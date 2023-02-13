@@ -6,17 +6,17 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
+try: 
+    import omni.isaac.version as v
+    VERSION = v.get_version()[0]
+except:
+    VERSION = "2021"
 from pxr import UsdGeom, Gf, UsdPhysics, Semantics              # pxr usd imports used to create cube
 from omni.isaac.examples.base_sample import BaseSample
 from omni.isaac.core.objects import DynamicCuboid, VisualCuboid
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.isaac.range_sensor import _range_sensor 
 from omni.isaac.core.utils.semantics import get_semantics
-try: 
-    import omni.isaac.version as v
-    VERSION = v.get_version()[0]
-except:
-    VERSION = "2021"
 
 import omni
 import asyncio  
@@ -34,12 +34,7 @@ import omni.kit.commands
 
 import numpy as np
 
-try: 
-    import omni.replicator.core as rep 
-except:pass
-
-
-
+import omni.replicator.core as rep 
 
 class ExtensionName(BaseSample):
     def __init__(self) -> None:
@@ -98,11 +93,11 @@ class ExtensionName(BaseSample):
 
     def add_to_scene(self):
         self.world_cleanup()
-        stage = omni.usd.get_context().get_stage()                      # Used to access Geometry
-        timeline = omni.timeline.get_timeline_interface()               # Used to interact with simulation
+        stage = omni.usd.get_context().get_stage()
+        # timeline = omni.timeline.get_timeline_interface()
 
         # Create the lidar
-        lidarInterface = _range_sensor.acquire_lidar_sensor_interface() # Used to interact with the LIDAR
+        # lidarInterface = _range_sensor.acquire_lidar_senor_interface() # Used to interact with the LIDAR
         lidarPath = "/LidarName"
         result, prim = omni.kit.commands.execute(
             "RangeSensorCreateLidar",
@@ -148,14 +143,10 @@ class ExtensionName(BaseSample):
         return np.array(new_points), np.array(new_sems)
 
     async def save_lidar_data(self):
-        print("\n\n =============== \n\n")
-        # pri = self.stage.GetPrimAtPath("/World"+self.lidarPath)#.GetAttribute("Translate"))
         # semantic_ = pri.GetAttribute("enabled")
         # semantic_.Set(1)
         # await asyncio.sleep(1.0)
         # self.timeline.pause()
-        # await asyncio.sleep(0.5)
-        # translate_attr = pri.GetAttribute("xformOp:translate")
         transform = Gf.Transform()
         transform.SetMatrix(UsdGeom.Xformable(self.pri).ComputeLocalToWorldTransform(Usd.TimeCode.Default()))
 
@@ -163,17 +154,14 @@ class ExtensionName(BaseSample):
         semantics = self.lidarInterface.get_semantic_data("/World"+self.lidarPath)
         position = transform.GetTranslation()
         # semantic_.Set(0)
-        # print(semantic_)
         print(position)
         pointcloud,semantics = self.clear_max_lidar(pointcloud, semantics, position, 100)
         np.save(f"/home/jon/Documents/RandLA-Net/pc_{self.save_count}.npy",np.array(pointcloud) )
         np.save(f"/home/jon/Documents/RandLA-Net/sem_{self.save_count}.npy", np.array(semantics))
         self.save_count += 1
-        # self.timeline.play()
 
     async def setup_post_load(self):
         stage = omni.usd.get_context().get_stage()                      # Used to access Geometry
-        #Here we want to load the scene
         omni.kit.commands.execute('AddPhysicsSceneCommand',stage = stage, path='/World/PhysicsScene',context = omni.usd.get_context()) 
     
     def remove_all_objects(self):

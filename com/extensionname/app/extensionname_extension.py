@@ -38,26 +38,7 @@ class ExtensionNameExtension(BaseSampleExtension):
         frame = self.get_frame(index=0)
         self.build_task_controls_ui(frame)
         frame = self.get_frame(index=1)
-        self.build_data_logging_ui(frame)
         self._window.visible = True
-        return
-
-    def _on_follow_target_button_event(self):
-        #asyncio.ensure_future(self.sample._on_follow_target_event_async())
-        ##self.task_ui_elements["Follow Target"].enabled = False
-        #self.task_ui_elements["Record Pose"].enabled = True
-        #self.task_ui_elements["Record Grasp - Close"].enabled = True
-        #self.task_ui_elements["Record Grasp - Open"].enabled = True
-        return
-
-    def reset_imitation_buttons(self):
-        #self.task_ui_elements["Follow Target"].enabled = True
-        #self.task_ui_elements["Mimic Trajectory"].enabled = True
-        #self.task_ui_elements["Randomize Target"].enabled = True
-        # self.task_ui_elements["Tool Task Scene"].enabled = True
-        # self.task_ui_elements["Brush-Shoe Task Scene"].enabled = True
-        #if len(self.sample.waypoints)>0: 
-        #   self.task_ui_elements["Follow Trajectory"].enabled = True
         return
 
 
@@ -103,20 +84,7 @@ class ExtensionNameExtension(BaseSampleExtension):
         return
 
     def _on_load_scene_button_event(self):
-        selection = self.task_ui_elements["Scene dropdown"].get_item_value_model().as_int
-        selected_scene = self.selectable_scenes[selection]
         self._add_to_scene_event()
-        # if selected_scene == "Tool Task Scene":
-        #     self._on_generate_tool_task_button_event()
-        # elif selected_scene == "Brush-Shoe Task Scene":
-        #     self._on_generate_brush_shoe_task_button_event()
-        # elif selected_scene == "Wine Scene":
-        #     self.sample.generate_wine_scene()
-        # elif selected_scene == "Screwdriver Scene":
-        #     self.sample.generate_screwdriver_scene()
-        # else:
-        #     print (f"Unrecognized scene {selected_scene}!")
-        return
 
     def build_task_controls_ui(self, frame):
         with frame:
@@ -124,10 +92,6 @@ class ExtensionNameExtension(BaseSampleExtension):
                 # Update the Frame Title
                 frame.title = "Task Controls"
                 frame.visible = True
-                self.selectable_scenes = ["Wine Scene", "Tool Task Scene", 
-                                          "Brush-Shoe Task Scene", "Screwdriver Scene"]
-                self.task_ui_elements["Scene dropdown"] = dropdown_builder(label="Choose Scene",
-                                                                items=self.selectable_scenes)
                 self.add_button("Load Scene", 
                            self._on_load_scene_button_event)
                 self.task_ui_elements["Load Scene"].enabled = True
@@ -135,15 +99,6 @@ class ExtensionNameExtension(BaseSampleExtension):
                 self.add_button("Save LiDAR", self._save_lidar_info_event)
 
                 self.task_ui_elements["Save LiDAR"].enabled = True
-
-                # self.add_button("Mimic Trajectory", 
-                #            self._on_imitate_trajectory_button_event)
-                # self.add_button("Randomize Target", 
-                #            self._on_randomize_target_button_event)
-                # self.add_button("Tool Task Scene", 
-                #            self._on_generate_tool_task_button_event)
-                # self.add_button("Brush-Shoe Task Scene", 
-                #            self._on_generate_brush_shoe_task_button_event)
 
     def _on_record_data_event(self):
         self.task_ui_elements["Record"].enabled = False
@@ -157,30 +112,3 @@ class ExtensionNameExtension(BaseSampleExtension):
         self.sample.toggle_data_recording(False)
         return
         
-    def build_data_logging_ui(self, frame):
-        with frame:
-            with ui.VStack(spacing=5):
-                # Update the Frame Title
-                frame.title = "Demonstration Controls"
-                frame.visible = True
-
-                # self.add_button("Follow Target", 
-                #            self._on_follow_target_button_event)
-                #
-                # self.add_button("Follow Trajectory", 
-                #            self._on_follow_trajectory_button_event)
-                #
-                # self.add_button("Record", 
-                #            self._on_record_data_event)
-                # self.add_button("Stop Record", 
-                #            self._on_stop_record_data_event)
-                #
-                # self.add_button("Record Pose", 
-                #            self._on_record_position_button_event)
-                # self.add_button("Record Grasp - Close", 
-                #            self._on_record_grasp_close_button_event)
-                # self.add_button("Record Grasp - Open", 
-                #            self._on_record_grasp_open_button_event)
-                # self.task_ui_elements["Stop Record"].enabled = self.sample.is_data_recording
-                # self.task_ui_elements["Record"].enabled = not self.sample.is_data_recording
-        return
