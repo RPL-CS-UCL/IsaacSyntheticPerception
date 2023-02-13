@@ -1,0 +1,23 @@
+[core]
+reloadable = true
+
+display_name = "Extension Template"
+
+[package]
+title="Extension Template"
+description="Extension Template"
+category=""
+authors=['Jon']
+keywords=['custom']
+
+[dependencies]
+"omni.isaac.dynamic_control" = {}
+"omni.isaac.range_sensor" = {}
+"omni.syntheticdata" = {}
+
+[[python.module]]
+name = "com.extensionname.app"
+
+
+[[native.plugin]]
+recursive = false
