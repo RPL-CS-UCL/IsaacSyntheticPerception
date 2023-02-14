@@ -10,14 +10,11 @@ import os
 from omni.isaac.examples.base_sample import BaseSampleExtension
 import asyncio
 import omni.ui as ui
-from omni.isaac.ui.ui_utils import btn_builder,dropdown_builder #, str_builder
-from .synthetic_perception import SyntheticPerception 
+from omni.isaac.ui.ui_utils import btn_builder, dropdown_builder  # , str_builder
+from .synthetic_perception import SyntheticPerception
 
 # This file is for UI control. It build on sample extension
-# It calls FollowTarget, which is the sample, building on BaseSample
-# - it builds the world defines task behaviours
-# such as robot controller and waypoints, and passes on commands to the
-# Task  
+
 
 class SyntheticPerceptionExtension(BaseSampleExtension):
     def on_startup(self, ext_id: str):
@@ -41,25 +38,24 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self._window.visible = True
         return
 
-
     def post_reset_button_event(self):
-        #self.reset_imitation_buttons()
+        # self.reset_imitation_buttons()
         pass
 
     def post_load_button_event(self):
         pass
-        #self.reset_imitation_buttons()
+        # self.reset_imitation_buttons()
 
     def post_clear_button_event(self):
-        #self.reset_imitation_buttons()
+        # self.reset_imitation_buttons()
         pass
-	
+
     def shutdown_cleanup(self):
         self.sample.remove_all_objects()
         return
 
     def add_button(self, label, on_clicked_fn):
-        """ Adds a button """
+        """Adds a button"""
         dict = {
             "label": label,
             "type": "button",
@@ -70,10 +66,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
         self.task_ui_elements[label] = btn_builder(**dict)
         self.task_ui_elements[label].enabled = False
-                
+
         return
-    
-    
+
     def _add_to_scene_event(self):
         self.sample.init_sensor_and_semantics()
         return
@@ -92,8 +87,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 # Update the Frame Title
                 frame.title = "Task Controls"
                 frame.visible = True
-                self.add_button("Load Scene", 
-                           self._on_load_scene_button_event)
+                self.add_button("Load Scene", self._on_load_scene_button_event)
                 self.task_ui_elements["Load Scene"].enabled = True
 
                 self.add_button("Save LiDAR", self._save_lidar_info_event)
@@ -111,4 +105,3 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.task_ui_elements["Stop Record"].enabled = False
         self.sample.toggle_data_recording(False)
         return
-        
