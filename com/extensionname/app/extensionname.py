@@ -17,7 +17,6 @@ from omni.isaac.core.objects import DynamicCuboid, VisualCuboid
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.isaac.range_sensor import _range_sensor 
 from omni.isaac.core.utils.semantics import get_semantics
-
 import omni
 import asyncio  
 import omni.kit.commands
@@ -31,9 +30,7 @@ import omni.kit.viewport
 from time import sleep
 from pxr import Usd, Gf, UsdGeom
 import omni.kit.commands
-
 import numpy as np
-
 import omni.replicator.core as rep 
 
 class ExtensionName(BaseSample):
@@ -52,10 +49,6 @@ class ExtensionName(BaseSample):
 
     def world_cleanup(self):
         self.remove_all_objects()
-        return
-
-    def add_collider(self, prim):
-        collisionAPI = UsdPhysics.CollisionAPI.Apply(prim)
         return
 
     def add_semantic(self, p, prim_class):
@@ -97,7 +90,6 @@ class ExtensionName(BaseSample):
         # timeline = omni.timeline.get_timeline_interface()
 
         # Create the lidar
-        # lidarInterface = _range_sensor.acquire_lidar_senor_interface() # Used to interact with the LIDAR
         lidarPath = "/LidarName"
         result, prim = omni.kit.commands.execute(
             "RangeSensorCreateLidar",
@@ -125,11 +117,9 @@ class ExtensionName(BaseSample):
 
         self.lidarInterface = _range_sensor.acquire_lidar_sensor_interface() # Used to interact with the LIDAR
         self.lidarPath = "/LidarName"
-        # timeline.play()                                                 # Start the Simulation
         return
 
-    def clear_max_lidar(self, pc, sem, lidar_pos,max_dist):
-
+    def clear_max_lidar_points(self, pc, sem, lidar_pos,max_dist):
         new_points = []
         new_sems = []
         for seq_id in range(len(pc)):
@@ -155,7 +145,7 @@ class ExtensionName(BaseSample):
         position = transform.GetTranslation()
         # semantic_.Set(0)
         print(position)
-        pointcloud,semantics = self.clear_max_lidar(pointcloud, semantics, position, 100)
+        pointcloud,semantics = self.clear_max_lidar_points(pointcloud, semantics, position, 100)
         np.save(f"/home/jon/Documents/RandLA-Net/pc_{self.save_count}.npy",np.array(pointcloud) )
         np.save(f"/home/jon/Documents/RandLA-Net/sem_{self.save_count}.npy", np.array(semantics))
         self.save_count += 1
