@@ -13,7 +13,6 @@ except:
     VERSION = "2021"
 from pxr import UsdGeom, Gf, UsdPhysics, Semantics              # pxr usd imports used to create cube
 from omni.isaac.examples.base_sample import BaseSample
-from omni.isaac.core.objects import DynamicCuboid, VisualCuboid
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.isaac.range_sensor import _range_sensor 
 from omni.isaac.core.utils.semantics import get_semantics
@@ -21,11 +20,7 @@ import omni
 import asyncio  
 import omni.kit.commands
 import omni.timeline
-from pxr import Sdf
-from omni.isaac.core.utils.stage import add_reference_to_stage
-from omni.isaac.core.utils.rotations import euler_angles_to_quat, matrix_to_euler_angles
-from omni.isaac.core.utils.semantics import add_update_semantics
-from omni.isaac.core.utils.prims import get_prim_at_path, get_prim_property
+from omni.isaac.core.utils.prims import get_prim_at_path#, get_prim_property
 import omni.kit.viewport
 from time import sleep
 from pxr import Usd, Gf, UsdGeom
@@ -36,9 +31,11 @@ import omni.replicator.core as rep
 class SyntheticPerception(BaseSample):
     def __init__(self) -> None:
         super().__init__()
-        self.obstacles = []
+        self.__created_objs = []
         self.save_count = 0
         self.pri = None
+        self.obstacles = []
+        self.__undefined_class_string = "undef"
 
 
     def setup_scene(self):
@@ -64,7 +61,7 @@ class SyntheticPerception(BaseSample):
             sem.GetSemanticDataAttr().Set(prim_class)
 
     def __add_semantics_to_all(self, stage):
-        prim_class = "undef" 
+        prim_class = self.__undefined_class_string 
         for prim_ref in stage.Traverse():
             prim_ref_name = str(prim_ref.GetPrimPath())
             for word in prim_ref_name.split("/"):
@@ -84,7 +81,7 @@ class SyntheticPerception(BaseSample):
                     self.add_semantic(p,prim_class)
 
 
-    def add_to_scene(self):
+    def init_sensor_and_semantics(self):
         self.world_cleanup()
         stage = omni.usd.get_context().get_stage()
         # timeline = omni.timeline.get_timeline_interface()
@@ -109,7 +106,7 @@ class SyntheticPerception(BaseSample):
             enable_semantics=False
         )
         UsdGeom.XformCommonAPI(prim).SetTranslate((2.0, 0.0, 4.0))
-        self.obstacles.append(prim)
+        self.__created_objs.append(prim)
         self.__add_semantics_to_all(stage)
         self.pri = prim
         self.stage = omni.usd.get_context().get_stage()                      # Used to access Geometry
@@ -133,8 +130,10 @@ class SyntheticPerception(BaseSample):
         return np.array(new_points), np.array(new_sems)
 
     async def save_lidar_data(self):
-        # semantic_ = pri.GetAttribute("enabled")
-        # semantic_.Set(1)
+        # lidar_att = pri.GetAttribute("enabled")
+        # lidar_att.Set(1)
+        # lidar_att = pri.GetAttribute("enableSemantics")
+        # lidar_att.Set(1)
         # await asyncio.sleep(1.0)
         # self.timeline.pause()
         transform = Gf.Transform()
@@ -155,11 +154,11 @@ class SyntheticPerception(BaseSample):
         omni.kit.commands.execute('AddPhysicsSceneCommand',stage = stage, path='/World/PhysicsScene',context = omni.usd.get_context()) 
     
     def remove_all_objects(self):
-        for i in reversed(range(len(self.obstacles))):
+        for i in reversed(range(len(self.__created_objs))):
             try:
-                self._world.scene.remove_object(self.obstacles[i])
+                self._world.scene.remove_object(self.__created_objs[i])
             except:
                 pass # already deleted from world
-            del self.obstacles[i]
+            del self.__created_objs[i]
 
 

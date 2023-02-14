@@ -75,7 +75,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     
     
     def _add_to_scene_event(self):
-        self.sample.add_to_scene()
+        self.sample.init_sensor_and_semantics()
         return
 
     def _save_lidar_info_event(self):
