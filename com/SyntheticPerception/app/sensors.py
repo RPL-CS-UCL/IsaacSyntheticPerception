@@ -16,6 +16,10 @@ import omni.kit.commands
 import numpy as np
 import omni.replicator.core as rep
 
+class DepthCamera:
+    def __init__(self) -> None:
+        pass
+    # https://docs.omniverse.nvidia.com/py/isaacsim/source/extensions/omni.isaac.sensor/docs/index.html#module-omni.isaac.sensor.scripts.camera
 
 class Lidar:
     def __init__(
