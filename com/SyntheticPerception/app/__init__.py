@@ -16,5 +16,5 @@ for k in L:
   if "com.copycat" in k:
     print (k)
     importlib.reload(sys.modules[k])
-from .extensionname import ExtensionName
-from .extensionname_extension import ExtensionNameExtension
+from .synthetic_perception import SyntheticPerception 
+from .synthetic_perception_extension import SyntheticPerceptionExtension 

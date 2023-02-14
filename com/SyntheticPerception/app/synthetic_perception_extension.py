@@ -11,7 +11,7 @@ from omni.isaac.examples.base_sample import BaseSampleExtension
 import asyncio
 import omni.ui as ui
 from omni.isaac.ui.ui_utils import btn_builder,dropdown_builder #, str_builder
-from .extensionname import ExtensionName
+from .synthetic_perception import SyntheticPerception 
 
 # This file is for UI control. It build on sample extension
 # It calls FollowTarget, which is the sample, building on BaseSample
@@ -19,7 +19,7 @@ from .extensionname import ExtensionName
 # such as robot controller and waypoints, and passes on commands to the
 # Task  
 
-class ExtensionNameExtension(BaseSampleExtension):
+class SyntheticPerceptionExtension(BaseSampleExtension):
     def on_startup(self, ext_id: str):
         super().on_startup(ext_id)
         super().start_extension(
@@ -29,7 +29,7 @@ class ExtensionNameExtension(BaseSampleExtension):
             title="ExtensionName Task",
             doc_link="https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/overview.html",
             overview="This Example shows how to follow a target using Franka robot in Isaac Sim.\n\nPress the 'Open in IDE' button to view the source code.",
-            sample=ExtensionName(),
+            sample=SyntheticPerception(),
             file_path=os.path.abspath(__file__),
             number_of_extra_frames=2,
             window_width=700,

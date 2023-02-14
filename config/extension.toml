@@ -1,11 +1,11 @@
 [core]
 reloadable = true
 
-display_name = "Extension Template"
+display_name = "Synthetic Perception"
 
 [package]
-title="Extension Template"
-description="Extension Template"
+title="Synthetic Perception"
+description="Synthetic Perception desc"
 category=""
 authors=['Jon']
 keywords=['custom']
@@ -16,7 +16,7 @@ keywords=['custom']
 "omni.syntheticdata" = {}
 
 [[python.module]]
-name = "com.extensionname.app"
+name = "com.SyntheticPerception.app"
 
 
 [[native.plugin]]

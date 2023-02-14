@@ -33,7 +33,7 @@ import omni.kit.commands
 import numpy as np
 import omni.replicator.core as rep 
 
-class ExtensionName(BaseSample):
+class SyntheticPerception(BaseSample):
     def __init__(self) -> None:
         super().__init__()
         self.obstacles = []
