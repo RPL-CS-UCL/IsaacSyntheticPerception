@@ -63,7 +63,7 @@ class ExtensionName(BaseSample):
             sem.GetSemanticTypeAttr().Set("class")
             sem.GetSemanticDataAttr().Set(prim_class)
 
-    def add_semantics_all(self, stage):
+    def __add_semantics_to_all(self, stage):
         prim_class = "undef" 
         for prim_ref in stage.Traverse():
             prim_ref_name = str(prim_ref.GetPrimPath())
@@ -110,7 +110,7 @@ class ExtensionName(BaseSample):
         )
         UsdGeom.XformCommonAPI(prim).SetTranslate((2.0, 0.0, 4.0))
         self.obstacles.append(prim)
-        self.add_semantics_all(stage)
+        self.__add_semantics_to_all(stage)
         self.pri = prim
         self.stage = omni.usd.get_context().get_stage()                      # Used to access Geometry
         self.timeline = omni.timeline.get_timeline_interface()               # Used to interact with simulation
@@ -119,7 +119,7 @@ class ExtensionName(BaseSample):
         self.lidarPath = "/LidarName"
         return
 
-    def clear_max_lidar_points(self, pc, sem, lidar_pos,max_dist):
+    def __clear_max_lidar_points(self, pc, sem, lidar_pos,max_dist):
         new_points = []
         new_sems = []
         for seq_id in range(len(pc)):
@@ -145,7 +145,7 @@ class ExtensionName(BaseSample):
         position = transform.GetTranslation()
         # semantic_.Set(0)
         print(position)
-        pointcloud,semantics = self.clear_max_lidar_points(pointcloud, semantics, position, 100)
+        pointcloud,semantics = self.__clear_max_lidar_points(pointcloud, semantics, position, 100)
         np.save(f"/home/jon/Documents/RandLA-Net/pc_{self.save_count}.npy",np.array(pointcloud) )
         np.save(f"/home/jon/Documents/RandLA-Net/sem_{self.save_count}.npy", np.array(semantics))
         self.save_count += 1
