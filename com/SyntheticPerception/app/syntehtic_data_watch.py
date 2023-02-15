@@ -34,6 +34,8 @@ class SyntheticDataWatch_V2(object):
             camera = rep.AnnotatorRegistry.get_annotator("camera_params")
         )
         self.sdh_topics = list(self.annotators.keys())
+        print(" ============== sdh topics ========== o" )
+        print(self.sdh_topics)
         self._max_clip_range = 30.
 
         self.set_robot(robot)

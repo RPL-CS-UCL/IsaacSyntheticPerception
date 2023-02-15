@@ -34,7 +34,116 @@ import numpy as np
 import omni.replicator.core as rep
 from .sensors import Lidar
 from omni.isaac.core.utils.stage import get_stage_units
+from omni.isaac.synthetic_utils import SyntheticDataHelper
 from .syntehtic_data_watch import SyntheticDataWatch,SyntheticDataWatch_V2
+
+from omni.kit.viewport.utility import get_active_viewport
+def get_meters_per_unit():
+    from pxr import UsdGeom
+    stage = omni.usd.get_context().get_stage()
+    return UsdGeom.GetStageMetersPerUnit(stage)
+
+def gf_as_numpy(gf_matrix)->np.array:
+    """Take in a pxr.Gf matrix and returns it as a numpy array.
+    Specifically it transposes the matrix so that it follows numpy
+    matrix rules.
+
+    Args:
+        gf_matrix (Gf.Matrix_d): Gf matrix to convert
+
+    Returns:
+        np.array:
+    """
+    # Convert matrix/vector to numpy array
+    return np.array(list(gf_matrix)).T
+
+def get_intrinsic_matrix(viewport):
+    # Get camera params from usd
+    stage = omni.usd.get_context().get_stage()
+    prim = stage.GetPrimAtPath(viewport.get_active_camera())
+    focal_length = prim.GetAttribute("focalLength").Get()
+    horiz_aperture = prim.GetAttribute("horizontalAperture").Get()
+    x_min, y_min, x_max, y_max = viewport.get_viewport_rect()
+    width, height = x_max - x_min, y_max - y_min
+
+    # Pixels are square so we can do:
+    vert_aperture = height / width * horiz_aperture
+
+    # Compute focal point and center
+    focal_x = width * focal_length / horiz_aperture
+    focal_y = height * focal_length / vert_aperture
+    center_x = width * 0.5
+    center_y = height * 0.5
+    
+    # Turn into matrix
+    intrinsic_matrix = np.array([[focal_x, 0, center_x],
+                                 [0, focal_y, center_y],
+                                 [0, 0, 1]])
+    
+    return intrinsic_matrix
+
+def get_extrinsic_matrix(viewport, meters=False):
+    from pxr import UsdGeom
+    # Get camera pose
+    stage = omni.usd.get_context().get_stage()
+    camera_prim = stage.GetPrimAtPath(viewport.get_active_camera())
+    camera_pose = gf_as_numpy(UsdGeom.Camera(camera_prim).GetLocalTransformation())
+    if meters:
+        camera_pose[:,3] = camera_pose[:,3]*get_meters_per_unit()
+    
+    view_matrix = np.linalg.inv(camera_pose)
+    return view_matrix
+
+def freq_count(v:np.array)->np.array:
+    """Return the number of times each element in an array occur
+
+    Args:
+        v (np.array): 1D array to count
+
+    Returns:
+        np.array: Frequency list [[num, count], [num, count],...]
+    """
+    unique, counts = np.unique(v, return_counts=True)
+    return np.asarray((unique, counts)).T
+
+def pointcloud_from_mask_and_depth(depth:np.array, mask:np.array, mask_val:int, intrinsic_matrix:np.array, extrinsic_matrix:np.array=None):
+    depth = np.array(depth).squeeze()
+    mask = np.array(mask).squeeze()
+    # Mask the depth array
+    masked_depth = np.ma.masked_where(mask!=mask_val, depth)
+    masked_depth = np.ma.masked_greater(masked_depth, 8000)
+    # Create idx array
+    idxs = np.indices(masked_depth.shape)
+    u_idxs = idxs[1]
+    v_idxs = idxs[0]
+    # Get only non-masked depth and idxs
+    z = masked_depth[~masked_depth.mask]
+    compressed_u_idxs = u_idxs[~masked_depth.mask]
+    compressed_v_idxs = v_idxs[~masked_depth.mask]
+    # Calculate local position of each point
+    # Apply vectorized math to depth using compressed arrays
+    cx = intrinsic_matrix[0,2]
+    fx = intrinsic_matrix[0,0]
+    x = (compressed_u_idxs - cx) * z / fx
+    cy = intrinsic_matrix[1,2]
+    fy = intrinsic_matrix[1,1]
+    # Flip y as we want +y pointing up not down
+    y = -((compressed_v_idxs - cy) * z / fy)
+
+    # Apply camera_matrix to pointcloud as to get the pointcloud in world coords
+    if extrinsic_matrix is not None:
+        # Calculate camera pose from extrinsic matrix
+        camera_matrix = np.linalg.inv(extrinsic_matrix)
+        # Create homogenous array of vectors by adding 4th entry of 1
+        # At the same time flip z as for eye space the camera is looking down the -z axis
+        w = np.ones(z.shape)
+        x_y_z_eye_hom = np.vstack((x, y, -z, w))
+        # Transform the points from eye space to world space
+        x_y_z_world = np.dot(camera_matrix, x_y_z_eye_hom)[:3]
+        return x_y_z_world.T
+    else:
+        x_y_z_local = np.vstack((x, y, z))
+        return x_y_z_local.T
 def transform(prim_path, pos,ori,scale):
     from pxr import Usd, Gf
     import omni.kit.commands
@@ -105,6 +214,7 @@ class SyntheticPerception(BaseSample):
         self.__undefined_class_string = "undef"
         self.__sensor = None
         self.sd_watch = SyntheticDataWatch_V2("/home/jon/Documents/temp")
+        self._rp = None
 
     def setup_scene(self):
         return
@@ -246,11 +356,11 @@ class SyntheticPerception(BaseSample):
         campath = "/World/CameraStand_Closeup/CameraCloseup"
         campath = "/World/Camera"
         campath = "/World/CameraStand_Closeup/CameraCloseup"
+        # if self._rp is None:
         rp = rep.create.render_product(campath, resolution=(640, 480))
-        # set viewport
+                    # set viewport
         topics = ["rgb", "full_pointcloud", "instanceSegmentation",
                   "camera", "depth"]
-        from omni.kit.viewport.utility import get_active_viewport
         
         viewport = get_active_viewport()
         if not viewport: raise RuntimeError("No active Viewport")
@@ -261,3 +371,75 @@ class SyntheticPerception(BaseSample):
         gt = asyncio.ensure_future(self.sd_watch.snap_async(topics, rp, viewport = viewport))
         del rp
         return
+
+
+    import omni.replicator.core as rep
+    def init_camera(self):
+        self.cam = rep.create.camera(position=(0,0,0))
+        self.rp = rep.create.render_product(self.cam, (512, 512))
+
+        self.rgb_annot = self.rep.AnnotatorRegistry.get_annotator("rgb")
+        self.rgb_annot.attach(self.rp)
+
+        self.depth_annot = self.rep.AnnotatorRegistry.get_annotator("distance_to_camera")
+        self.depth_annot.attach(self.rp)
+
+        self.pc_annot = self.rep.AnnotatorRegistry.get_annotator("point_cloud")
+        self.pc_annot.attach(self.rp)
+
+        self.sem_annot = self.rep.AnnotatorRegistry.get_annotator("semantic_segmentation")
+        self.sem_annot.attach(self.rp)
+
+    async def test(self):
+        # from omni.isaac.sensor import Camera
+        # c = Camera("/World/FakeCam")
+        # c.add_semantic_segmentation_to_frame()
+        # print(c.get_vertical_fov())
+        # import omni.replicator.core as rep
+        # cone = rep.create.cone()
+        #
+        # cam = rep.create.camera(position=(0,0,0), look_at=cone)
+        # rp = rep.create.render_product(cam, (512, 512))
+        #
+        # rgb = rep.AnnotatorRegistry.get_annotator("rgb")
+        # rgb.attach(rp)
+        # depth = rep.AnnotatorRegistry.get_annotator("distance_to_camera")
+        # depth.attach(rp)
+
+        await rep.orchestrator.step_async()
+        rgb_data = self.rgb_annot.get_data()
+        np.save("/home/jon/Documents/temp/image.npy", rgb_data)
+
+        depth_ = depth.get_data()
+        print("depth: ", depth_.shape)
+        print(depth_)
+        np.save("/home/jon/Documents/temp/depth.npy", depth_)
+
+        # viewport = get_active_viewport()
+        # sd_helper = SyntheticDataHelper()
+        # gt = sd_helper.get_groundtruth(
+        #         [
+        #             "rgb",
+        #             "depth",
+        #             "semanticSegmentation",
+        #             "depthLinear"
+        #         ],
+        #         viewport,
+        #     )
+        # gt = sd_helper.get_groundtruth(
+        #     [
+        #         "rgb",
+        #         "depth",
+        #         "semanticSegmentation",
+        #         "depthLinear"
+        #     ],
+        #     viewport,
+        # )
+        #
+        # # POINTCLOUD 
+        # depth_linear = gt["depthLinear"]
+        # semantic_seg = gt["semanticSegmentation"]
+        # intrinsic_matrix = get_intrinsic_matrix(viewport)
+        # extrinsic_matrix = get_extrinsic_matrix(viewport, meters=True)
+        # points = pointcloud_from_mask_and_depth(depth_linear, semantic_seg, 1, intrinsic_matrix, extrinsic_matrix)
+        # print(points)

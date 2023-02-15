@@ -75,6 +75,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _camera_seg_event(self):
         asyncio.ensure_future(self.sample.final_fn())
         return
+    def _test_event(self):
+        asyncio.ensure_future(self.sample.test())
 
     def _save_lidar_info_event(self):
         asyncio.ensure_future(self.sample.save_lidar_data())
@@ -94,12 +96,15 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.task_ui_elements["Load Scene"].enabled = True
 
                 self.add_button("Save LiDAR", self._save_lidar_info_event)
-
                 self.task_ui_elements["Save LiDAR"].enabled = True
+
                 self.add_button("camera test", self._camera_seg_event)
 
 
                 self.task_ui_elements["camera test"].enabled = True
+
+                self.add_button("test", self._test_event)
+                self.task_ui_elements["test"].enabled = True
 
     def _on_record_data_event(self):
         self.task_ui_elements["Record"].enabled = False
