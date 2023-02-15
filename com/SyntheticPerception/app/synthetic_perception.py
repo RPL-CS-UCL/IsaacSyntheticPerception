@@ -33,8 +33,68 @@ import omni.kit.commands
 import numpy as np
 import omni.replicator.core as rep
 from .sensors import Lidar
+from omni.isaac.core.utils.stage import get_stage_units
+from .syntehtic_data_watch import SyntheticDataWatch,SyntheticDataWatch_V2
+def transform(prim_path, pos,ori,scale):
+    from pxr import Usd, Gf
+    import omni.kit.commands
+    if "2021" in VERSION:
+        omni.kit.commands.execute('TransformPrimSRTCommand',
+            path=prim_path,
+            old_translation=Gf.Vec3f(0, 0, 0),
+            old_rotation_euler=Gf.Vec3f(0, 0, 0),
+            old_rotation_order=Gf.Vec3i(0, 1, 2),
+            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            new_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
+            new_rotation_euler=Gf.Vec3f(0, 0, 0),
+            new_rotation_order=Gf.Vec3i(0, 1, 2),
+            new_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            time_code=Usd.TimeCode(),
+            had_transform_at_key=False)
+        
+        omni.kit.commands.execute('TransformPrimSRTCommand',
+            path=prim_path,
+            old_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
+            old_rotation_euler=Gf.Vec3f(0, 0, 0),
+            old_rotation_order=Gf.Vec3i(0, 1, 2),
+            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            new_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
+            new_rotation_euler=Gf.Vec3f(ori[0], ori[1], ori[2]),
+            new_rotation_order=Gf.Vec3i(2, 1, 0),#Gf.Vec3i(0, 1, 2),
+            new_scale=Gf.Vec3f(scale[0], scale[1], scale[2]),
+            time_code=Usd.TimeCode(),
+            had_transform_at_key=False)
 
+    else:
+        print ("Not tested - it may be failing to translate")
+        print(scale)
+        omni.kit.commands.execute('TransformPrimSRTCommand',
+            path=prim_path,
+            old_translation=Gf.Vec3f(0, 0, 0),
+            old_rotation_euler=Gf.Vec3f(0, 0, 0),
+            old_rotation_order=Gf.Vec3i(0, 1, 2),
+            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            new_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
+            new_rotation_euler=Gf.Vec3f(0, 0, 0),
+            new_rotation_order=Gf.Vec3i(0, 1, 2),
+            new_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            time_code=Usd.TimeCode(),
+            had_transform_at_key=False)
+        
+        omni.kit.commands.execute('TransformPrimSRTCommand',
+            path=prim_path,
+            old_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
+            old_rotation_euler=Gf.Vec3f(0, 0, 0),
+            old_rotation_order=Gf.Vec3i(0, 1, 2),
+            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            new_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
+            new_rotation_euler=Gf.Vec3f(ori[0], ori[1], ori[2]),
+            new_rotation_order=Gf.Vec3i(2, 1, 0),#Gf.Vec3i(0, 1, 2),
+            new_scale=Gf.Vec3f(scale[0], scale[1], scale[2]),
+            time_code=Usd.TimeCode(),
+            had_transform_at_key=False) 
 
+    return
 class SyntheticPerception(BaseSample):
     def __init__(self) -> None:
         super().__init__()
@@ -44,6 +104,7 @@ class SyntheticPerception(BaseSample):
         self.obstacles = []
         self.__undefined_class_string = "undef"
         self.__sensor = None
+        self.sd_watch = SyntheticDataWatch_V2("/home/jon/Documents/temp")
 
     def setup_scene(self):
         return
@@ -54,7 +115,43 @@ class SyntheticPerception(BaseSample):
     def world_cleanup(self):
         self.remove_all_objects()
         return
+    def make_camera_stand(self):
+        prim_path = "/World/CameraStand"
+        prim_name = "camera_stand"
+        prim = XFormPrim(name=prim_name, prim_path=prim_path,
+                        position =np.asarray([-0.77,1.883, 1.01])/get_stage_units(),
+                        orientation = np.asarray([-0.18648,-0.10337,0.47367, 0.8545]),
+                        )
+        if "2021" in VERSION:
+            transform (prim_path, np.array([-50.,240.,100.]),
+                    np.array([12.0,5.,110.]), np.array([1.,1.,1.]))
+        else:
+            transform (prim_path, np.array([-50.,240.,100.])/100,
+                     np.array([12.0,5.,110.]), np.array([1.,1.,1.]))
 
+        omni.kit.commands.execute('CreatePrimWithDefaultXform',
+            prim_path = "/World/CameraStand/Camera",
+            prim_type = 'Camera',
+            attributes={'focusDistance': 400, 'focalLength': 2.7,
+                        'horizontalAperture': 2.682,
+                        'verticalAperture': 1.509})
+
+
+        prim_path = "/World/CameraStand_Closeup"
+        prim_name = "camera_stand_closup"
+        prim = XFormPrim(name=prim_name, prim_path=prim_path,
+                        position =np.asarray([-0.77,1.883, 1.01])/get_stage_units(),
+                        orientation = np.asarray([-0.18648,-0.10337,0.47367, 0.8545]),
+                        )
+        transform (prim_path, np.array([10.,120.,50.])/100,
+                     np.array([12.0,5.,110.]), np.array([1.,1.,1.]))
+
+        omni.kit.commands.execute('CreatePrimWithDefaultXform',
+            prim_path = "/World/CameraStand_Closeup/CameraCloseup",
+            prim_type = 'Camera',
+            attributes={'focusDistance': 400, 'focalLength': 2.7,
+                        'horizontalAperture': 2.682,
+                        'verticalAperture': 1.509})
     def add_semantic(self, p, prim_class):
         sem_dict = get_semantics(p)
         collisionAPI = UsdPhysics.CollisionAPI.Apply(p)
@@ -92,6 +189,7 @@ class SyntheticPerception(BaseSample):
                     self.add_semantic(p, prim_class)
 
     def init_sensor_and_semantics(self):
+
         self.world_cleanup()
         stage = omni.usd.get_context().get_stage()
         self.__sensor = Lidar()
@@ -100,6 +198,7 @@ class SyntheticPerception(BaseSample):
         self.timeline = (
             omni.timeline.get_timeline_interface()
         )  # Used to interact with simulation
+        self.make_camera_stand()
 
         return
 
@@ -141,3 +240,24 @@ class SyntheticPerception(BaseSample):
             except:
                 pass  # already deleted from world
             del self.__created_objs[i]
+
+    async def final_fn(self):
+        print("calling camera test")
+        campath = "/World/CameraStand_Closeup/CameraCloseup"
+        campath = "/World/Camera"
+        campath = "/World/CameraStand_Closeup/CameraCloseup"
+        rp = rep.create.render_product(campath, resolution=(640, 480))
+        # set viewport
+        topics = ["rgb", "full_pointcloud", "instanceSegmentation",
+                  "camera", "depth"]
+        from omni.kit.viewport.utility import get_active_viewport
+        
+        viewport = get_active_viewport()
+        if not viewport: raise RuntimeError("No active Viewport")
+        
+        # Set the Viewport's active camera to the
+        # camera prim path you want to switch to.
+        viewport.camera_path = campath
+        gt = asyncio.ensure_future(self.sd_watch.snap_async(topics, rp, viewport = viewport))
+        del rp
+        return
