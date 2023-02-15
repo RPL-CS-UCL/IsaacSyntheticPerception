@@ -76,7 +76,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         asyncio.ensure_future(self.sample.final_fn())
         return
     def _test_event(self):
-        asyncio.ensure_future(self.sample.test())
+        # asyncio.ensure_future(self.sample.test())
+        self.sample.test()
 
     def _save_lidar_info_event(self):
         asyncio.ensure_future(self.sample.save_lidar_data())

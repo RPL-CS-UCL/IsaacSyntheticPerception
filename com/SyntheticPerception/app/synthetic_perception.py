@@ -32,7 +32,7 @@ from pxr import Usd, Gf, UsdGeom
 import omni.kit.commands
 import numpy as np
 import omni.replicator.core as rep
-from .sensors import Lidar
+from .sensors import Lidar, DepthCamera
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.synthetic_utils import SyntheticDataHelper
 from .syntehtic_data_watch import SyntheticDataWatch,SyntheticDataWatch_V2
@@ -215,6 +215,7 @@ class SyntheticPerception(BaseSample):
         self.__sensor = None
         self.sd_watch = SyntheticDataWatch_V2("/home/jon/Documents/temp")
         self._rp = None
+        self._depth_camera = None
 
     def setup_scene(self):
         return
@@ -310,7 +311,8 @@ class SyntheticPerception(BaseSample):
         )  # Used to interact with simulation
         self.make_camera_stand()
 
-        self.init_camera()
+        self._depth_camera = DepthCamera()
+        # self.init_camera()
 
         return
 
@@ -392,7 +394,8 @@ class SyntheticPerception(BaseSample):
         self.sem_annot = self.rep.AnnotatorRegistry.get_annotator("semantic_segmentation")
         self.sem_annot.attach(self.rp)
 
-    async def test(self):
+    def test(self):
+        asyncio.ensure_future(self._depth_camera.sample_sensor())
         # from omni.isaac.sensor import Camera
         # c = Camera("/World/FakeCam")
         # c.add_semantic_segmentation_to_frame()
@@ -408,19 +411,19 @@ class SyntheticPerception(BaseSample):
         # depth = rep.AnnotatorRegistry.get_annotator("distance_to_camera")
         # depth.attach(rp)
 
-        await rep.orchestrator.step_async()
-        rgb_data = self.rgb_annot.get_data()
-        print(rgb_data.shape)
-        np.save("/home/jon/Documents/temp/image.npy", rgb_data)
-        depth_data = self.depth_annot.get_data()
-        print(depth_data.shape)
-        np.save("/home/jon/Documents/temp/depth.npy", depth_data)
-
-        # pc_data = self.pc_annot.get_data()
-        # print(pc_data)
-        # np.save("/home/jon/Documents/temp/pc.npy", pc_data["data"])
-        # np.save("/home/jon/Documents/temp/pc_col.npy", pc_data["info"]["pointRgb"])
-
-        sem_data = self.sem_annot.get_data()
-        print(sem_data)
-        np.save("/home/jon/Documents/temp/sem.npy", sem_data)
+        # await rep.orchestrator.step_async()
+        # rgb_data = self.rgb_annot.get_data()
+        # print(rgb_data.shape)
+        # np.save("/home/jon/Documents/temp/image.npy", rgb_data)
+        # depth_data = self.depth_annot.get_data()
+        # print(depth_data.shape)
+        # np.save("/home/jon/Documents/temp/depth.npy", depth_data)
+        #
+        # # pc_data = self.pc_annot.get_data()
+        # # print(pc_data)
+        # # np.save("/home/jon/Documents/temp/pc.npy", pc_data["data"])
+        # # np.save("/home/jon/Documents/temp/pc_col.npy", pc_data["info"]["pointRgb"])
+        #
+        # sem_data = self.sem_annot.get_data()
+        # print(sem_data)
+        # np.save("/home/jon/Documents/temp/sem.npy", sem_data)

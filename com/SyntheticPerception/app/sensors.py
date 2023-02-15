@@ -16,10 +16,17 @@ import omni.kit.commands
 import numpy as np
 import omni.replicator.core as rep
 
+
 class DepthCamera:
-    def __init__(self, position, rotation) -> None:
-        self.__cam = rep.create.camera(position=(0,0,0))
-        self.__rp = rep.create.render_product(self.__cam, (512, 512))
+    def __init__(
+        self, position=(0, 0, 0), rotation=(0, 0, 0), image_size=(512, 512), attach=True
+    ) -> None:
+        self.__cam = rep.create.camera(position=position)
+        self.__rp = rep.create.render_product(self.__cam, image_size)
+
+        if attach:
+            self.__init_annotators()
+            self.__attach_annotoators()
 
     def __init_annotators(self):
         self.rgb_annot = rep.AnnotatorRegistry.get_annotator("rgb")
@@ -38,6 +45,19 @@ class DepthCamera:
         self.rgb_annot.detach(self.__rp)
         self.sem_annot.detach(self.__rp)
         # self.pc_annot.dettach(self.rp)
+
+    async def sample_sensor(self):
+        await rep.orchestrator.step_async()
+
+        rgb_data = self.rgb_annot.get_data()
+        np.save("/home/jon/Documents/temp/image.npy", rgb_data)
+
+        depth_data = self.depth_annot.get_data()
+        np.save("/home/jon/Documents/temp/depth.npy", depth_data)
+
+        sem_data = self.sem_annot.get_data()
+        np.save("/home/jon/Documents/temp/sem.npy", sem_data)
+        return
 
 
 class Lidar:
@@ -58,6 +78,10 @@ class Lidar:
         yaw_offset=0.0,
         enable_semantics=False,
         origin_pos=(2.0, 0.0, 4.0),
+    ):
+        result, self.__lidar_prim = omni.kit.commands.execute(
+            "RangeSensorCreateLidar",
+            path=path,
             parent=parent,
             min_range=min_range,
             max_range=max_range,
