@@ -17,9 +17,28 @@ import numpy as np
 import omni.replicator.core as rep
 
 class DepthCamera:
-    def __init__(self) -> None:
-        pass
-    # https://docs.omniverse.nvidia.com/py/isaacsim/source/extensions/omni.isaac.sensor/docs/index.html#module-omni.isaac.sensor.scripts.camera
+    def __init__(self, position, rotation) -> None:
+        self.__cam = rep.create.camera(position=(0,0,0))
+        self.__rp = rep.create.render_product(self.__cam, (512, 512))
+
+    def __init_annotators(self):
+        self.rgb_annot = rep.AnnotatorRegistry.get_annotator("rgb")
+        self.depth_annot = rep.AnnotatorRegistry.get_annotator("distance_to_camera")
+        # self.pc_annot = rep.AnnotatorRegistry.get_annotator("pointcloud")
+        self.sem_annot = rep.AnnotatorRegistry.get_annotator("semantic_segmentation")
+
+    def __attach_annotoators(self):
+        self.depth_annot.attach(self.__rp)
+        self.rgb_annot.attach(self.__rp)
+        self.sem_annot.attach(self.__rp)
+        # self.pc_annot.attach(self.rp)
+
+    def __detatch_annototators(self):
+        self.depth_annot.detach(self.__rp)
+        self.rgb_annot.detach(self.__rp)
+        self.sem_annot.detach(self.__rp)
+        # self.pc_annot.dettach(self.rp)
+
 
 class Lidar:
     def __init__(
@@ -38,11 +57,7 @@ class Lidar:
         high_lod=True,
         yaw_offset=0.0,
         enable_semantics=False,
-        origin_pos=(2.0,0.0, 4.0)
-    ):
-        result, self.__lidar_prim = omni.kit.commands.execute(
-            "RangeSensorCreateLidar",
-            path=path,
+        origin_pos=(2.0, 0.0, 4.0),
             parent=parent,
             min_range=min_range,
             max_range=max_range,
