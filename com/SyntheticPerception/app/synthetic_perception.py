@@ -310,6 +310,8 @@ class SyntheticPerception(BaseSample):
         )  # Used to interact with simulation
         self.make_camera_stand()
 
+        self.init_camera()
+
         return
 
     def __clear_max_lidar_points(self, pc, sem, lidar_pos, max_dist):
@@ -384,8 +386,8 @@ class SyntheticPerception(BaseSample):
         self.depth_annot = self.rep.AnnotatorRegistry.get_annotator("distance_to_camera")
         self.depth_annot.attach(self.rp)
 
-        self.pc_annot = self.rep.AnnotatorRegistry.get_annotator("point_cloud")
-        self.pc_annot.attach(self.rp)
+        # self.pc_annot = self.rep.AnnotatorRegistry.get_annotator("pointcloud")
+        # self.pc_annot.attach(self.rp)
 
         self.sem_annot = self.rep.AnnotatorRegistry.get_annotator("semantic_segmentation")
         self.sem_annot.attach(self.rp)
@@ -408,38 +410,17 @@ class SyntheticPerception(BaseSample):
 
         await rep.orchestrator.step_async()
         rgb_data = self.rgb_annot.get_data()
+        print(rgb_data.shape)
         np.save("/home/jon/Documents/temp/image.npy", rgb_data)
+        depth_data = self.depth_annot.get_data()
+        print(depth_data.shape)
+        np.save("/home/jon/Documents/temp/depth.npy", depth_data)
 
-        depth_ = depth.get_data()
-        print("depth: ", depth_.shape)
-        print(depth_)
-        np.save("/home/jon/Documents/temp/depth.npy", depth_)
+        # pc_data = self.pc_annot.get_data()
+        # print(pc_data)
+        # np.save("/home/jon/Documents/temp/pc.npy", pc_data["data"])
+        # np.save("/home/jon/Documents/temp/pc_col.npy", pc_data["info"]["pointRgb"])
 
-        # viewport = get_active_viewport()
-        # sd_helper = SyntheticDataHelper()
-        # gt = sd_helper.get_groundtruth(
-        #         [
-        #             "rgb",
-        #             "depth",
-        #             "semanticSegmentation",
-        #             "depthLinear"
-        #         ],
-        #         viewport,
-        #     )
-        # gt = sd_helper.get_groundtruth(
-        #     [
-        #         "rgb",
-        #         "depth",
-        #         "semanticSegmentation",
-        #         "depthLinear"
-        #     ],
-        #     viewport,
-        # )
-        #
-        # # POINTCLOUD 
-        # depth_linear = gt["depthLinear"]
-        # semantic_seg = gt["semanticSegmentation"]
-        # intrinsic_matrix = get_intrinsic_matrix(viewport)
-        # extrinsic_matrix = get_extrinsic_matrix(viewport, meters=True)
-        # points = pointcloud_from_mask_and_depth(depth_linear, semantic_seg, 1, intrinsic_matrix, extrinsic_matrix)
-        # print(points)
+        sem_data = self.sem_annot.get_data()
+        print(sem_data)
+        np.save("/home/jon/Documents/temp/sem.npy", sem_data)
