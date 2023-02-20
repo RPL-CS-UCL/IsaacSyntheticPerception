@@ -32,12 +32,13 @@ from pxr import Usd, Gf, UsdGeom
 import omni.kit.commands
 import numpy as np
 import omni.replicator.core as rep
-from .sensors import Lidar, DepthCamera
+from .sensors import Lidar, DepthCamera, SensorRig
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.synthetic_utils import SyntheticDataHelper
 from .syntehtic_data_watch import SyntheticDataWatch,SyntheticDataWatch_V2
-
+import omni.physx as _physx
 from omni.kit.viewport.utility import get_active_viewport
+from omni.isaac.dynamic_control import _dynamic_control
 def get_meters_per_unit():
     from pxr import UsdGeom
     stage = omni.usd.get_context().get_stage()
@@ -216,6 +217,7 @@ class SyntheticPerception(BaseSample):
         self.sd_watch = SyntheticDataWatch_V2("/home/jon/Documents/temp")
         self._rp = None
         self._depth_camera = None
+        self._rc = None
 
     def setup_scene(self):
         return
@@ -299,6 +301,16 @@ class SyntheticPerception(BaseSample):
                             prim_class = word
                     self.add_semantic(p, prim_class)
 
+    def _get_translate(self,prim_path):
+        # prim = stage.GetPrimAtPath(prim_path)
+        dc=_dynamic_control.acquire_dynamic_control_interface()
+
+        object=dc.get_rigid_body(prim_path)
+        object_pose=dc.get_rigid_body_pose(object)
+
+        print("position:", object_pose.p)
+        print("rotation:", object_pose.r)
+
     def init_sensor_and_semantics(self):
 
         self.world_cleanup()
@@ -312,9 +324,22 @@ class SyntheticPerception(BaseSample):
         self.make_camera_stand()
 
         self._depth_camera = DepthCamera()
+        self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(self._controller_update)
+        # prim = self.stage.GetPrimAtPath("/World/SensorOrigin")
+        # xform = UsdGeom.Xformable(prim)
+        # transform = prim.GetAttribute('xformOp:transform')
+        print(" ============================================================== ")
+        print("trying to load sensor rig")
+        # print(self._get_translate("/World/SensorOrigin"))
+        self.sr = SensorRig("TestSensorOrigin", "/World")
+        self.sr.create_rig(np.array([0,5,0]),np.asarray([-0.18648,-0.10337,0.47367, 0.8545]),self.stage)
+
+
         # self.init_camera()
 
         return
+    def _controller_update(self, step):
+        pass
 
     def __clear_max_lidar_points(self, pc, sem, lidar_pos, max_dist):
         new_points = []
@@ -356,25 +381,28 @@ class SyntheticPerception(BaseSample):
             del self.__created_objs[i]
 
     async def final_fn(self):
-        print("calling camera test")
-        campath = "/World/CameraStand_Closeup/CameraCloseup"
-        campath = "/World/Camera"
-        campath = "/World/CameraStand_Closeup/CameraCloseup"
-        # if self._rp is None:
-        rp = rep.create.render_product(campath, resolution=(640, 480))
-                    # set viewport
-        topics = ["rgb", "full_pointcloud", "instanceSegmentation",
-                  "camera", "depth"]
-        
-        viewport = get_active_viewport()
-        if not viewport: raise RuntimeError("No active Viewport")
-        
-        # Set the Viewport's active camera to the
-        # camera prim path you want to switch to.
-        viewport.camera_path = campath
-        gt = asyncio.ensure_future(self.sd_watch.snap_async(topics, rp, viewport = viewport))
-        del rp
-        return
+
+        pos, rot = self.sr.get_pos_rot()
+        print(pos, rot)
+        # print("calling camera test")
+        # campath = "/World/CameraStand_Closeup/CameraCloseup"
+        # campath = "/World/Camera"
+        # campath = "/World/CameraStand_Closeup/CameraCloseup"
+        # # if self._rp is None:
+        # rp = rep.create.render_product(campath, resolution=(640, 480))
+        #             # set viewport
+        # topics = ["rgb", "full_pointcloud", "instanceSegmentation",
+        #           "camera", "depth"]
+        # 
+        # viewport = get_active_viewport()
+        # if not viewport: raise RuntimeError("No active Viewport")
+        # 
+        # # Set the Viewport's active camera to the
+        # # camera prim path you want to switch to.
+        # viewport.camera_path = campath
+        # gt = asyncio.ensure_future(self.sd_watch.snap_async(topics, rp, viewport = viewport))
+        # del rp
+        # return
 
 
     import omni.replicator.core as rep

@@ -24,14 +24,60 @@ from typing import Any, Dict, Sequence, Tuple, Union
 import omni.graph.core as og
 from omni.replicator.core.scripts.annotators import Annotator
 
+from omni.isaac.core.prims import XFormPrim, RigidPrim
+from omni.isaac.core.utils.stage import get_stage_units
+from omni.isaac.dynamic_control import _dynamic_control
+
+
 class SensorRig:
-    def __init__(self) -> None:
+    def __init__(self, name, path) -> None:
         self.__sensors = []
         self.__num_sensors = []
         self.__waypoints = []
         self.__curr_waypoint_id = 0
         self.__current_transform = None
 
+        self._prim_path = path
+        self._prim_name = name
+        self._full_prim_path = f"{self._prim_path}/{self._prim_name}"
+        self._prim = None
+        self._dc = None
+        self._rb = None
+
+    def create_rig(self, position, orientation, stage):
+        self._dc = _dynamic_control.acquire_dynamic_control_interface()
+        # spawn object
+        print("Creating rig")
+        print(position)
+        print(position/get_stage_units())
+        self._prim = XFormPrim(
+            name=self._prim_name,
+            prim_path=self._full_prim_path,
+            position=position / get_stage_units(),
+            orientation=orientation,
+        )
+        
+
+        
+        # collisionAPI = PhysicsRigidBodyAPI.Apply(self._prim)
+        omni.kit.commands.execute('AddPhysicsComponent',
+             usd_prim=stage.GetPrimAtPath(self._full_prim_path),
+             component='PhysicsRigidBodyAPI')
+
+        from pxr import Sdf
+
+        omni.kit.commands.execute('ChangeProperty',
+            prop_path=Sdf.Path('/World/TestSensorOrigin.physxRigidBody:disableGravity'),
+            value=True,
+            prev=None)
+        self._rb =  self._dc.get_rigid_body(self._full_prim_path)
+
+
+    def get_pos_rot(self):
+        self._rb =  self._dc.get_rigid_body(self._full_prim_path)
+        # self._dc.wake_up_rigid_body(self._rb)
+        object_pose = self._dc.get_rigid_body_pose(self._rb)
+        return object_pose.p, object_pose.r
 
     def initialize_waypoints(self, waypoint_parent):
         # iter over the stage and get all the waypoints
@@ -40,13 +86,14 @@ class SensorRig:
 
     def __get_target_rot(self, waypoint_id):
         pass
+
     def __advance_waypoint(self, waypoint_id):
         pass
 
     def move(self):
         # updates curr waypoint
         self.__advance_waypoint(self.__curr_waypoint_id)
-        
+
         self.__get_target_rot(self.__curr_waypoint_id)
 
 
@@ -57,7 +104,7 @@ class DepthCamera:
         self.__cam = rep.create.camera(position=position)
         self.__rp: og.Node = rep.create.render_product(self.__cam, image_size)
         self.__rgb_annot: Annotator
-        self.__save_path =  ""
+        self.__save_path = ""
 
         if attach:
             self.__init_annotators()
@@ -143,9 +190,9 @@ class Lidar:
         pointcloud = self.__lidarInterface.get_point_cloud_data(self.__lidar_path)
         semantics = self.__lidarInterface.get_semantic_data(self.__lidar_path)
         lidar_position = self.__get_position()
-        pointcloud, semantics = self.__clear_max_lidar_points(
-            pointcloud, semantics, lidar_position, self.__max_range
-        )
+        # pointcloud, semantics = self.__clear_max_lidar_points(
+        #     pointcloud, semantics, lidar_position, self.__max_range
+        # )
 
         if save_path is not None:
             np.save(
