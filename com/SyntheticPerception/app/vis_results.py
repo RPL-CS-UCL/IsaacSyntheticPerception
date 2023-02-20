@@ -1,16 +1,15 @@
 
 import pptk
 from os.path import join
-# from RandLANet import Network
-# from tester_SemanticKITTI import ModelTester
-# import tensorflow.compat.v1 as tf
-# tf.disable_v2_behavior()
 import numpy as np
 import os, argparse, pickle
 import open3d as o3d
 import yaml
 from os.path import exists, join, isfile, dirname, abspath
 
+from PIL import Image
+import numpy as np
+import matplotlib.pyplot as plt
 import sys
 np.set_printoptions(threshold=sys.maxsize)
 # from main_SemanticKITTI import SemanticKITTI
@@ -96,53 +95,13 @@ if __name__ == '__main__':
     colour_path = f"{seq_id}/rgb/{file_id}.png"
     full_pc_path = "_pc.npy"
     colour_path = "_sem.npy"
-    from PIL import Image
-    import numpy as np
-    import matplotlib.pyplot as plt
-    # cm_test = np.load("image.npy")
-    # cm_test = rgba2rgb(cm_test)
-    # plt.imshow(cm_test)
-    # plt.show()
-    # sys.exit()
     im = np.load(colour_path, allow_pickle=True)
 
     full_pc = np.load(full_pc_path,allow_pickle=True)
     full_pc, im = process_clouds2(full_pc, im)
-    # im = lin_col_to_norm(im)
-    print(full_pc.shape)
-    # im = rgba2rgb(im)
-    # im = np.array(Image.open(colour_path))
-    print(im.shape)
-    # full_pc, im = process_clouds(full_pc, im)
-    # plt.plot(full_pc[:,2])
-    # plt.show()
     pcd = o3d.geometry.PointCloud()
     colors = [COLOR_MAP[clr] for clr in im] 
     pcd.points = o3d.utility.Vector3dVector(full_pc)
     pcd.colors = o3d.utility.Vector3dVector(colors)
-
-
-
     o3d.visualization.draw_geometries([pcd])
     sys.exit()
-    lidar_data = np.load(f"pc_{seq_id}.npy")
-    print(lidar_data.shape)
-    sem_data = np.load(f"sem_{seq_id}.npy")
-    print(sem_data.shape)
-
-    points = []
-    points_x = []
-    points_y = []
-    points_z = []
-    sem = []
-    points = lidar_data
-    sem = sem_data
-    sem = sem_data
-    pcd = o3d.geometry.PointCloud()
-    colors = [COLOR_MAP[clr] for clr in sem] 
-    pcd.points = o3d.utility.Vector3dVector(points)
-    pcd.colors = o3d.utility.Vector3dVector(colors.astype(np.float) / 255.0)
-    # pcd.normals = o3d.utility.Vector3dVector(normals)
-    o3d.visualization.draw_geometries([pcd])
-    # Plot.draw_pc_sem_ins(np.array(points), np.array(sem), plot_colors=True)
-

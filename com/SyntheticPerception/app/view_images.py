@@ -54,6 +54,6 @@ def plot_sem(name):
     print(data)
     pass
 
-# plot_depth("depth")
-# plot_image("image")
+plot_depth("depth")
+plot_image("image")
 plot_sem("sem")
