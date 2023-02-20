@@ -15,6 +15,39 @@ from pxr import Usd, Gf, UsdGeom
 import omni.kit.commands
 import numpy as np
 import omni.replicator.core as rep
+import builtins
+import math
+import numpy as np
+import scipy.spatial.transform as tf
+from dataclasses import dataclass
+from typing import Any, Dict, Sequence, Tuple, Union
+import omni.graph.core as og
+from omni.replicator.core.scripts.annotators import Annotator
+
+class SensorRig:
+    def __init__(self) -> None:
+        self.__sensors = []
+        self.__num_sensors = []
+        self.__waypoints = []
+        self.__curr_waypoint_id = 0
+        self.__current_transform = None
+
+
+    def initialize_waypoints(self, waypoint_parent):
+        # iter over the stage and get all the waypoints
+        # go through each child and save its tranform details to the waypoints list.
+        pass
+
+    def __get_target_rot(self, waypoint_id):
+        pass
+    def __advance_waypoint(self, waypoint_id):
+        pass
+
+    def move(self):
+        # updates curr waypoint
+        self.__advance_waypoint(self.__curr_waypoint_id)
+        
+        self.__get_target_rot(self.__curr_waypoint_id)
 
 
 class DepthCamera:
@@ -22,11 +55,16 @@ class DepthCamera:
         self, position=(0, 0, 0), rotation=(0, 0, 0), image_size=(512, 512), attach=True
     ) -> None:
         self.__cam = rep.create.camera(position=position)
-        self.__rp = rep.create.render_product(self.__cam, image_size)
+        self.__rp: og.Node = rep.create.render_product(self.__cam, image_size)
+        self.__rgb_annot: Annotator
+        self.__save_path =  ""
 
         if attach:
             self.__init_annotators()
             self.__attach_annotoators()
+
+    def construct_pc(rgb_image, depth_image):
+        pass
 
     def __init_annotators(self):
         self.rgb_annot = rep.AnnotatorRegistry.get_annotator("rgb")
