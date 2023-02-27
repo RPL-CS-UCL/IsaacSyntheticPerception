@@ -60,20 +60,19 @@ class SensorRig:
         )
 
         # collisionAPI = PhysicsRigidBodyAPI.Apply(self._prim)
-        omni.kit.commands.execute(
-            "AddPhysicsComponent",
-            usd_prim=stage.GetPrimAtPath(self._full_prim_path),
-            component="PhysicsRigidBodyAPI",
-        )
-
-        omni.kit.commands.execute(
-            "ChangeProperty",
-            prop_path=Sdf.Path("/World/TestSensorOrigin.physxRigidBody:disableGravity"),
-            value=True,
-            prev=None,
-        )
-        self._rb = self._dc.get_rigid_body(self._full_prim_path)
-
+        # omni.kit.commands.execute(
+        #     "AddPhysicsComponent",
+        #     usd_prim=stage.GetPrimAtPath(self._full_prim_path),
+        #     component="PhysicsRigidBodyAPI",
+        # )
+        #
+        # omni.kit.commands.execute(
+        #     "ChangeProperty",
+        #     prop_path=Sdf.Path("/World/TestSensorOrigin.physxRigidBody:disableGravity"),
+        #     value=True,
+        #     prev=None,
+        # )
+        # self._rb = self._dc.get_rigid_body(self._full_prim_path)
 
     def add_depth_camera_to_rig(
         self,
@@ -89,8 +88,15 @@ class SensorRig:
             )
         )
 
-    def add_lidar_to_rig(self,name,  origin_pos):
-        self.__sensors.append(Lidar(path=name,parent=self._full_prim_path, origin_pos=origin_pos))
+    def add_lidar_to_rig(self, name, origin_pos):
+        self.__sensors.append(
+            Lidar(path=name, parent=self._full_prim_path, origin_pos=origin_pos)
+        )
+
+    def sample_sensors(self):
+        for sensor in self.__sensors:
+            # sensor.sample_sensor()
+            asyncio.ensure_future(sensor.sample_sensor())
 
     def get_pos_rot(self):
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
@@ -114,10 +120,6 @@ class SensorRig:
         self.__advance_waypoint(self.__curr_waypoint_id)
 
         self.__get_target_rot(self.__curr_waypoint_id)
-
-    def sample_sensors(self):
-        pose_pos = 0.4
-        pose_rot = 0.3
 
 
 class DepthCamera:
@@ -211,14 +213,17 @@ class Lidar:
             enable_semantics=enable_semantics,
         )
         UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(origin_pos)
-        self.__lidar_path = parent + path
+        self.__lidar_path = parent + "/" + path
+        print(f"lidar path should be {self.__lidar_path}")
         self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
         self.__max_range = max_range
 
-    def sample_sensor(self):
+    # def sample_sensor(self):
+    #     self.get_pc_and_semantic()
+    async def sample_sensor(self):
         self.get_pc_and_semantic()
 
-    def get_pc_and_semantic(self, save_path=None):
+    def get_pc_and_semantic(self, save_path="/home/jon/Documents/temp/a"):
         pointcloud = self.__lidarInterface.get_point_cloud_data(self.__lidar_path)
         semantics = self.__lidarInterface.get_semantic_data(self.__lidar_path)
         lidar_position = self.__get_position()

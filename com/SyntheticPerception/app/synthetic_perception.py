@@ -120,7 +120,7 @@ class SyntheticPerception(BaseSample):
         )  # Used to interact with simulation
 
         # self._depth_camera = DepthCamera()
-        # self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(self._controller_update)
+        self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(self._controller_update)
         # prim = self.stage.GetPrimAtPath("/World/SensorOrigin")
         # xform = UsdGeom.Xformable(prim)
         # transform = prim.GetAttribute('xformOp:transform')
@@ -220,7 +220,9 @@ class SyntheticPerception(BaseSample):
         self.sem_annot.attach(self.rp)
 
     def test(self):
-        asyncio.ensure_future(self._depth_camera.sample_sensor())
+        # asyncio.ensure_future(self._depth_camera.sample_sensor())
+        self.sr.sample_sensors()
+        # asyncio.ensure_future(self.sr.sample_sensors())
         # from omni.isaac.sensor import Camera
         # c = Camera("/World/FakeCam")
         # c.add_semantic_segmentation_to_frame()
