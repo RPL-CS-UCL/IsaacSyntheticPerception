@@ -61,20 +61,25 @@ class SensorRig:
         )
 
         # collisionAPI = PhysicsRigidBodyAPI.Apply(self._prim)
-        # omni.kit.commands.execute(
-        #     "AddPhysicsComponent",
-        #     usd_prim=stage.GetPrimAtPath(self._full_prim_path),
-        #     component="PhysicsRigidBodyAPI",
-        # )
-        #
-        # omni.kit.commands.execute(
-        #     "ChangeProperty",
-        #     prop_path=Sdf.Path("/World/TestSensorOrigin.physxRigidBody:disableGravity"),
-        #     value=True,
-        #     prev=None,
-        # )
-        # self._rb = self._dc.get_rigid_body(self._full_prim_path)
+        omni.kit.commands.execute(
+            "AddPhysicsComponent",
+            usd_prim=stage.GetPrimAtPath(self._full_prim_path),
+            component="PhysicsRigidBodyAPI",
+        )
 
+        omni.kit.commands.execute(
+            "ChangeProperty",
+            prop_path=Sdf.Path(f"{self._full_prim_path}.physxRigidBody:disableGravity"),
+            value=True,
+            prev=None,
+        )
+        self._rb = self._dc.get_rigid_body(self._full_prim_path)
+        print(self._rb)
+        print(self.get_pos_rot())
+    def apply_veloc(self):
+
+        self._rb = self._dc.get_rigid_body(self._full_prim_path)
+        self._dc.set_rigid_body_linear_velocity(self._rb, np.array([5,0,0]))
     def add_depth_camera_to_rig(
         self,
         position=(0, 0, 0),

@@ -53,6 +53,7 @@ class SyntheticPerception(BaseSample):
         self._depth_camera = None
         self._rc = None
 
+        self.sr = SensorRig("SensorRig", "/World")
     def setup_scene(self):
         return
 
@@ -126,7 +127,6 @@ class SyntheticPerception(BaseSample):
         # transform = prim.GetAttribute('xformOp:transform')
         print(" ============================================================== ")
         print("trying to load sensor rig")
-        self.sr = SensorRig("SensorRig", "/World")
         self.sr.create_rig(np.array([0,5,0]),np.asarray([1,1,1,1]),self.stage)
         # self.sr.add_depth_camera_to_rig( (0, 0, 0), (0, 0, 0), (512, 512), True,"DepthCamera")
         self.sr.add_sensor_to_rig(DepthCamera(name="depthcam2"))
@@ -221,38 +221,10 @@ class SyntheticPerception(BaseSample):
         self.sem_annot = self.rep.AnnotatorRegistry.get_annotator("semantic_segmentation")
         self.sem_annot.attach(self.rp)
 
-    def test(self):
+    def test(self, data):
         # asyncio.ensure_future(self._depth_camera.sample_sensor())
-        self.sr.sample_sensors()
-        # asyncio.ensure_future(self.sr.sample_sensors())
-        # from omni.isaac.sensor import Camera
-        # c = Camera("/World/FakeCam")
-        # c.add_semantic_segmentation_to_frame()
-        # print(c.get_vertical_fov())
-        # import omni.replicator.core as rep
-        # cone = rep.create.cone()
-        #
-        # cam = rep.create.camera(position=(0,0,0), look_at=cone)
-        # rp = rep.create.render_product(cam, (512, 512))
-        #
-        # rgb = rep.AnnotatorRegistry.get_annotator("rgb")
-        # rgb.attach(rp)
-        # depth = rep.AnnotatorRegistry.get_annotator("distance_to_camera")
-        # depth.attach(rp)
+        print(data)
+        # self.sr.sample_sensors()
 
-        # await rep.orchestrator.step_async()
-        # rgb_data = self.rgb_annot.get_data()
-        # print(rgb_data.shape)
-        # np.save("/home/jon/Documents/temp/image.npy", rgb_data)
-        # depth_data = self.depth_annot.get_data()
-        # print(depth_data.shape)
-        # np.save("/home/jon/Documents/temp/depth.npy", depth_data)
-        #
-        # # pc_data = self.pc_annot.get_data()
-        # # print(pc_data)
-        # # np.save("/home/jon/Documents/temp/pc.npy", pc_data["data"])
-        # # np.save("/home/jon/Documents/temp/pc_col.npy", pc_data["info"]["pointRgb"])
-        #
-        # sem_data = self.sem_annot.get_data()
-        # print(sem_data)
-        # np.save("/home/jon/Documents/temp/sem.npy", sem_data)
+    def sample_sensors(self):
+        self.sr.sample_sensors()

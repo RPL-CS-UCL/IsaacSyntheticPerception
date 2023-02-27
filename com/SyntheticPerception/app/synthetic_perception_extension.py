@@ -10,7 +10,11 @@ import os
 from omni.isaac.examples.base_sample import BaseSampleExtension
 import asyncio
 import omni.ui as ui
-from omni.isaac.ui.ui_utils import btn_builder, dropdown_builder  # , str_builder
+from omni.isaac.ui.ui_utils import (
+    btn_builder,
+    dropdown_builder,
+    combo_floatfield_slider_builder,
+)  # , str_builder
 from .synthetic_perception import SyntheticPerception
 
 # This file is for UI control. It build on sample extension
@@ -69,23 +73,46 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
         return
 
+    def add_slider(self, label, on_clicked_fn):
+        dict = {
+            "label": label,
+        }
+        _, self.task_ui_elements[label] = combo_floatfield_slider_builder(**dict)
+        print("here =-- --=-=-=-=-=----- ", _)
+        print(self.task_ui_elements[label].__dict__)
+        self.task_ui_elements[label].enabled = False
+
     def _add_to_scene_event(self):
         self.sample.init_sensor_and_semantics()
         return
+
     def _camera_seg_event(self):
         asyncio.ensure_future(self.sample.final_fn())
         return
+
     def _test_event(self):
         # asyncio.ensure_future(self.sample.test())
-        self.sample.test()
-
+        # print("pressing but")
+        # print(self.task_ui_elements["speed_slider"].get_value_as_float())
+        self.sample.test(self.task_ui_elements["speed_slider"].get_value_as_float())
+    
+    def _on_sample_sensors(self):
+        # asyncio.ensure_future(self.sample.test())
+        # print("pressing but")
+        # print(self.task_ui_elements["speed_slider"].get_value_as_float())
+        # self.sample.test(self.task_ui_elements["speed_slider"].get_value_as_float())
+        self.sample.sample_sensors()
     def _save_lidar_info_event(self):
-        asyncio.ensure_future(self.sample.save_lidar_data())
+        # asyncio.ensure_future(self.sample.save_lidar_data())
+        self.sample.sr.apply_veloc()
         # self.sample.save_lidar_data()
         return
 
     def _on_load_scene_button_event(self):
         self._add_to_scene_event()
+
+    def _on_value_changed(self):
+        print(" ======================= done =====================")
 
     def build_task_controls_ui(self, frame):
         with frame:
@@ -96,16 +123,38 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.add_button("Load Scene", self._on_load_scene_button_event)
                 self.task_ui_elements["Load Scene"].enabled = True
 
-                self.add_button("Save LiDAR", self._save_lidar_info_event)
-                self.task_ui_elements["Save LiDAR"].enabled = True
+                self.add_button("veloc", self._save_lidar_info_event)
+                self.task_ui_elements["veloc"].enabled = True
 
-                self.add_button("camera test", self._camera_seg_event)
+                self.add_button("sample sensors", self._on_sample_sensors)
+                self.task_ui_elements["sample sensors"].enabled = True
 
+                # self.add_button("apply velocity", self._test_event)
+                # self.task_ui_elements["apply velocity"].enabled = True
+                args = {
+                    "label": "Gripper Speed (UP)",
+                    "default_val": 0,
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "tooltip": ["Speed in ()", "Speed in ()"],
+                }
 
-                self.task_ui_elements["camera test"].enabled = True
-
-                self.add_button("test", self._test_event)
-                self.task_ui_elements["test"].enabled = True
+                self.task_ui_elements["speed_slider"], slider = combo_floatfield_slider_builder(
+                    **args)
+                # )
+                #
+                args = {
+                    "label": "Set Speed",
+                    "type": "button",
+                    "text": "APPLY",
+                    "tooltip": "Apply Cone Velocity in the Z-Axis",
+                    "on_clicked_fn": self._test_event,
+                }
+                self.task_ui_elements["speed_button"] = btn_builder(**args)
+                # self.add_slider("velocity", self._test_event)
+                self.task_ui_elements["speed_button"].enabled = True
+                # print(self.task_ui_elements["velocity"])
 
     def _on_record_data_event(self):
         self.task_ui_elements["Record"].enabled = False
