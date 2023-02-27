@@ -39,172 +39,6 @@ from .syntehtic_data_watch import SyntheticDataWatch,SyntheticDataWatch_V2
 import omni.physx as _physx
 from omni.kit.viewport.utility import get_active_viewport
 from omni.isaac.dynamic_control import _dynamic_control
-def get_meters_per_unit():
-    from pxr import UsdGeom
-    stage = omni.usd.get_context().get_stage()
-    return UsdGeom.GetStageMetersPerUnit(stage)
-
-def gf_as_numpy(gf_matrix)->np.array:
-    """Take in a pxr.Gf matrix and returns it as a numpy array.
-    Specifically it transposes the matrix so that it follows numpy
-    matrix rules.
-
-    Args:
-        gf_matrix (Gf.Matrix_d): Gf matrix to convert
-
-    Returns:
-        np.array:
-    """
-    # Convert matrix/vector to numpy array
-    return np.array(list(gf_matrix)).T
-
-def get_intrinsic_matrix(viewport):
-    # Get camera params from usd
-    stage = omni.usd.get_context().get_stage()
-    prim = stage.GetPrimAtPath(viewport.get_active_camera())
-    focal_length = prim.GetAttribute("focalLength").Get()
-    horiz_aperture = prim.GetAttribute("horizontalAperture").Get()
-    x_min, y_min, x_max, y_max = viewport.get_viewport_rect()
-    width, height = x_max - x_min, y_max - y_min
-
-    # Pixels are square so we can do:
-    vert_aperture = height / width * horiz_aperture
-
-    # Compute focal point and center
-    focal_x = width * focal_length / horiz_aperture
-    focal_y = height * focal_length / vert_aperture
-    center_x = width * 0.5
-    center_y = height * 0.5
-    
-    # Turn into matrix
-    intrinsic_matrix = np.array([[focal_x, 0, center_x],
-                                 [0, focal_y, center_y],
-                                 [0, 0, 1]])
-    
-    return intrinsic_matrix
-
-def get_extrinsic_matrix(viewport, meters=False):
-    from pxr import UsdGeom
-    # Get camera pose
-    stage = omni.usd.get_context().get_stage()
-    camera_prim = stage.GetPrimAtPath(viewport.get_active_camera())
-    camera_pose = gf_as_numpy(UsdGeom.Camera(camera_prim).GetLocalTransformation())
-    if meters:
-        camera_pose[:,3] = camera_pose[:,3]*get_meters_per_unit()
-    
-    view_matrix = np.linalg.inv(camera_pose)
-    return view_matrix
-
-def freq_count(v:np.array)->np.array:
-    """Return the number of times each element in an array occur
-
-    Args:
-        v (np.array): 1D array to count
-
-    Returns:
-        np.array: Frequency list [[num, count], [num, count],...]
-    """
-    unique, counts = np.unique(v, return_counts=True)
-    return np.asarray((unique, counts)).T
-
-def pointcloud_from_mask_and_depth(depth:np.array, mask:np.array, mask_val:int, intrinsic_matrix:np.array, extrinsic_matrix:np.array=None):
-    depth = np.array(depth).squeeze()
-    mask = np.array(mask).squeeze()
-    # Mask the depth array
-    masked_depth = np.ma.masked_where(mask!=mask_val, depth)
-    masked_depth = np.ma.masked_greater(masked_depth, 8000)
-    # Create idx array
-    idxs = np.indices(masked_depth.shape)
-    u_idxs = idxs[1]
-    v_idxs = idxs[0]
-    # Get only non-masked depth and idxs
-    z = masked_depth[~masked_depth.mask]
-    compressed_u_idxs = u_idxs[~masked_depth.mask]
-    compressed_v_idxs = v_idxs[~masked_depth.mask]
-    # Calculate local position of each point
-    # Apply vectorized math to depth using compressed arrays
-    cx = intrinsic_matrix[0,2]
-    fx = intrinsic_matrix[0,0]
-    x = (compressed_u_idxs - cx) * z / fx
-    cy = intrinsic_matrix[1,2]
-    fy = intrinsic_matrix[1,1]
-    # Flip y as we want +y pointing up not down
-    y = -((compressed_v_idxs - cy) * z / fy)
-
-    # Apply camera_matrix to pointcloud as to get the pointcloud in world coords
-    if extrinsic_matrix is not None:
-        # Calculate camera pose from extrinsic matrix
-        camera_matrix = np.linalg.inv(extrinsic_matrix)
-        # Create homogenous array of vectors by adding 4th entry of 1
-        # At the same time flip z as for eye space the camera is looking down the -z axis
-        w = np.ones(z.shape)
-        x_y_z_eye_hom = np.vstack((x, y, -z, w))
-        # Transform the points from eye space to world space
-        x_y_z_world = np.dot(camera_matrix, x_y_z_eye_hom)[:3]
-        return x_y_z_world.T
-    else:
-        x_y_z_local = np.vstack((x, y, z))
-        return x_y_z_local.T
-def transform(prim_path, pos,ori,scale):
-    from pxr import Usd, Gf
-    import omni.kit.commands
-    if "2021" in VERSION:
-        omni.kit.commands.execute('TransformPrimSRTCommand',
-            path=prim_path,
-            old_translation=Gf.Vec3f(0, 0, 0),
-            old_rotation_euler=Gf.Vec3f(0, 0, 0),
-            old_rotation_order=Gf.Vec3i(0, 1, 2),
-            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-            new_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
-            new_rotation_euler=Gf.Vec3f(0, 0, 0),
-            new_rotation_order=Gf.Vec3i(0, 1, 2),
-            new_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-            time_code=Usd.TimeCode(),
-            had_transform_at_key=False)
-        
-        omni.kit.commands.execute('TransformPrimSRTCommand',
-            path=prim_path,
-            old_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
-            old_rotation_euler=Gf.Vec3f(0, 0, 0),
-            old_rotation_order=Gf.Vec3i(0, 1, 2),
-            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-            new_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
-            new_rotation_euler=Gf.Vec3f(ori[0], ori[1], ori[2]),
-            new_rotation_order=Gf.Vec3i(2, 1, 0),#Gf.Vec3i(0, 1, 2),
-            new_scale=Gf.Vec3f(scale[0], scale[1], scale[2]),
-            time_code=Usd.TimeCode(),
-            had_transform_at_key=False)
-
-    else:
-        print ("Not tested - it may be failing to translate")
-        print(scale)
-        omni.kit.commands.execute('TransformPrimSRTCommand',
-            path=prim_path,
-            old_translation=Gf.Vec3f(0, 0, 0),
-            old_rotation_euler=Gf.Vec3f(0, 0, 0),
-            old_rotation_order=Gf.Vec3i(0, 1, 2),
-            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-            new_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
-            new_rotation_euler=Gf.Vec3f(0, 0, 0),
-            new_rotation_order=Gf.Vec3i(0, 1, 2),
-            new_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-            time_code=Usd.TimeCode(),
-            had_transform_at_key=False)
-        
-        omni.kit.commands.execute('TransformPrimSRTCommand',
-            path=prim_path,
-            old_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
-            old_rotation_euler=Gf.Vec3f(0, 0, 0),
-            old_rotation_order=Gf.Vec3i(0, 1, 2),
-            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-            new_translation=Gf.Vec3f(pos[0], pos[1], pos[2]),
-            new_rotation_euler=Gf.Vec3f(ori[0], ori[1], ori[2]),
-            new_rotation_order=Gf.Vec3i(2, 1, 0),#Gf.Vec3i(0, 1, 2),
-            new_scale=Gf.Vec3f(scale[0], scale[1], scale[2]),
-            time_code=Usd.TimeCode(),
-            had_transform_at_key=False) 
-
-    return
 class SyntheticPerception(BaseSample):
     def __init__(self) -> None:
         super().__init__()
@@ -228,43 +62,6 @@ class SyntheticPerception(BaseSample):
     def world_cleanup(self):
         self.remove_all_objects()
         return
-    def make_camera_stand(self):
-        prim_path = "/World/CameraStand"
-        prim_name = "camera_stand"
-        prim = XFormPrim(name=prim_name, prim_path=prim_path,
-                        position =np.asarray([-0.77,1.883, 1.01])/get_stage_units(),
-                        orientation = np.asarray([-0.18648,-0.10337,0.47367, 0.8545]),
-                        )
-        if "2021" in VERSION:
-            transform (prim_path, np.array([-50.,240.,100.]),
-                    np.array([12.0,5.,110.]), np.array([1.,1.,1.]))
-        else:
-            transform (prim_path, np.array([-50.,240.,100.])/100,
-                     np.array([12.0,5.,110.]), np.array([1.,1.,1.]))
-
-        omni.kit.commands.execute('CreatePrimWithDefaultXform',
-            prim_path = "/World/CameraStand/Camera",
-            prim_type = 'Camera',
-            attributes={'focusDistance': 400, 'focalLength': 2.7,
-                        'horizontalAperture': 2.682,
-                        'verticalAperture': 1.509})
-
-
-        prim_path = "/World/CameraStand_Closeup"
-        prim_name = "camera_stand_closup"
-        prim = XFormPrim(name=prim_name, prim_path=prim_path,
-                        position =np.asarray([-0.77,1.883, 1.01])/get_stage_units(),
-                        orientation = np.asarray([-0.18648,-0.10337,0.47367, 0.8545]),
-                        )
-        transform (prim_path, np.array([10.,120.,50.])/100,
-                     np.array([12.0,5.,110.]), np.array([1.,1.,1.]))
-
-        omni.kit.commands.execute('CreatePrimWithDefaultXform',
-            prim_path = "/World/CameraStand_Closeup/CameraCloseup",
-            prim_type = 'Camera',
-            attributes={'focusDistance': 400, 'focalLength': 2.7,
-                        'horizontalAperture': 2.682,
-                        'verticalAperture': 1.509})
     def add_semantic(self, p, prim_class):
         sem_dict = get_semantics(p)
         collisionAPI = UsdPhysics.CollisionAPI.Apply(p)
@@ -315,24 +112,24 @@ class SyntheticPerception(BaseSample):
 
         self.world_cleanup()
         stage = omni.usd.get_context().get_stage()
-        self.__sensor = Lidar()
+        # self.__sensor = Lidar()
         self.__add_semantics_to_all(stage)
         self.stage = omni.usd.get_context().get_stage()  # Used to access Geometry
         self.timeline = (
             omni.timeline.get_timeline_interface()
         )  # Used to interact with simulation
-        self.make_camera_stand()
 
-        self._depth_camera = DepthCamera()
-        self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(self._controller_update)
+        # self._depth_camera = DepthCamera()
+        # self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(self._controller_update)
         # prim = self.stage.GetPrimAtPath("/World/SensorOrigin")
         # xform = UsdGeom.Xformable(prim)
         # transform = prim.GetAttribute('xformOp:transform')
         print(" ============================================================== ")
         print("trying to load sensor rig")
-        # print(self._get_translate("/World/SensorOrigin"))
-        self.sr = SensorRig("TestSensorOrigin", "/World")
-        self.sr.create_rig(np.array([0,5,0]),np.asarray([-0.18648,-0.10337,0.47367, 0.8545]),self.stage)
+        self.sr = SensorRig("SensorRig", "/World")
+        self.sr.create_rig(np.array([0,5,0]),np.asarray([1,1,1,1]),self.stage)
+        self.sr.add_depth_camera_to_rig( (0, 0, 0), (0, 0, 0), (512, 512), True,"DepthCamera")
+        self.sr.add_lidar_to_rig("Lidar", (0,0,0))
 
 
         # self.init_camera()

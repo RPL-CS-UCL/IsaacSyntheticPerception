@@ -28,6 +28,8 @@ from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.dynamic_control import _dynamic_control
 
+from pxr import Sdf
+
 
 class SensorRig:
     def __init__(self, name, path) -> None:
@@ -49,32 +51,49 @@ class SensorRig:
         # spawn object
         print("Creating rig")
         print(position)
-        print(position/get_stage_units())
+        print(position / get_stage_units())
         self._prim = XFormPrim(
             name=self._prim_name,
             prim_path=self._full_prim_path,
             position=position / get_stage_units(),
             orientation=orientation,
         )
-        
 
-        
         # collisionAPI = PhysicsRigidBodyAPI.Apply(self._prim)
-        omni.kit.commands.execute('AddPhysicsComponent',
-             usd_prim=stage.GetPrimAtPath(self._full_prim_path),
-             component='PhysicsRigidBodyAPI')
+        omni.kit.commands.execute(
+            "AddPhysicsComponent",
+            usd_prim=stage.GetPrimAtPath(self._full_prim_path),
+            component="PhysicsRigidBodyAPI",
+        )
 
-        from pxr import Sdf
-
-        omni.kit.commands.execute('ChangeProperty',
-            prop_path=Sdf.Path('/World/TestSensorOrigin.physxRigidBody:disableGravity'),
+        omni.kit.commands.execute(
+            "ChangeProperty",
+            prop_path=Sdf.Path("/World/TestSensorOrigin.physxRigidBody:disableGravity"),
             value=True,
-            prev=None)
-        self._rb =  self._dc.get_rigid_body(self._full_prim_path)
+            prev=None,
+        )
+        self._rb = self._dc.get_rigid_body(self._full_prim_path)
 
+
+    def add_depth_camera_to_rig(
+        self,
+        position=(0, 0, 0),
+        rotation=(0, 0, 0),
+        image_size=(512, 512),
+        attach=True,
+        name="/DepthCamera",
+    ):
+        self.__sensors.append(
+            DepthCamera(
+                position, rotation, image_size, attach, self._full_prim_path, name
+            )
+        )
+
+    def add_lidar_to_rig(self,name,  origin_pos):
+        self.__sensors.append(Lidar(path=name,parent=self._full_prim_path, origin_pos=origin_pos))
 
     def get_pos_rot(self):
-        self._rb =  self._dc.get_rigid_body(self._full_prim_path)
+        self._rb = self._dc.get_rigid_body(self._full_prim_path)
         # self._dc.wake_up_rigid_body(self._rb)
         object_pose = self._dc.get_rigid_body_pose(self._rb)
         return object_pose.p, object_pose.r
@@ -96,12 +115,22 @@ class SensorRig:
 
         self.__get_target_rot(self.__curr_waypoint_id)
 
+    def sample_sensors(self):
+        pose_pos = 0.4
+        pose_rot = 0.3
+
 
 class DepthCamera:
     def __init__(
-        self, position=(0, 0, 0), rotation=(0, 0, 0), image_size=(512, 512), attach=True
+        self,
+        position=(0, 0, 0),
+        rotation=(0, 0, 0),
+        image_size=(512, 512),
+        attach=True,
+        parent="/World/DepthCamera",
+        name="DepthCamera",
     ) -> None:
-        self.__cam = rep.create.camera(position=position)
+        self.__cam = rep.create.camera(position=position, parent=parent, name=name)
         self.__rp: og.Node = rep.create.render_product(self.__cam, image_size)
         self.__rgb_annot: Annotator
         self.__save_path = ""
@@ -110,7 +139,7 @@ class DepthCamera:
             self.__init_annotators()
             self.__attach_annotoators()
 
-    def construct_pc(rgb_image, depth_image):
+    def construct_pc(self, rgb_image, depth_image):
         pass
 
     def __init_annotators(self):
@@ -185,6 +214,9 @@ class Lidar:
         self.__lidar_path = parent + path
         self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
         self.__max_range = max_range
+
+    def sample_sensor(self):
+        self.get_pc_and_semantic()
 
     def get_pc_and_semantic(self, save_path=None):
         pointcloud = self.__lidarInterface.get_point_cloud_data(self.__lidar_path)
