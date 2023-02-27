@@ -225,6 +225,8 @@ class SyntheticPerception(BaseSample):
         # asyncio.ensure_future(self._depth_camera.sample_sensor())
         print(data)
         # self.sr.sample_sensors()
+        
+        self.sr.apply_veloc()
 
     def sample_sensors(self):
         self.sr.sample_sensors()
