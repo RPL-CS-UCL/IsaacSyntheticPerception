@@ -1,3 +1,4 @@
+from omni.syntheticdata.scripts.sensors import enable_sensors
 from pxr import (
     UsdGeom,
     Gf,
@@ -92,11 +93,19 @@ class SensorRig:
         self.__sensors.append(
             Lidar(path=name, parent=self._full_prim_path, origin_pos=origin_pos)
         )
+    def add_sensor_to_rig(self, sensor):
+        self.__sensors.append(sensor)
+        self.__sensors[-1].init_sensor(self._full_prim_path)
+
 
     def sample_sensors(self):
+        # Sample all sensors 
         for sensor in self.__sensors:
             # sensor.sample_sensor()
             asyncio.ensure_future(sensor.sample_sensor())
+        return
+        #save position and rotation of sensor rig as a whole, and for each sensor.
+        pos, rot = self.get_pos_rot()
 
     def get_pos_rot(self):
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
@@ -132,12 +141,24 @@ class DepthCamera:
         parent="/World/DepthCamera",
         name="DepthCamera",
     ) -> None:
-        self.__cam = rep.create.camera(position=position, parent=parent, name=name)
-        self.__rp: og.Node = rep.create.render_product(self.__cam, image_size)
         self.__rgb_annot: Annotator
         self.__save_path = ""
+        self.__pos = position
+        self.__rot = rotation
+        self.__image_size = image_size
+        self.__attach = attach
+        self.__name = name
+        # self.__cam = rep.create.camera(position=position, parent=parent, name=name)
+        # self.__rp: og.Node = rep.create.render_product(self.__cam, image_size)
+        # if attach:
+        #     self.__init_annotators()
+        #     self.__attach_annotoators()
 
-        if attach:
+    def init_sensor(self,parent):
+
+        self.__cam = rep.create.camera(position=self.__pos, parent=parent, name=self.__name)
+        self.__rp: og.Node = rep.create.render_product(self.__cam, self.__image_size)
+        if self.__attach:
             self.__init_annotators()
             self.__attach_annotoators()
 
@@ -195,28 +216,64 @@ class Lidar:
         enable_semantics=False,
         origin_pos=(2.0, 0.0, 4.0),
     ):
+        self.__path = "/" +path
+        self.__min_range=min_range
+        self.__max_range=max_range
+        self.__draw_points=draw_points
+        self.__draw_lines=draw_lines
+        self.__horizontal_fov=horizontal_fov
+        self.__vertical_fov=vertical_fov
+        self.__horizontal_resolution=horizontal_resolution
+        self.__vertical_resolution=vertical_resolution
+        self.__rotation_rate=rotation_rate
+        self.__high_lod=high_lod
+        self.__yaw_offset=yaw_offset
+        self.__enable_semantics=enable_semantics
+        self.__origin_pos=origin_pos
+        # result, self.__lidar_prim = omni.kit.commands.execute(
+        #     "RangeSensorCreateLidar",
+        #     path=path,
+        #     parent=parent,
+        #     min_range=min_range,
+        #     max_range=max_range,
+        #     draw_points=draw_points,
+        #     draw_lines=draw_lines,
+        #     horizontal_fov=horizontal_fov,
+        #     vertical_fov=vertical_fov,
+        #     horizontal_resolution=horizontal_resolution,
+        #     vertical_resolution=vertical_resolution,
+        #     rotation_rate=rotation_rate,
+        #     high_lod=high_lod,
+        #     yaw_offset=yaw_offset,
+        #     enable_semantics=enable_semantics,
+        # )
+        # UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(origin_pos)
+        # self.__lidar_path = parent + "/" + path
+        # print(f"lidar path should be {self.__lidar_path}")
+    def init_sensor(self,parent):
+        print(f"init the lidar {parent}")
+        # self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
         result, self.__lidar_prim = omni.kit.commands.execute(
             "RangeSensorCreateLidar",
-            path=path,
+            path=self.__path,
             parent=parent,
-            min_range=min_range,
-            max_range=max_range,
-            draw_points=draw_points,
-            draw_lines=draw_lines,
-            horizontal_fov=horizontal_fov,
-            vertical_fov=vertical_fov,
-            horizontal_resolution=horizontal_resolution,
-            vertical_resolution=vertical_resolution,
-            rotation_rate=rotation_rate,
-            high_lod=high_lod,
-            yaw_offset=yaw_offset,
-            enable_semantics=enable_semantics,
+            min_range=self.__min_range,
+            max_range=self.__max_range,
+            draw_points=self.__draw_points,
+            draw_lines=self.__draw_lines,
+            horizontal_fov=self.__horizontal_fov,
+            vertical_fov=self.__vertical_fov,
+            horizontal_resolution=self.__horizontal_resolution,
+            vertical_resolution=self.__vertical_resolution,
+            rotation_rate=self.__rotation_rate,
+            high_lod=self.__high_lod,
+            yaw_offset=self.__yaw_offset,
+            enable_semantics=self.__enable_semantics,
         )
-        UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(origin_pos)
-        self.__lidar_path = parent + "/" + path
+        UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(self.__origin_pos)
+        self.__lidar_path = parent + "/" + self.__path
         print(f"lidar path should be {self.__lidar_path}")
         self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
-        self.__max_range = max_range
 
     # def sample_sensor(self):
     #     self.get_pc_and_semantic()

@@ -128,8 +128,10 @@ class SyntheticPerception(BaseSample):
         print("trying to load sensor rig")
         self.sr = SensorRig("SensorRig", "/World")
         self.sr.create_rig(np.array([0,5,0]),np.asarray([1,1,1,1]),self.stage)
-        self.sr.add_depth_camera_to_rig( (0, 0, 0), (0, 0, 0), (512, 512), True,"DepthCamera")
-        self.sr.add_lidar_to_rig("Lidar", (0,0,0))
+        # self.sr.add_depth_camera_to_rig( (0, 0, 0), (0, 0, 0), (512, 512), True,"DepthCamera")
+        self.sr.add_sensor_to_rig(DepthCamera(name="depthcam2"))
+        self.sr.add_sensor_to_rig(Lidar(path="coolLidar"))
+        # self.sr.add_lidar_to_rig("Lidar", (0,0,0))
 
 
         # self.init_camera()
