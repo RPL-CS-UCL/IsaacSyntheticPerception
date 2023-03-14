@@ -1,6 +1,6 @@
 # Isaac Synthetic Perception Data Generator
 ![RPL Logo](https://github.com/RPL-CS-UCL/IsaacSyntheticPerception/blob/main/docs/img/rpl_logo.png | width=100)
-
+<img src="https://github.com/RPL-CS-UCL/IsaacSyntheticPerception/blob/main/docs/img/rpl_logo.png" width="48"> 
 
 # Introduction
 This data generator uses the photo-realistic NVIDIA Isaac Simulator to gather sensor data in procedurally created environments.
