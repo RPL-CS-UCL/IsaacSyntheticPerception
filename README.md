@@ -1,4 +1,5 @@
 # Isaac Synthetic Perception Data Generator
+![RPL Logo](https://github.com/RPL-CS-UCL/IsaacSyntheticPerception/blob/main/source/img/rpl_logo.png)
 
 
 # Introduction
