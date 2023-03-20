@@ -35,11 +35,11 @@ from pxr import Sdf
 def get_world_translation(prim):
     transform = Gf.Transform()
     transform.SetMatrix(
-        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(
-            Usd.TimeCode.Default()
-        )
+        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
     )
     return transform.GetTranslation()
+
+
 class SensorRig:
     def __init__(self, name, path) -> None:
         self.__sensors = []
@@ -84,10 +84,11 @@ class SensorRig:
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         print(self._rb)
         print(self.get_pos_rot())
-    def apply_veloc(self):
 
+    def apply_veloc(self):
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
-        self._dc.set_rigid_body_linear_velocity(self._rb, np.array([5,0,0]))
+        self._dc.set_rigid_body_linear_velocity(self._rb, np.array([5, 0, 0]))
+
     def add_depth_camera_to_rig(
         self,
         position=(0, 0, 0),
@@ -106,18 +107,18 @@ class SensorRig:
         self.__sensors.append(
             Lidar(path=name, parent=self._full_prim_path, origin_pos=origin_pos)
         )
+
     def add_sensor_to_rig(self, sensor):
         self.__sensors.append(sensor)
         self.__sensors[-1].init_sensor(self._full_prim_path)
 
-
     def sample_sensors(self):
-        # Sample all sensors 
+        # Sample all sensors
         for sensor in self.__sensors:
             # sensor.sample_sensor()
             asyncio.ensure_future(sensor.sample_sensor())
         return
-        #save position and rotation of sensor rig as a whole, and for each sensor.
+        # save position and rotation of sensor rig as a whole, and for each sensor.
         pos, rot = self.get_pos_rot()
 
     def get_pos_rot(self):
@@ -129,7 +130,7 @@ class SensorRig:
     def initialize_waypoints(self, waypoint_parent_tag, stage):
         # iter over the stage and get all the waypoints
         # go through each child and save its tranform details to the waypoints list.
-        print("Waypoint initialization") 
+        print("Waypoint initialization")
         for prim_ref in stage.Traverse():
             prim_ref_name = str(prim_ref.GetPrimPath())
             if "_waypoints_" in prim_ref_name:
@@ -175,9 +176,10 @@ class DepthCamera:
         #     self.__init_annotators()
         #     self.__attach_annotoators()
 
-    def init_sensor(self,parent):
-
-        self.__cam = rep.create.camera(position=self.__pos, parent=parent, name=self.__name)
+    def init_sensor(self, parent):
+        self.__cam = rep.create.camera(
+            position=self.__pos, parent=parent, name=self.__name
+        )
         self.__rp: og.Node = rep.create.render_product(self.__cam, self.__image_size)
         if self.__attach:
             self.__init_annotators()
@@ -237,20 +239,20 @@ class Lidar:
         enable_semantics=False,
         origin_pos=(2.0, 0.0, 4.0),
     ):
-        self.__path = "/" +path
-        self.__min_range=min_range
-        self.__max_range=max_range
-        self.__draw_points=draw_points
-        self.__draw_lines=draw_lines
-        self.__horizontal_fov=horizontal_fov
-        self.__vertical_fov=vertical_fov
-        self.__horizontal_resolution=horizontal_resolution
-        self.__vertical_resolution=vertical_resolution
-        self.__rotation_rate=rotation_rate
-        self.__high_lod=high_lod
-        self.__yaw_offset=yaw_offset
-        self.__enable_semantics=enable_semantics
-        self.__origin_pos=origin_pos
+        self.__path = "/" + path
+        self.__min_range = min_range
+        self.__max_range = max_range
+        self.__draw_points = draw_points
+        self.__draw_lines = draw_lines
+        self.__horizontal_fov = horizontal_fov
+        self.__vertical_fov = vertical_fov
+        self.__horizontal_resolution = horizontal_resolution
+        self.__vertical_resolution = vertical_resolution
+        self.__rotation_rate = rotation_rate
+        self.__high_lod = high_lod
+        self.__yaw_offset = yaw_offset
+        self.__enable_semantics = enable_semantics
+        self.__origin_pos = origin_pos
         # result, self.__lidar_prim = omni.kit.commands.execute(
         #     "RangeSensorCreateLidar",
         #     path=path,
@@ -271,7 +273,8 @@ class Lidar:
         # UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(origin_pos)
         # self.__lidar_path = parent + "/" + path
         # print(f"lidar path should be {self.__lidar_path}")
-    def init_sensor(self,parent):
+
+    def init_sensor(self, parent):
         print(f"init the lidar {parent}")
         # self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
         result, self.__lidar_prim = omni.kit.commands.execute(
