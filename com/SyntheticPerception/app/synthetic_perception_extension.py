@@ -16,7 +16,9 @@ from omni.isaac.ui.ui_utils import (
     combo_floatfield_slider_builder,
 )  # , str_builder
 from .synthetic_perception import SyntheticPerception
+from .sensors import SensorRig
 
+import omni
 # This file is for UI control. It build on sample extension
 
 
@@ -113,6 +115,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
     def _on_value_changed(self):
         print(" ======================= done =====================")
+    def _testFunc(self):
+        sr = SensorRig(",","")
+        stage = omni.usd.get_context().get_stage()
+        sr.initialize_waypoints("",stage)
 
     def build_task_controls_ui(self, frame):
         with frame:
@@ -120,6 +126,11 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 # Update the Frame Title
                 frame.title = "Task Controls"
                 frame.visible = True
+
+                self.add_button("Waypointtest", self._testFunc)
+
+                self.task_ui_elements["Waypointtest"].enabled = True
+
                 self.add_button("Load Scene", self._on_load_scene_button_event)
                 self.task_ui_elements["Load Scene"].enabled = True
 

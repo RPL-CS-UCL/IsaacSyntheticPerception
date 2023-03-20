@@ -32,6 +32,14 @@ from omni.isaac.dynamic_control import _dynamic_control
 from pxr import Sdf
 
 
+def get_world_translation(prim):
+    transform = Gf.Transform()
+    transform.SetMatrix(
+        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(
+            Usd.TimeCode.Default()
+        )
+    )
+    return transform.GetTranslation()
 class SensorRig:
     def __init__(self, name, path) -> None:
         self.__sensors = []
@@ -118,10 +126,18 @@ class SensorRig:
         object_pose = self._dc.get_rigid_body_pose(self._rb)
         return object_pose.p, object_pose.r
 
-    def initialize_waypoints(self, waypoint_parent):
+    def initialize_waypoints(self, waypoint_parent_tag, stage):
         # iter over the stage and get all the waypoints
         # go through each child and save its tranform details to the waypoints list.
-        pass
+        print("Waypoint initialization") 
+        for prim_ref in stage.Traverse():
+            prim_ref_name = str(prim_ref.GetPrimPath())
+            if "_waypoints_" in prim_ref_name:
+                for i in range(len(prim_ref.GetChildren())):
+                    prim_child = prim_ref.GetChildren()[i]
+                    self.__waypoints.append(get_world_translation(prim_child))
+        print("SensorRig waypoints initialization complete:")
+        print(self.__waypoints)
 
     def __get_target_rot(self, waypoint_id):
         pass
