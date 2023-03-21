@@ -39,6 +39,7 @@ from .syntehtic_data_watch import SyntheticDataWatch,SyntheticDataWatch_V2
 import omni.physx as _physx
 from omni.kit.viewport.utility import get_active_viewport
 from omni.isaac.dynamic_control import _dynamic_control
+from omni.isaac.core import World
 class SyntheticPerception(BaseSample):
     def __init__(self) -> None:
         super().__init__()
@@ -52,6 +53,7 @@ class SyntheticPerception(BaseSample):
         self._rp = None
         self._depth_camera = None
         self._rc = None
+        print(f"Should be creating base sample. {self.get_world()}")
 
         self.sr = SensorRig("SensorRig", "/World")
     def setup_scene(self):
@@ -230,3 +232,13 @@ class SyntheticPerception(BaseSample):
 
     def sample_sensors(self):
         self.sr.sample_sensors()
+
+    def temp_passthrough(self,srx):
+        if World.instance() is None:
+            self._world = World(**self._world_settings)
+        else:
+            self._world = World.instance()
+        world=self.get_world()
+        print(f" have we got the world? {world} {self._world}")
+        world.add_physics_callback("sim_step", srx.move())
+

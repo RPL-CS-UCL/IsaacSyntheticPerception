@@ -116,11 +116,15 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _on_value_changed(self):
         print(" ======================= done =====================")
     def _testFunc(self):
-        sr = SensorRig("SensorRig", "/World")
+        self.sr = SensorRig("SensorRig", "/World")
         stage = omni.usd.get_context().get_stage()
-        sr.create_rig(np.array([0,0,0]),np.asarray([1,1,1,1]),stage)
-        sr.initialize_waypoints("",stage)
+        self.sr.create_rig(np.array([0,0,0]),np.asarray([1,1,1,1]),stage)
+        self.sr.initialize_waypoints("",stage)
 
+    def _testRigWaypoint(self):
+        print("Activating move to timestep")
+        self.sample.temp_passthrough(self.sr)  
+        # self.sr.move()
     def build_task_controls_ui(self, frame):
         with frame:
             with ui.VStack(spacing=5):
@@ -129,9 +133,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 frame.visible = True
 
                 self.add_button("Waypointtest", self._testFunc)
-
                 self.task_ui_elements["Waypointtest"].enabled = True
+                self.add_button("_testRigWaypoint", self._testRigWaypoint)
 
+                self.task_ui_elements["_testRigWaypoint"].enabled = True
                 self.add_button("Load Scene", self._on_load_scene_button_event)
                 self.task_ui_elements["Load Scene"].enabled = True
 
