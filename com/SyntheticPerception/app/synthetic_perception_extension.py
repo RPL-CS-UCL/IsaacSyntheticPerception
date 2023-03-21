@@ -75,6 +75,20 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
         return
 
+    def add_button_title(self, label, title, on_clicked_fn):
+        """Adds a button"""
+        dict = {
+            "label": label,
+            "type": "button",
+            "text": title,
+            "tooltip": label,
+            "on_clicked_fn": on_clicked_fn,
+        }
+
+        self.task_ui_elements[label] = btn_builder(**dict)
+        self.task_ui_elements[label].enabled = True
+
+        return
     def add_slider(self, label, on_clicked_fn):
         dict = {
             "label": label,
@@ -140,15 +154,19 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 frame.title = "Task Controls"
                 frame.visible = True
                 
-                self.add_button("asyncloadscene", self._loadtest)
-                self.task_ui_elements["asyncloadscene"].enabled = True
+                # self.add_button("asyncloadscene", self._loadtest)
+                # self.task_ui_elements["asyncloadscene"].enabled = True
+
+                self.add_button_title("Attach Sys To Scene", "Attach", self._loadtest)
+
                 # self.add_button("Waypointtest", self._testFunc)
                 # self.task_ui_elements["Waypointtest"].enabled = True
-                self.add_button("_testRigWaypoint", self._testRigWaypoint)
+                # self.add_button("_testRigWaypoint", self._testRigWaypoint)
+                # self.task_ui_elements["_testRigWaypoint"].enabled = True
+                self.add_button_title("Init waypoints & attach", "Attach", self._testRigWaypoint)
 
-                self.task_ui_elements["_testRigWaypoint"].enabled = True
-                self.add_button("Load Scene", self._on_load_scene_button_event)
-                self.task_ui_elements["Load Scene"].enabled = True
+                # self.add_button("Load Scene", self._on_load_scene_button_event)
+                # self.task_ui_elements["Load Scene"].enabled = True
 
                 self.add_button("veloc", self._save_lidar_info_event)
                 self.task_ui_elements["veloc"].enabled = True
@@ -158,30 +176,30 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
                 # self.add_button("apply velocity", self._test_event)
                 # self.task_ui_elements["apply velocity"].enabled = True
-                args = {
-                    "label": "Gripper Speed (UP)",
-                    "default_val": 0,
-                    "min": 0,
-                    "max": 100,
-                    "step": 1,
-                    "tooltip": ["Speed in ()", "Speed in ()"],
-                }
-
-                self.task_ui_elements["speed_slider"], slider = combo_floatfield_slider_builder(
-                    **args)
-                # )
+                # args = {
+                #     "label": "Gripper Speed (UP)",
+                #     "default_val": 0,
+                #     "min": 0,
+                #     "max": 100,
+                #     "step": 1,
+                #     "tooltip": ["Speed in ()", "Speed in ()"],
+                # }
                 #
-                args = {
-                    "label": "Set Speed",
-                    "type": "button",
-                    "text": "APPLY",
-                    "tooltip": "Apply Cone Velocity in the Z-Axis",
-                    "on_clicked_fn": self._test_event,
-                }
-                self.task_ui_elements["speed_button"] = btn_builder(**args)
-                # self.add_slider("velocity", self._test_event)
-                self.task_ui_elements["speed_button"].enabled = True
-                # print(self.task_ui_elements["velocity"])
+                # self.task_ui_elements["speed_slider"], slider = combo_floatfield_slider_builder(
+                #     **args)
+                # # )
+                # #
+                # args = {
+                #     "label": "Set Speed",
+                #     "type": "button",
+                #     "text": "APPLY",
+                #     "tooltip": "Apply Cone Velocity in the Z-Axis",
+                #     "on_clicked_fn": self._test_event,
+                # }
+                # self.task_ui_elements["speed_button"] = btn_builder(**args)
+                # # self.add_slider("velocity", self._test_event)
+                # self.task_ui_elements["speed_button"].enabled = True
+                # # print(self.task_ui_elements["velocity"])
 
     def _on_record_data_event(self):
         self.task_ui_elements["Record"].enabled = False
