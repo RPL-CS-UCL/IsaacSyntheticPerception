@@ -51,7 +51,6 @@ class SyntheticPerception(BaseSample):
         self.obstacles = []
         self.__undefined_class_string = "undef"
         self.__sensor = None
-        self.sd_watch = SyntheticDataWatch_V2("/home/jon/Documents/temp")
         self._rp = None
         self._depth_camera = None
         self._rc = None
