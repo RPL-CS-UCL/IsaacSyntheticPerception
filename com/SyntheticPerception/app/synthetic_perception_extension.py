@@ -80,7 +80,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             "label": label,
         }
         _, self.task_ui_elements[label] = combo_floatfield_slider_builder(**dict)
-        print("here =-- --=-=-=-=-=----- ", _)
         print(self.task_ui_elements[label].__dict__)
         self.task_ui_elements[label].enabled = False
 
@@ -115,26 +114,36 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
     def _on_value_changed(self):
         print(" ======================= done =====================")
-    def _testFunc(self):
-        # self.sr = SensorRig("SensorRig", "/World")
+    # def _testFunc(self):
+    #     # self.sr = SensorRig("SensorRig", "/World")
+    #     stage = omni.usd.get_context().get_stage()
+    #     # self.sr.create_rig(np.array([0,0,0]),np.asarray([1,1,1,1]),stage)
+    #     # self.sr.initialize_waypoints("",stage)
+    #     self.sample.sr.initialize_waypoints("",stage)
+
+    def _testRigWaypoint(self):
+        print("init waypoints")
         stage = omni.usd.get_context().get_stage()
         # self.sr.create_rig(np.array([0,0,0]),np.asarray([1,1,1,1]),stage)
         # self.sr.initialize_waypoints("",stage)
         self.sample.sr.initialize_waypoints("",stage)
-
-    def _testRigWaypoint(self):
-        print("Activating move to timestep")
+        print("Attach move to callback")
         self.sample.temp_passthrough(self.sample.sr)  
         # self.sr.move()
+    def _loadtest(self):
+                
+        asyncio.ensure_future(self.sample.load_sample())
     def build_task_controls_ui(self, frame):
         with frame:
             with ui.VStack(spacing=5):
                 # Update the Frame Title
                 frame.title = "Task Controls"
                 frame.visible = True
-
-                self.add_button("Waypointtest", self._testFunc)
-                self.task_ui_elements["Waypointtest"].enabled = True
+                
+                self.add_button("asyncloadscene", self._loadtest)
+                self.task_ui_elements["asyncloadscene"].enabled = True
+                # self.add_button("Waypointtest", self._testFunc)
+                # self.task_ui_elements["Waypointtest"].enabled = True
                 self.add_button("_testRigWaypoint", self._testRigWaypoint)
 
                 self.task_ui_elements["_testRigWaypoint"].enabled = True

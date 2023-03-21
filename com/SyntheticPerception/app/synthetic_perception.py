@@ -59,14 +59,27 @@ class SyntheticPerception(BaseSample):
 
         self.sr = SensorRig("SensorRig", "/World")
 
+    async def load_sample(self):
+        """Function called when clicking load buttton
+        """
+        if World.instance() is None:
+            self._world = World(**self._world_settings)
+            await self._world.initialize_simulation_context_async()
+            self.setup_scene()
+        else:
+            self._world = World.instance()
+        await self._world.reset_async()
+        await self._world.pause_async()
+        await self.setup_post_load()
+        return
     def setup_scene(self):
         self.world = self.get_world()
 
         # Overwrites the default target prim, in order to remove
         # default visual cube
         # TODO: Make it an XFormPrim that is accessible via scene
-        target_prim_path = "/World/target"
-        self.world.scene.stage.DefinePrim(target_prim_path, "Xform")
+        # target_prim_path = "/World/target"
+        # self.world.scene.stage.DefinePrim(target_prim_path, "Xform")
         return
 
     async def setup_pre_reset(self):
