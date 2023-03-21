@@ -5,19 +5,17 @@ from pxr import (
     UsdPhysics,
     Semantics,
 )  # pxr usd imports used to create cube
-from omni.isaac.range_sensor import _range_sensor
 import omni
 import asyncio
 import omni.kit.commands
 import omni.timeline
 import omni.kit.viewport
-from time import sleep
 from pxr import Usd, Gf, UsdGeom
 import omni.kit.commands
-import numpy as np
 import omni.replicator.core as rep
 import builtins
 import math
+
 import numpy as np
 import scipy.spatial.transform as tf
 from dataclasses import dataclass
@@ -54,10 +52,8 @@ class SensorRig:
     def __init__(self, name, path) -> None:
         print("SensorRig Init function")
         self.__sensors = []
-        self.__num_sensors = []
         self.__waypoints = []
         self.__curr_waypoint_id = 0
-        self.__current_transform = None
 
         self._prim_path = path
         self._prim_name = name
@@ -165,19 +161,22 @@ class SensorRig:
         goal_pos = Gf.Vec3d(goal_pos)
 
         # Calculate the diff vector
-        distance = goal_pos - pos
-        
+        move_vec = goal_pos - pos
+        distance =  np.linalg.norm(goal_pos-pos)
         # convert it to a distance check
         # iter over the points till the next valid one found.
+        
         if distance < 2:
             self.__curr_waypoint_id += 1
             if self.__curr_waypoint_id >= len(self.__waypoints):
                 self.__curr_waypoint_id = 0
             return self._waypoint_update(pos)
 
-        return distance
+        return move_vec
 
-    def move(self):
+    def move(self, time_step):
+        print("Attempting to use waypoint move")
+
         # Retrieve the current position and orientation of the sensor rig
         current_pos, current_rot = self.get_pos_rot()
         current_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])

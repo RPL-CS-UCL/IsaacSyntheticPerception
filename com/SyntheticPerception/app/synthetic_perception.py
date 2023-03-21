@@ -35,11 +35,13 @@ import omni.replicator.core as rep
 from .sensors import Lidar, DepthCamera, SensorRig
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.synthetic_utils import SyntheticDataHelper
-from .syntehtic_data_watch import SyntheticDataWatch,SyntheticDataWatch_V2
+from .syntehtic_data_watch import SyntheticDataWatch, SyntheticDataWatch_V2
 import omni.physx as _physx
 from omni.kit.viewport.utility import get_active_viewport
 from omni.isaac.dynamic_control import _dynamic_control
 from omni.isaac.core import World
+
+
 class SyntheticPerception(BaseSample):
     def __init__(self) -> None:
         super().__init__()
@@ -56,15 +58,33 @@ class SyntheticPerception(BaseSample):
         print(f"Should be creating base sample. {self.get_world()}")
 
         self.sr = SensorRig("SensorRig", "/World")
+
     def setup_scene(self):
+        self.world = self.get_world()
+
+        # Overwrites the default target prim, in order to remove
+        # default visual cube
+        # TODO: Make it an XFormPrim that is accessible via scene
+        target_prim_path = "/World/target"
+        self.world.scene.stage.DefinePrim(target_prim_path, "Xform")
         return
 
     async def setup_pre_reset(self):
-        return
+        world = self.get_world()
+        if world.physics_callback_exists("sim_step"):
+            world.remove_physics_callback("sim_step")
+        if world.physics_callback_exists("sim_timestep"):
+            world.remove_physics_callback("sim_timestep")
+        stage = omni.usd.get_context().get_stage()
+        self.sr.initialize_waypoints("",stage)
+
+    # async def setup_post_load(self):
+    #     self._world_settings = {"physics_dt": 1.0 / 60.0, "stage_units_in_meters": 1.0, "rendering_dt": 1.0 / 60.0}
 
     def world_cleanup(self):
         self.remove_all_objects()
         return
+
     def add_semantic(self, p, prim_class):
         sem_dict = get_semantics(p)
         collisionAPI = UsdPhysics.CollisionAPI.Apply(p)
@@ -101,18 +121,17 @@ class SyntheticPerception(BaseSample):
                             prim_class = word
                     self.add_semantic(p, prim_class)
 
-    def _get_translate(self,prim_path):
+    def _get_translate(self, prim_path):
         # prim = stage.GetPrimAtPath(prim_path)
-        dc=_dynamic_control.acquire_dynamic_control_interface()
+        dc = _dynamic_control.acquire_dynamic_control_interface()
 
-        object=dc.get_rigid_body(prim_path)
-        object_pose=dc.get_rigid_body_pose(object)
+        object = dc.get_rigid_body(prim_path)
+        object_pose = dc.get_rigid_body_pose(object)
 
         print("position:", object_pose.p)
         print("rotation:", object_pose.r)
 
     def init_sensor_and_semantics(self):
-
         self.world_cleanup()
         stage = omni.usd.get_context().get_stage()
         # self.__sensor = Lidar()
@@ -123,22 +142,25 @@ class SyntheticPerception(BaseSample):
         )  # Used to interact with simulation
 
         # self._depth_camera = DepthCamera()
-        self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(self._controller_update)
+        self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(
+            self._controller_update
+        )
         # prim = self.stage.GetPrimAtPath("/World/SensorOrigin")
         # xform = UsdGeom.Xformable(prim)
-        # transform = prim.GetAttribute('xformOp:transform')
+        # transform = prim.GetAttriute('xformOp:transform')
+    def init_sensor_rig(self):
         print(" ============================================================== ")
         print("trying to load sensor rig")
-        self.sr.create_rig(np.array([0,5,0]),np.asarray([1,1,1,1]),self.stage)
+        self.sr.create_rig(np.array([0, 5, 0]), np.asarray([1, 1, 1, 1]), self.stage)
         # self.sr.add_depth_camera_to_rig( (0, 0, 0), (0, 0, 0), (512, 512), True,"DepthCamera")
         self.sr.add_sensor_to_rig(DepthCamera(name="depthcam2"))
         self.sr.add_sensor_to_rig(Lidar(path="coolLidar"))
         # self.sr.add_lidar_to_rig("Lidar", (0,0,0))
 
-
         # self.init_camera()
 
         return
+
     def _controller_update(self, step):
         pass
 
@@ -165,13 +187,25 @@ class SyntheticPerception(BaseSample):
         pc, sem = self.__sensor.get_pc_and_semantic(save_path="/home/jon/Desktop/")
 
     async def setup_post_load(self):
-        stage = omni.usd.get_context().get_stage()  # Used to access Geometry
-        omni.kit.commands.execute(
-            "AddPhysicsSceneCommand",
-            stage=stage,
-            path="/World/PhysicsScene",
-            context=omni.usd.get_context(),
-        )
+        self._world_settings = {
+            "physics_dt": 1.0 / 60.0,
+            "stage_units_in_meters": 1.0,
+            "rendering_dt": 1.0 / 60.0,
+        }
+
+        self.init_sensor_and_semantics()
+        self.init_sensor_rig()
+        # stage = omni.usd.get_context().get_stage()  # Used to access Geometry
+        # omni.kit.commands.execute(
+        #     "AddPhysicsSceneCommand",
+        #     stage=stage,
+        #     path="/World/PhysicsScene",
+        #     context=omni.usd.get_context(),
+        # )
+        #
+        # self._world_settings = {"physics_dt": 1.0 / 60.0, "stage_units_in_meters": 1.0, "rendering_dt": 1.0 / 60.0}
+
+        # self.get_world().add_physics_callback("sim_step", self.rep_fn)
 
     def remove_all_objects(self):
         for i in reversed(range(len(self.__created_objs))):
@@ -182,63 +216,44 @@ class SyntheticPerception(BaseSample):
             del self.__created_objs[i]
 
     async def final_fn(self):
-
         pos, rot = self.sr.get_pos_rot()
         print(pos, rot)
-        # print("calling camera test")
-        # campath = "/World/CameraStand_Closeup/CameraCloseup"
-        # campath = "/World/Camera"
-        # campath = "/World/CameraStand_Closeup/CameraCloseup"
-        # # if self._rp is None:
-        # rp = rep.create.render_product(campath, resolution=(640, 480))
-        #             # set viewport
-        # topics = ["rgb", "full_pointcloud", "instanceSegmentation",
-        #           "camera", "depth"]
-        # 
-        # viewport = get_active_viewport()
-        # if not viewport: raise RuntimeError("No active Viewport")
-        # 
-        # # Set the Viewport's active camera to the
-        # # camera prim path you want to switch to.
-        # viewport.camera_path = campath
-        # gt = asyncio.ensure_future(self.sd_watch.snap_async(topics, rp, viewport = viewport))
-        # del rp
-        # return
-
 
     import omni.replicator.core as rep
+
     def init_camera(self):
-        self.cam = rep.create.camera(position=(0,0,0))
+        self.cam = rep.create.camera(position=(0, 0, 0))
         self.rp = rep.create.render_product(self.cam, (512, 512))
 
         self.rgb_annot = self.rep.AnnotatorRegistry.get_annotator("rgb")
         self.rgb_annot.attach(self.rp)
 
-        self.depth_annot = self.rep.AnnotatorRegistry.get_annotator("distance_to_camera")
+        self.depth_annot = self.rep.AnnotatorRegistry.get_annotator(
+            "distance_to_camera"
+        )
         self.depth_annot.attach(self.rp)
 
         # self.pc_annot = self.rep.AnnotatorRegistry.get_annotator("pointcloud")
         # self.pc_annot.attach(self.rp)
 
-        self.sem_annot = self.rep.AnnotatorRegistry.get_annotator("semantic_segmentation")
+        self.sem_annot = self.rep.AnnotatorRegistry.get_annotator(
+            "semantic_segmentation"
+        )
         self.sem_annot.attach(self.rp)
+        #asdf
 
     def test(self, data):
         # asyncio.ensure_future(self._depth_camera.sample_sensor())
         print(data)
         # self.sr.sample_sensors()
-        
+
         self.sr.apply_veloc()
 
     def sample_sensors(self):
         self.sr.sample_sensors()
 
-    def temp_passthrough(self,srx):
-        if World.instance() is None:
-            self._world = World(**self._world_settings)
-        else:
-            self._world = World.instance()
-        world=self.get_world()
-        print(f" have we got the world? {world} {self._world}")
-        world.add_physics_callback("sim_step", srx.move())
+    def tt(self, time_step):
+        pass
 
+    def temp_passthrough(self, srx):
+        self.get_world().add_physics_callback("sim_step", callback_fn = srx.move)
