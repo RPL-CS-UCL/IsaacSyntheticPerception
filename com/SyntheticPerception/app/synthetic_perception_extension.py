@@ -17,7 +17,7 @@ from omni.isaac.ui.ui_utils import (
 )  # , str_builder
 from .synthetic_perception import SyntheticPerception
 from .sensors import SensorRig
-
+import numpy as np
 import omni
 # This file is for UI control. It build on sample extension
 
@@ -116,8 +116,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _on_value_changed(self):
         print(" ======================= done =====================")
     def _testFunc(self):
-        sr = SensorRig(",","")
+        sr = SensorRig("SensorRig", "/World")
         stage = omni.usd.get_context().get_stage()
+        sr.create_rig(np.array([0,0,0]),np.asarray([1,1,1,1]),stage)
         sr.initialize_waypoints("",stage)
 
     def build_task_controls_ui(self, frame):

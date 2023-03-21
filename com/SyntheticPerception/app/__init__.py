@@ -18,4 +18,4 @@ for k in L:
     importlib.reload(sys.modules[k])
 from .synthetic_perception import SyntheticPerception 
 from .synthetic_perception_extension import SyntheticPerceptionExtension 
-from .sensors import Lidar
+# from .sensors import Lidar

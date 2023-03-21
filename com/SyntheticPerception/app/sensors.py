@@ -30,7 +30,8 @@ from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.dynamic_control import _dynamic_control
 
 from pxr import Sdf
-
+from .Sensors.LIDAR import Lidar
+from .Sensors.Camera import DepthCamera
 
 def get_world_translation(prim):
     transform = Gf.Transform()
@@ -39,9 +40,16 @@ def get_world_translation(prim):
     )
     return transform.GetTranslation()
 
+def get_world_pose(prim):
+    transform = Gf.Transform()
+    transform.SetMatrix(
+        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
+    )
+    return transform.GetRotation()
 
 class SensorRig:
     def __init__(self, name, path) -> None:
+        print("SensorRig Init function")
         self.__sensors = []
         self.__num_sensors = []
         self.__waypoints = []
@@ -57,6 +65,7 @@ class SensorRig:
 
     def create_rig(self, position, orientation, stage):
         self._dc = _dynamic_control.acquire_dynamic_control_interface()
+        print(f"Dynamic control aquired: {self._dc}")
         # spawn object
         print("Creating rig")
         print(position)
@@ -84,6 +93,7 @@ class SensorRig:
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         print(self._rb)
         print(self.get_pos_rot())
+        print(self._dc)
 
     def apply_veloc(self):
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
@@ -122,12 +132,15 @@ class SensorRig:
         pos, rot = self.get_pos_rot()
 
     def get_pos_rot(self):
+        print(f"do we have dyamic control: {self._dc}")
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         # self._dc.wake_up_rigid_body(self._rb)
         object_pose = self._dc.get_rigid_body_pose(self._rb)
         return object_pose.p, object_pose.r
 
     def initialize_waypoints(self, waypoint_parent_tag, stage):
+        current_pos, current_rot = self.get_pos_rot()
+
         # iter over the stage and get all the waypoints
         # go through each child and save its tranform details to the waypoints list.
         print("Waypoint initialization")
@@ -137,6 +150,12 @@ class SensorRig:
                 for i in range(len(prim_ref.GetChildren())):
                     prim_child = prim_ref.GetChildren()[i]
                     self.__waypoints.append(get_world_translation(prim_child))
+                    print("child rot")
+                    print(get_world_pose(prim_child))
+                    # print(prim_child.get_world_pose())
+                    print(get_world_translation(prim_child))
+                    print(f"sensor rig pos: {current_pos}")
+
         print("SensorRig waypoints initialization complete:")
         print(self.__waypoints)
 
@@ -153,194 +172,174 @@ class SensorRig:
         self.__get_target_rot(self.__curr_waypoint_id)
 
 
-class DepthCamera:
-    def __init__(
-        self,
-        position=(0, 0, 0),
-        rotation=(0, 0, 0),
-        image_size=(512, 512),
-        attach=True,
-        parent="/World/DepthCamera",
-        name="DepthCamera",
-    ) -> None:
-        self.__rgb_annot: Annotator
-        self.__save_path = ""
-        self.__pos = position
-        self.__rot = rotation
-        self.__image_size = image_size
-        self.__attach = attach
-        self.__name = name
-        # self.__cam = rep.create.camera(position=position, parent=parent, name=name)
-        # self.__rp: og.Node = rep.create.render_product(self.__cam, image_size)
-        # if attach:
-        #     self.__init_annotators()
-        #     self.__attach_annotoators()
+# class DepthCamera:
+#     def __init__(
+#         self,
+#         position=(0, 0, 0),
+#         rotation=(0, 0, 0),
+#         image_size=(512, 512),
+#         attach=True,
+#         parent="/World/DepthCamera",
+#         name="DepthCamera",
+#     ) -> None:
+#         self.__rgb_annot: Annotator
+#         self.__save_path = ""
+#         self.__pos = position
+#         self.__rot = rotation
+#         self.__image_size = image_size
+#         self.__attach = attach
+#         self.__name = name
+#         # self.__cam = rep.create.camera(position=position, parent=parent, name=name)
+#         # self.__rp: og.Node = rep.create.render_product(self.__cam, image_size)
+#         # if attach:
+#         #     self.__init_annotators()
+#         #     self.__attach_annotoators()
+#
+#     def init_sensor(self, parent):
+#         self.__cam = rep.create.camera(
+#             position=self.__pos, parent=parent, name=self.__name
+#         )
+#         self.__rp: og.Node = rep.create.render_product(self.__cam, self.__image_size)
+#         if self.__attach:
+#             self.__init_annotators()
+#             self.__attach_annotoators()
+#
+#     def construct_pc(self, rgb_image, depth_image):
+#         pass
+#
+#     def __init_annotators(self):
+#         self.rgb_annot = rep.AnnotatorRegistry.get_annotator("rgb")
+#         self.depth_annot = rep.AnnotatorRegistry.get_annotator("distance_to_camera")
+#         # self.pc_annot = rep.AnnotatorRegistry.get_annotator("pointcloud")
+#         self.sem_annot = rep.AnnotatorRegistry.get_annotator("semantic_segmentation")
+#
+#     def __attach_annotoators(self):
+#         self.depth_annot.attach(self.__rp)
+#         self.rgb_annot.attach(self.__rp)
+#         self.sem_annot.attach(self.__rp)
+#         # self.pc_annot.attach(self.rp)
+#
+#     def __detatch_annototators(self):
+#         self.depth_annot.detach(self.__rp)
+#         self.rgb_annot.detach(self.__rp)
+#         self.sem_annot.detach(self.__rp)
+#         # self.pc_annot.dettach(self.rp)
+#
+#     async def sample_sensor(self):
+#         await rep.orchestrator.step_async()
+#
+#         rgb_data = self.rgb_annot.get_data()
+#         np.save("/home/jon/Documents/temp/image.npy", rgb_data)
+#
+#         depth_data = self.depth_annot.get_data()
+#         np.save("/home/jon/Documents/temp/depth.npy", depth_data)
+#
+#         sem_data = self.sem_annot.get_data()
+#         np.save("/home/jon/Documents/temp/sem.npy", sem_data)
+#         return
 
-    def init_sensor(self, parent):
-        self.__cam = rep.create.camera(
-            position=self.__pos, parent=parent, name=self.__name
-        )
-        self.__rp: og.Node = rep.create.render_product(self.__cam, self.__image_size)
-        if self.__attach:
-            self.__init_annotators()
-            self.__attach_annotoators()
 
-    def construct_pc(self, rgb_image, depth_image):
-        pass
-
-    def __init_annotators(self):
-        self.rgb_annot = rep.AnnotatorRegistry.get_annotator("rgb")
-        self.depth_annot = rep.AnnotatorRegistry.get_annotator("distance_to_camera")
-        # self.pc_annot = rep.AnnotatorRegistry.get_annotator("pointcloud")
-        self.sem_annot = rep.AnnotatorRegistry.get_annotator("semantic_segmentation")
-
-    def __attach_annotoators(self):
-        self.depth_annot.attach(self.__rp)
-        self.rgb_annot.attach(self.__rp)
-        self.sem_annot.attach(self.__rp)
-        # self.pc_annot.attach(self.rp)
-
-    def __detatch_annototators(self):
-        self.depth_annot.detach(self.__rp)
-        self.rgb_annot.detach(self.__rp)
-        self.sem_annot.detach(self.__rp)
-        # self.pc_annot.dettach(self.rp)
-
-    async def sample_sensor(self):
-        await rep.orchestrator.step_async()
-
-        rgb_data = self.rgb_annot.get_data()
-        np.save("/home/jon/Documents/temp/image.npy", rgb_data)
-
-        depth_data = self.depth_annot.get_data()
-        np.save("/home/jon/Documents/temp/depth.npy", depth_data)
-
-        sem_data = self.sem_annot.get_data()
-        np.save("/home/jon/Documents/temp/sem.npy", sem_data)
-        return
-
-
-class Lidar:
-    def __init__(
-        self,
-        path="/Lidar1",
-        parent="/World",
-        min_range=0.4,
-        max_range=100.0,
-        draw_points=False,
-        draw_lines=False,
-        horizontal_fov=360.0,
-        vertical_fov=60.0,
-        horizontal_resolution=0.4,
-        vertical_resolution=0.4,
-        rotation_rate=0,
-        high_lod=True,
-        yaw_offset=0.0,
-        enable_semantics=False,
-        origin_pos=(2.0, 0.0, 4.0),
-    ):
-        self.__path = "/" + path
-        self.__min_range = min_range
-        self.__max_range = max_range
-        self.__draw_points = draw_points
-        self.__draw_lines = draw_lines
-        self.__horizontal_fov = horizontal_fov
-        self.__vertical_fov = vertical_fov
-        self.__horizontal_resolution = horizontal_resolution
-        self.__vertical_resolution = vertical_resolution
-        self.__rotation_rate = rotation_rate
-        self.__high_lod = high_lod
-        self.__yaw_offset = yaw_offset
-        self.__enable_semantics = enable_semantics
-        self.__origin_pos = origin_pos
-        # result, self.__lidar_prim = omni.kit.commands.execute(
-        #     "RangeSensorCreateLidar",
-        #     path=path,
-        #     parent=parent,
-        #     min_range=min_range,
-        #     max_range=max_range,
-        #     draw_points=draw_points,
-        #     draw_lines=draw_lines,
-        #     horizontal_fov=horizontal_fov,
-        #     vertical_fov=vertical_fov,
-        #     horizontal_resolution=horizontal_resolution,
-        #     vertical_resolution=vertical_resolution,
-        #     rotation_rate=rotation_rate,
-        #     high_lod=high_lod,
-        #     yaw_offset=yaw_offset,
-        #     enable_semantics=enable_semantics,
-        # )
-        # UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(origin_pos)
-        # self.__lidar_path = parent + "/" + path
-        # print(f"lidar path should be {self.__lidar_path}")
-
-    def init_sensor(self, parent):
-        print(f"init the lidar {parent}")
-        # self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
-        result, self.__lidar_prim = omni.kit.commands.execute(
-            "RangeSensorCreateLidar",
-            path=self.__path,
-            parent=parent,
-            min_range=self.__min_range,
-            max_range=self.__max_range,
-            draw_points=self.__draw_points,
-            draw_lines=self.__draw_lines,
-            horizontal_fov=self.__horizontal_fov,
-            vertical_fov=self.__vertical_fov,
-            horizontal_resolution=self.__horizontal_resolution,
-            vertical_resolution=self.__vertical_resolution,
-            rotation_rate=self.__rotation_rate,
-            high_lod=self.__high_lod,
-            yaw_offset=self.__yaw_offset,
-            enable_semantics=self.__enable_semantics,
-        )
-        UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(self.__origin_pos)
-        self.__lidar_path = parent + "/" + self.__path
-        print(f"lidar path should be {self.__lidar_path}")
-        self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
-
-    # def sample_sensor(self):
-    #     self.get_pc_and_semantic()
-    async def sample_sensor(self):
-        self.get_pc_and_semantic()
-
-    def get_pc_and_semantic(self, save_path="/home/jon/Documents/temp/a"):
-        pointcloud = self.__lidarInterface.get_point_cloud_data(self.__lidar_path)
-        semantics = self.__lidarInterface.get_semantic_data(self.__lidar_path)
-        lidar_position = self.__get_position()
-        # pointcloud, semantics = self.__clear_max_lidar_points(
-        #     pointcloud, semantics, lidar_position, self.__max_range
-        # )
-
-        if save_path is not None:
-            np.save(
-                f"{save_path}_pc.npy",
-                np.array(pointcloud),
-            )
-            np.save(
-                f"{save_path}_sem.npy",
-                np.array(semantics),
-            )
-        return pointcloud, semantics
-
-    def __get_position(self):
-        transform = Gf.Transform()
-        transform.SetMatrix(
-            UsdGeom.Xformable(self.__lidar_prim).ComputeLocalToWorldTransform(
-                Usd.TimeCode.Default()
-            )
-        )
-        return transform.GetTranslation()
-
-    def __clear_max_lidar_points(self, pc, sem, lidar_pos, max_dist):
-        new_points = []
-        new_sems = []
-        for seq_id in range(len(pc)):
-            for point_id in range(len(pc[seq_id])):
-                point = pc[seq_id][point_id]
-                dist = np.linalg.norm(point - lidar_pos)
-                if dist < max_dist - 10:
-                    new_points.append(pc[seq_id][point_id])
-                    new_sems.append(sem[seq_id][point_id])
-
-        return np.array(new_points), np.array(new_sems)
+# class Lidar:
+#     def __init__(
+#         self,
+#         path="/Lidar1",
+#         parent="/World",
+#         min_range=0.4,
+#         max_range=100.0,
+#         draw_points=False,
+#         draw_lines=False,
+#         horizontal_fov=360.0,
+#         vertical_fov=60.0,
+#         horizontal_resolution=0.4,
+#         vertical_resolution=0.4,
+#         rotation_rate=0,
+#         high_lod=True,
+#         yaw_offset=0.0,
+#         enable_semantics=False,
+#         origin_pos=(2.0, 0.0, 4.0),
+#     ):
+#         self.__path = "/" + path
+#         self.__min_range = min_range
+#         self.__max_range = max_range
+#         self.__draw_points = draw_points
+#         self.__draw_lines = draw_lines
+#         self.__horizontal_fov = horizontal_fov
+#         self.__vertical_fov = vertical_fov
+#         self.__horizontal_resolution = horizontal_resolution
+#         self.__vertical_resolution = vertical_resolution
+#         self.__rotation_rate = rotation_rate
+#         self.__high_lod = high_lod
+#         self.__yaw_offset = yaw_offset
+#         self.__enable_semantics = enable_semantics
+#         self.__origin_pos = origin_pos
+#
+#     def init_sensor(self, parent):
+#         print(f"init the lidar {parent}")
+#         # self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
+#         result, self.__lidar_prim = omni.kit.commands.execute(
+#             "RangeSensorCreateLidar",
+#             path=self.__path,
+#             parent=parent,
+#             min_range=self.__min_range,
+#             max_range=self.__max_range,
+#             draw_points=self.__draw_points,
+#             draw_lines=self.__draw_lines,
+#             horizontal_fov=self.__horizontal_fov,
+#             vertical_fov=self.__vertical_fov,
+#             horizontal_resolution=self.__horizontal_resolution,
+#             vertical_resolution=self.__vertical_resolution,
+#             rotation_rate=self.__rotation_rate,
+#             high_lod=self.__high_lod,
+#             yaw_offset=self.__yaw_offset,
+#             enable_semantics=self.__enable_semantics,
+#         )
+#         UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(self.__origin_pos)
+#         self.__lidar_path = parent + "/" + self.__path
+#         print(f"lidar path should be {self.__lidar_path}")
+#         self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
+#
+#     # def sample_sensor(self):
+#     #     self.get_pc_and_semantic()
+#     async def sample_sensor(self):
+#         self.get_pc_and_semantic()
+#
+#     def get_pc_and_semantic(self, save_path="/home/jon/Documents/temp/a"):
+#         pointcloud = self.__lidarInterface.get_point_cloud_data(self.__lidar_path)
+#         semantics = self.__lidarInterface.get_semantic_data(self.__lidar_path)
+#         lidar_position = self.__get_position()
+#         # pointcloud, semantics = self.__clear_max_lidar_points(
+#         #     pointcloud, semantics, lidar_position, self.__max_range
+#         # )
+#
+#         if save_path is not None:
+#             np.save(
+#                 f"{save_path}_pc.npy",
+#                 np.array(pointcloud),
+#             )
+#             np.save(
+#                 f"{save_path}_sem.npy",
+#                 np.array(semantics),
+#             )
+#         return pointcloud, semantics
+#
+#     def __get_position(self):
+#         transform = Gf.Transform()
+#         transform.SetMatrix(
+#             UsdGeom.Xformable(self.__lidar_prim).ComputeLocalToWorldTransform(
+#                 Usd.TimeCode.Default()
+#             )
+#         )
+#         return transform.GetTranslation()
+#
+#     def __clear_max_lidar_points(self, pc, sem, lidar_pos, max_dist):
+#         new_points = []
+#         new_sems = []
+#         for seq_id in range(len(pc)):
+#             for point_id in range(len(pc[seq_id])):
+#                 point = pc[seq_id][point_id]
+#                 dist = np.linalg.norm(point - lidar_pos)
+#                 if dist < max_dist - 10:
+#                     new_points.append(pc[seq_id][point_id])
+#                     new_sems.append(sem[seq_id][point_id])
+#
+#         return np.array(new_points), np.array(new_sems)
