@@ -163,10 +163,11 @@ class SensorRig:
         # Calculate the diff vector
         move_vec = goal_pos - pos
         distance =  np.linalg.norm(goal_pos-pos)
+        move_vec = (move_vec / distance) * 5
         # convert it to a distance check
         # iter over the points till the next valid one found.
         
-        if distance < 2:
+        if distance < 0.5:
             self.__curr_waypoint_id += 1
             if self.__curr_waypoint_id >= len(self.__waypoints):
                 self.__curr_waypoint_id = 0
