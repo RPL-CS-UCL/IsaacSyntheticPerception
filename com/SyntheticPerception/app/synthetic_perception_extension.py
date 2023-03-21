@@ -19,6 +19,7 @@ from .synthetic_perception import SyntheticPerception
 from .sensors import SensorRig
 import numpy as np
 import omni
+
 # This file is for UI control. It build on sample extension
 
 
@@ -89,6 +90,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.task_ui_elements[label].enabled = True
 
         return
+
     def add_slider(self, label, on_clicked_fn):
         dict = {
             "label": label,
@@ -106,17 +108,11 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         return
 
     def _test_event(self):
-        # asyncio.ensure_future(self.sample.test())
-        # print("pressing but")
-        # print(self.task_ui_elements["speed_slider"].get_value_as_float())
         self.sample.test(self.task_ui_elements["speed_slider"].get_value_as_float())
-    
+
     def _on_sample_sensors(self):
-        # asyncio.ensure_future(self.sample.test())
-        # print("pressing but")
-        # print(self.task_ui_elements["speed_slider"].get_value_as_float())
-        # self.sample.test(self.task_ui_elements["speed_slider"].get_value_as_float())
         self.sample.sample_sensors()
+
     def _save_lidar_info_event(self):
         # asyncio.ensure_future(self.sample.save_lidar_data())
         self.sample.sr.apply_veloc()
@@ -126,89 +122,33 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _on_load_scene_button_event(self):
         self._add_to_scene_event()
 
-    def _on_value_changed(self):
-        print(" ======================= done =====================")
-    # def _testFunc(self):
-    #     # self.sr = SensorRig("SensorRig", "/World")
-    #     stage = omni.usd.get_context().get_stage()
-    #     # self.sr.create_rig(np.array([0,0,0]),np.asarray([1,1,1,1]),stage)
-    #     # self.sr.initialize_waypoints("",stage)
-    #     self.sample.sr.initialize_waypoints("",stage)
-
     def _testRigWaypoint(self):
         print("init waypoints")
         stage = omni.usd.get_context().get_stage()
         # self.sr.create_rig(np.array([0,0,0]),np.asarray([1,1,1,1]),stage)
         # self.sr.initialize_waypoints("",stage)
-        self.sample.sr.initialize_waypoints("",stage)
+        self.sample.sr.initialize_waypoints("", stage)
         print("Attach move to callback")
-        self.sample.temp_passthrough(self.sample.sr)  
+        self.sample.temp_passthrough(self.sample.sr)
         # self.sr.move()
+
     def _loadtest(self):
-                
         asyncio.ensure_future(self.sample.load_sample())
+
     def build_task_controls_ui(self, frame):
         with frame:
             with ui.VStack(spacing=5):
                 # Update the Frame Title
                 frame.title = "Task Controls"
                 frame.visible = True
-                
-                # self.add_button("asyncloadscene", self._loadtest)
-                # self.task_ui_elements["asyncloadscene"].enabled = True
 
                 self.add_button_title("Attach Sys To Scene", "Attach", self._loadtest)
-
-                # self.add_button("Waypointtest", self._testFunc)
-                # self.task_ui_elements["Waypointtest"].enabled = True
-                # self.add_button("_testRigWaypoint", self._testRigWaypoint)
-                # self.task_ui_elements["_testRigWaypoint"].enabled = True
-                self.add_button_title("Init waypoints & attach", "Attach", self._testRigWaypoint)
-
-                # self.add_button("Load Scene", self._on_load_scene_button_event)
-                # self.task_ui_elements["Load Scene"].enabled = True
+                self.add_button_title(
+                    "Init waypoints & attach", "Attach", self._testRigWaypoint
+                )
 
                 self.add_button("veloc", self._save_lidar_info_event)
                 self.task_ui_elements["veloc"].enabled = True
 
                 self.add_button("sample sensors", self._on_sample_sensors)
                 self.task_ui_elements["sample sensors"].enabled = True
-
-                # self.add_button("apply velocity", self._test_event)
-                # self.task_ui_elements["apply velocity"].enabled = True
-                # args = {
-                #     "label": "Gripper Speed (UP)",
-                #     "default_val": 0,
-                #     "min": 0,
-                #     "max": 100,
-                #     "step": 1,
-                #     "tooltip": ["Speed in ()", "Speed in ()"],
-                # }
-                #
-                # self.task_ui_elements["speed_slider"], slider = combo_floatfield_slider_builder(
-                #     **args)
-                # # )
-                # #
-                # args = {
-                #     "label": "Set Speed",
-                #     "type": "button",
-                #     "text": "APPLY",
-                #     "tooltip": "Apply Cone Velocity in the Z-Axis",
-                #     "on_clicked_fn": self._test_event,
-                # }
-                # self.task_ui_elements["speed_button"] = btn_builder(**args)
-                # # self.add_slider("velocity", self._test_event)
-                # self.task_ui_elements["speed_button"].enabled = True
-                # # print(self.task_ui_elements["velocity"])
-
-    def _on_record_data_event(self):
-        self.task_ui_elements["Record"].enabled = False
-        self.task_ui_elements["Stop Record"].enabled = True
-        self.sample.toggle_data_recording(True)
-        return
-
-    def _on_stop_record_data_event(self):
-        self.task_ui_elements["Record"].enabled = True
-        self.task_ui_elements["Stop Record"].enabled = False
-        self.sample.toggle_data_recording(False)
-        return

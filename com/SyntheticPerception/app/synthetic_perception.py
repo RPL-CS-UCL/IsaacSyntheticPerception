@@ -55,7 +55,6 @@ class SyntheticPerception(BaseSample):
         self._rp = None
         self._depth_camera = None
         self._rc = None
-        print(f"Should be creating base sample. {self.get_world()}")
 
         self.sr = SensorRig("SensorRig", "/World")
 
@@ -71,16 +70,9 @@ class SyntheticPerception(BaseSample):
         await self._world.reset_async()
         await self._world.pause_async()
         await self.setup_post_load()
-        return
+
     def setup_scene(self):
         self.world = self.get_world()
-
-        # Overwrites the default target prim, in order to remove
-        # default visual cube
-        # TODO: Make it an XFormPrim that is accessible via scene
-        # target_prim_path = "/World/target"
-        # self.world.scene.stage.DefinePrim(target_prim_path, "Xform")
-        return
 
     async def setup_pre_reset(self):
         world = self.get_world()
