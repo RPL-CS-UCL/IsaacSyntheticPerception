@@ -14,6 +14,7 @@ from omni.isaac.ui.ui_utils import (
     btn_builder,
     dropdown_builder,
     combo_floatfield_slider_builder,
+    str_builder,
 )  # , str_builder
 from .synthetic_perception import SyntheticPerception
 from .sensors import SensorRig
@@ -45,24 +46,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self._window.visible = True
         return
 
-    def post_reset_button_event(self):
-        # self.reset_imitation_buttons()
-        pass
-
-    def post_load_button_event(self):
-        pass
-        # self.reset_imitation_buttons()
-
-    def post_clear_button_event(self):
-        # self.reset_imitation_buttons()
-        pass
-
     def shutdown_cleanup(self):
         self.sample.remove_all_objects()
         return
 
     def add_button(self, label, on_clicked_fn):
-        """Adds a button"""
+        """Adds a button to the task frame"""
         dict = {
             "label": label,
             "type": "button",
@@ -74,7 +63,14 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.task_ui_elements[label] = btn_builder(**dict)
         self.task_ui_elements[label].enabled = False
 
-        return
+    def add_string_field(self, label, on_clicked_fn):
+        "Adds a string to the task frame ()"
+        dict = {
+            "label": label,
+            "use_folder_picker": True,
+            "on_clicked_fn": on_clicked_fn,
+        }
+        self.task_ui_elements[label] = str_builder(**dict)
 
     def add_button_title(self, label, title, on_clicked_fn):
         """Adds a button"""
@@ -89,8 +85,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.task_ui_elements[label] = btn_builder(**dict)
         self.task_ui_elements[label].enabled = True
 
-        return
-
     def add_slider(self, label, on_clicked_fn):
         dict = {
             "label": label,
@@ -101,11 +95,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
     def _add_to_scene_event(self):
         self.sample.init_sensor_and_semantics()
-        return
 
     def _camera_seg_event(self):
         asyncio.ensure_future(self.sample.final_fn())
-        return
 
     def _test_event(self):
         self.sample.test(self.task_ui_elements["speed_slider"].get_value_as_float())
@@ -136,7 +128,13 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         # self.sr.move()
 
     def _loadtest(self):
+        # Get the save directory
+
         asyncio.ensure_future(self.sample.load_sample())
+
+    def _empty_func(self):
+        print("Calling empty onclick")
+        pass
 
     def build_task_controls_ui(self, frame):
         with frame:
@@ -155,10 +153,4 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
                 self.add_button("sample sensors", self._on_sample_sensors)
                 self.task_ui_elements["sample sensors"].enabled = True
-        # with frame:
-        #     with ui.VStack(spacing=5):
-        #         # Update the Frame Title
-        #         frame.title = "Task 2312Controls"
-        #         frame.visible = True
-        #
-        #         self.add_button_title("Attachasdsa Sys To Scene", "Attach", self._loadtest)
+                self.add_string_field("test", self._empty_func)

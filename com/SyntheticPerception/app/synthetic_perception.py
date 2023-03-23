@@ -35,12 +35,14 @@ import omni.replicator.core as rep
 from .sensors import Lidar, DepthCamera, SensorRig
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.synthetic_utils import SyntheticDataHelper
+
 # from .syntehtic_data_watch import SyntheticDataWatch, SyntheticDataWatch_V2
 import omni.physx as _physx
 from omni.kit.viewport.utility import get_active_viewport
 from omni.isaac.dynamic_control import _dynamic_control
 from omni.isaac.core import World
 
+import omni.replicator.core as rep
 
 class SyntheticPerception(BaseSample):
     def __init__(self) -> None:
@@ -58,8 +60,7 @@ class SyntheticPerception(BaseSample):
         self.sr = SensorRig("SensorRig", "/World")
 
     async def load_sample(self):
-        """Function called when clicking load buttton
-        """
+        """Function called when clicking load buttton"""
         if World.instance() is None:
             self._world = World(**self._world_settings)
             await self._world.initialize_simulation_context_async()
@@ -80,7 +81,7 @@ class SyntheticPerception(BaseSample):
         if world.physics_callback_exists("sim_timestep"):
             world.remove_physics_callback("sim_timestep")
         stage = omni.usd.get_context().get_stage()
-        self.sr.initialize_waypoints("",stage)
+        self.sr.initialize_waypoints("", stage)
 
     # async def setup_post_load(self):
     #     self._world_settings = {"physics_dt": 1.0 / 60.0, "stage_units_in_meters": 1.0, "rendering_dt": 1.0 / 60.0}
@@ -90,6 +91,7 @@ class SyntheticPerception(BaseSample):
         return
 
     def add_semantic(self, p, prim_class):
+        "Adds semantic to prim"
         sem_dict = get_semantics(p)
         collisionAPI = UsdPhysics.CollisionAPI.Apply(p)
         if "Semantics" not in sem_dict:
@@ -106,6 +108,7 @@ class SyntheticPerception(BaseSample):
             sem.GetSemanticDataAttr().Set(prim_class)
 
     def __add_semantics_to_all(self, stage):
+        "Add semantic information to all prims on stage based on parent xform"
         prim_class = self.__undefined_class_string
         for prim_ref in stage.Traverse():
             prim_ref_name = str(prim_ref.GetPrimPath())
@@ -126,6 +129,7 @@ class SyntheticPerception(BaseSample):
                     self.add_semantic(p, prim_class)
 
     def _get_translate(self, prim_path):
+        "Gettgs the tranformation of a prim at a path"
         # prim = stage.GetPrimAtPath(prim_path)
         dc = _dynamic_control.acquire_dynamic_control_interface()
 
@@ -136,6 +140,7 @@ class SyntheticPerception(BaseSample):
         print("rotation:", object_pose.r)
 
     def init_sensor_and_semantics(self):
+        "Initializes sensors and the replicator package"
         self.world_cleanup()
         stage = omni.usd.get_context().get_stage()
         # self.__sensor = Lidar()
@@ -149,26 +154,19 @@ class SyntheticPerception(BaseSample):
         self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(
             self._controller_update
         )
-        # prim = self.stage.GetPrimAtPath("/World/SensorOrigin")
-        # xform = UsdGeom.Xformable(prim)
-        # transform = prim.GetAttriute('xformOp:transform')
+
     def init_sensor_rig(self):
+        "Initializes the sensor rig and adds individual sensors"
         print(" ============================================================== ")
         print("trying to load sensor rig")
         self.sr.create_rig(np.array([0, 5, 0]), np.asarray([1, 1, 1, 1]), self.stage)
         # self.sr.add_depth_camera_to_rig( (0, 0, 0), (0, 0, 0), (512, 512), True,"DepthCamera")
         self.sr.add_sensor_to_rig(DepthCamera(name="depthcam2"))
         self.sr.add_sensor_to_rig(Lidar(path="coolLidar"))
-        # self.sr.add_lidar_to_rig("Lidar", (0,0,0))
 
-        # self.init_camera()
-
-        return
-
-    def _controller_update(self, step):
-        pass
 
     def __clear_max_lidar_points(self, pc, sem, lidar_pos, max_dist):
+        "Clears the lidar dome points. - max range points so they do not display or get saved."
         new_points = []
         new_sems = []
         for seq_id in range(len(pc)):
@@ -182,12 +180,6 @@ class SyntheticPerception(BaseSample):
         return np.array(new_points), np.array(new_sems)
 
     async def save_lidar_data(self):
-        # lidar_att = pri.GetAttribute("enabled")
-        # lidar_att.Set(1)
-        # lidar_att = pri.GetAttribute("enableSemantics")
-        # lidar_att.Set(1)
-        # await asyncio.sleep(1.0)
-        # self.timeline.pause()
         pc, sem = self.__sensor.get_pc_and_semantic(save_path="/home/jon/Desktop/")
 
     async def setup_post_load(self):
@@ -199,17 +191,6 @@ class SyntheticPerception(BaseSample):
 
         self.init_sensor_and_semantics()
         self.init_sensor_rig()
-        # stage = omni.usd.get_context().get_stage()  # Used to access Geometry
-        # omni.kit.commands.execute(
-        #     "AddPhysicsSceneCommand",
-        #     stage=stage,
-        #     path="/World/PhysicsScene",
-        #     context=omni.usd.get_context(),
-        # )
-        #
-        # self._world_settings = {"physics_dt": 1.0 / 60.0, "stage_units_in_meters": 1.0, "rendering_dt": 1.0 / 60.0}
-
-        # self.get_world().add_physics_callback("sim_step", self.rep_fn)
 
     def remove_all_objects(self):
         for i in reversed(range(len(self.__created_objs))):
@@ -223,35 +204,33 @@ class SyntheticPerception(BaseSample):
         pos, rot = self.sr.get_pos_rot()
         print(pos, rot)
 
-    import omni.replicator.core as rep
 
-    def init_camera(self):
-        self.cam = rep.create.camera(position=(0, 0, 0))
-        self.rp = rep.create.render_product(self.cam, (512, 512))
+    # def init_camera(self):
+    #     self.cam = rep.create.camera(position=(0, 0, 0))
+    #     self.rp = rep.create.render_product(self.cam, (512, 512))
+    #
+    #     self.rgb_annot = self.rep.AnnotatorRegistry.get_annotator("rgb")
+    #     self.rgb_annot.attach(self.rp)
+    #
+    #     self.depth_annot = self.rep.AnnotatorRegistry.get_annotator(
+    #         "distance_to_camera"
+    #     )
+    #     self.depth_annot.attach(self.rp)
+    #
+    #     # self.pc_annot = self.rep.AnnotatorRegistry.get_annotator("pointcloud")
+    #     # self.pc_annot.attach(self.rp)
+    #
+    #     self.sem_annot = self.rep.AnnotatorRegistry.get_annotator(
+    #         "semantic_segmentation"
+    #     )
+    #     self.sem_annot.attach(self.rp)
+        # asdf
 
-        self.rgb_annot = self.rep.AnnotatorRegistry.get_annotator("rgb")
-        self.rgb_annot.attach(self.rp)
-
-        self.depth_annot = self.rep.AnnotatorRegistry.get_annotator(
-            "distance_to_camera"
-        )
-        self.depth_annot.attach(self.rp)
-
-        # self.pc_annot = self.rep.AnnotatorRegistry.get_annotator("pointcloud")
-        # self.pc_annot.attach(self.rp)
-
-        self.sem_annot = self.rep.AnnotatorRegistry.get_annotator(
-            "semantic_segmentation"
-        )
-        self.sem_annot.attach(self.rp)
-        #asdf
-
-    def test(self, data):
-        # asyncio.ensure_future(self._depth_camera.sample_sensor())
-        print(data)
-        # self.sr.sample_sensors()
-
-        self.sr.apply_veloc()
+    # def test(self, data):
+    #     # asyncio.ensure_future(self._depth_camera.sample_sensor())
+    #     print(data)
+    #
+    #     self.sr.apply_veloc()
 
     def sample_sensors(self):
         self.sr.sample_sensors()
@@ -260,4 +239,4 @@ class SyntheticPerception(BaseSample):
         pass
 
     def temp_passthrough(self, srx):
-        self.get_world().add_physics_callback("sim_step", callback_fn = srx.move)
+        self.get_world().add_physics_callback("sim_step", callback_fn=srx.move)

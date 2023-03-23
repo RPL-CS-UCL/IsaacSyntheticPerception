@@ -1,3 +1,4 @@
+
 # Isaac Synthetic Perception Data Generator
 <img src="https://github.com/RPL-CS-UCL/IsaacSyntheticPerception/blob/main/docs/img/rpl_logo.png" width="250"> 
 
@@ -26,4 +27,27 @@ Figure out how to install `pydensecrf` in Isaac's python
 
 Open IsaacSim, and enable the FrankaCopycat extension.
 
-##
+# Using the Sensor Rig
+
+## What is it
+
+The SensorRig is a custom class that creates, manages, moves, and samples an array of sensors automatically and based on user parameters. For example; you can place cameras at certain positions on the sensor rig. You can then have it then follow user defined waypoints and sample at certain intervals (all within the UI).
+
+## How to use it
+There are a few key things to note...
+
+## How to expand it.
+...
+
+## SensorRig base options
+
+### Sensors
+Custom array of sensors, their positions and orientations
+
+### Movement system
+Movement type (velocity, waypoint, human control)
+Move speed
+#### waypoint
+load from file
+initialise from scene (build when in the scene)
+save waypoints
