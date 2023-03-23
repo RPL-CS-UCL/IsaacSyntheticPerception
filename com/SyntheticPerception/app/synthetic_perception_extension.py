@@ -12,6 +12,7 @@ import asyncio
 import omni.ui as ui
 from omni.isaac.ui.ui_utils import (
     btn_builder,
+    int_builder,
     dropdown_builder,
     combo_floatfield_slider_builder,
     str_builder,
@@ -22,7 +23,6 @@ import numpy as np
 import omni
 
 # This file is for UI control. It build on sample extension
-
 
 class SyntheticPerceptionExtension(BaseSampleExtension):
     def on_startup(self, ext_id: str):
@@ -43,6 +43,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         frame = self.get_frame(index=0)
         self.build_task_controls_ui(frame)
         frame = self.get_frame(index=1)
+        self.build_sensor_ui(frame)
         self._window.visible = True
         return
 
@@ -72,6 +73,14 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         }
         self.task_ui_elements[label] = str_builder(**dict)
 
+    # def add_int_field(self, label, on_clicked_fn):
+    #     "Adds a string to the task frame ()"
+    #     dict = {
+    #         "label": label,
+    #         "use_folder_picker": True,
+    #         "on_clicked_fn": on_clicked_fn,
+    #     }
+    #     self.task_ui_elements[label] = str_builder(**dict)
     def add_button_title(self, label, title, on_clicked_fn):
         """Adds a button"""
         dict = {
@@ -135,7 +144,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _empty_func(self):
         print("Calling empty onclick")
         pass
-
+    
     def build_task_controls_ui(self, frame):
         with frame:
             with ui.VStack(spacing=5):
@@ -154,3 +163,22 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.add_button("sample sensors", self._on_sample_sensors)
                 self.task_ui_elements["sample sensors"].enabled = True
                 self.add_string_field("test", self._empty_func)
+    def build_sensor_ui(self, frame):
+        with frame:
+            with ui.VStack(spacing=5):
+                # Update the Frame Title
+                frame.title = "Sensors"
+                frame.visible = True
+
+                self.add_button_title("Attach Sys To Scene", "Attach", self._loadtest)
+                self.add_button_title(
+                    "Init waypoints & attach", "Attach", self._testRigWaypoint
+                )
+
+                self.add_button("veloc", self._save_lidar_info_event)
+                self.task_ui_elements["veloc"].enabled = True
+
+                self.add_button("sample sensors", self._on_sample_sensors)
+                self.task_ui_elements["sample sensors"].enabled = True
+                self.add_string_field("test", self._empty_func)
+                print(self.task_ui_elements["test"].get_value_as_float())

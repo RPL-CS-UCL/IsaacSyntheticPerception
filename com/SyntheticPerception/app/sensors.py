@@ -95,6 +95,7 @@ class SensorRig:
         print(self._dc)
 
     def apply_veloc(self, veloc):
+        print("applying ", veloc)
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         self._dc.set_rigid_body_linear_velocity(self._rb, veloc)
 

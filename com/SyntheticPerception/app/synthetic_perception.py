@@ -35,15 +35,15 @@ import omni.replicator.core as rep
 from .sensors import Lidar, DepthCamera, SensorRig
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.synthetic_utils import SyntheticDataHelper
-
-# from .syntehtic_data_watch import SyntheticDataWatch, SyntheticDataWatch_V2
 import omni.physx as _physx
 from omni.kit.viewport.utility import get_active_viewport
 from omni.isaac.dynamic_control import _dynamic_control
 from omni.isaac.core import World
 
 import omni.replicator.core as rep
-
+import omni.appwindow  # Contains handle to keyboard
+import numpy as np
+import carb
 class SyntheticPerception(BaseSample):
     def __init__(self) -> None:
         super().__init__()
@@ -58,6 +58,46 @@ class SyntheticPerception(BaseSample):
         self._rc = None
 
         self.sr = SensorRig("SensorRig", "/World")
+
+
+        self._event_flag = False
+
+        # bindings for keyboard to command
+        self._input_keyboard_mapping = {
+            # forward command
+            "NUMPAD_8": [1.5, 0.0, 0.0],
+            "UP": [1.5, 0.0, 0.0],
+            # back command
+            "NUMPAD_2": [-1.5, 0.0, 0.0],
+            "DOWN": [-1.5, 0.0, 0.0],
+            # left command
+            "NUMPAD_6": [0.0, -1.0, 0.0],
+            "RIGHT": [0.0, -1.0, 0.0],
+            # right command
+            "NUMPAD_4": [0.0, 1.0, 0.0],
+            "LEFT": [0.0, 1.0, 0.0],
+            # yaw command (positive)
+            "NUMPAD_7": [0.0, 0.0, 1.0],
+            "N": [0.0, 0.0, 1.0],
+            # yaw command (negative)
+            "NUMPAD_9": [0.0, 0.0, -1.0],
+            "M": [0.0, 0.0, -1.0],}
+        
+    
+
+
+    def _sub_keyboard_event(self, event, *args, **kwargs):
+        self._event_flag = False
+        # when a key is pressedor released  the command is adjusted w.r.t the key-mapping
+        if event.type == carb.input.KeyboardEventType.KEY_PRESS:
+            if event.input.name in self._input_keyboard_mapping:
+                print(f"Here: {event.input.name}")
+                print("calling apply veloc")
+                self.sr.apply_veloc(self._input_keyboard_mapping[event.input.name])
+        elif event.type == carb.input.KeyboardEventType.KEY_RELEASE:
+            self.sr.apply_veloc([0,0,0])
+                # print(self._input_keyboard_mapping[event.input.name])
+        return True
 
     async def load_sample(self):
         """Function called when clicking load buttton"""
@@ -151,9 +191,9 @@ class SyntheticPerception(BaseSample):
         )  # Used to interact with simulation
 
         # self._depth_camera = DepthCamera()
-        self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(
-            self._controller_update
-        )
+        # self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(
+        #     self._controller_update
+        # )
 
     def init_sensor_rig(self):
         "Initializes the sensor rig and adds individual sensors"
@@ -191,6 +231,11 @@ class SyntheticPerception(BaseSample):
 
         self.init_sensor_and_semantics()
         self.init_sensor_rig()
+        print("Aquiring keyboard interface")
+        self._appwindow = omni.appwindow.get_default_app_window()
+        self._input = carb.input.acquire_input_interface()
+        self._keyboard = self._appwindow.get_keyboard()
+        self._sub_keyboard = self._input.subscribe_to_keyboard_events(self._keyboard, self._sub_keyboard_event)
 
     def remove_all_objects(self):
         for i in reversed(range(len(self.__created_objs))):
@@ -239,4 +284,6 @@ class SyntheticPerception(BaseSample):
         pass
 
     def temp_passthrough(self, srx):
-        self.get_world().add_physics_callback("sim_step", callback_fn=srx.move)
+        # un comment to enalbe wAYPOINT
+        # self.get_world().add_physics_callback("sim_step", callback_fn=srx.move)
+        pass
