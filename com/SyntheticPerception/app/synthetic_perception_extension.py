@@ -39,6 +39,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             number_of_extra_frames=2,
             window_width=700,
         )
+
+        self.mm = False
         self.task_ui_elements = {}
         frame = self.get_frame(index=0)
         self.build_task_controls_ui(frame)
@@ -163,22 +165,41 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.add_button("sample sensors", self._on_sample_sensors)
                 self.task_ui_elements["sample sensors"].enabled = True
                 self.add_string_field("test", self._empty_func)
+
+
+    def _rebuild_update(self, e):
+        print("request rebuild", e)
+        if str(e) == "Manual":
+            self.mm=True
+
+            # self.task_ui_elements["movement_speed"].enabled = True
+        if str(e) == "Waypoints":
+            self.mm = False
+
+            # self.task_ui_elements["movement_speed"].enabled = False
+        print(self.mm)
+        # frame = self.get_frame(index=1)
+        # self.build_sensor_ui(frame)
+        return e
     def build_sensor_ui(self, frame):
         with frame:
             with ui.VStack(spacing=5):
                 # Update the Frame Title
                 frame.title = "Sensors"
                 frame.visible = True
+                self.task_ui_elements["movement_mode"] = dropdown_builder(items=["Waypoints","Manual","Linear"],on_clicked_fn=self._rebuild_update)
+                self.task_ui_elements["movement_speed"] = int_builder("move speed")
 
-                self.add_button_title("Attach Sys To Scene", "Attach", self._loadtest)
-                self.add_button_title(
-                    "Init waypoints & attach", "Attach", self._testRigWaypoint
-                )
-
-                self.add_button("veloc", self._save_lidar_info_event)
-                self.task_ui_elements["veloc"].enabled = True
-
-                self.add_button("sample sensors", self._on_sample_sensors)
-                self.task_ui_elements["sample sensors"].enabled = True
-                self.add_string_field("test", self._empty_func)
-                print(self.task_ui_elements["test"].get_value_as_float())
+                # self.task_ui_elements["movement_speed"].enabled = False
+                # self.add_button_title("Attach Sys To Scene", "Attach", self._loadtest)
+                # self.add_button_title(
+                #     "Init waypoints & attach", "Attach", self._testRigWaypoint
+                # )
+                #
+                # self.add_button("veloc", self._save_lidar_info_event)
+                # self.task_ui_elements["veloc"].enabled = True
+                #
+                # self.add_button("sample sensors", self._on_sample_sensors)
+                # self.task_ui_elements["sample sensors"].enabled = True
+                # self.add_string_field("test", self._empty_func)
+                # print(self.task_ui_elements["test"].get_value_as_float())
