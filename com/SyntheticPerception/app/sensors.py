@@ -131,7 +131,6 @@ class SensorRig:
         pos, rot = self.get_pos_rot()
 
     def get_pos_rot(self):
-        print(f"do we have dyamic control: {self._dc}")
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         object_pose = self._dc.get_rigid_body_pose(self._rb)
         return object_pose.p, object_pose.r
@@ -162,11 +161,11 @@ class SensorRig:
 
         # Calculate the diff vector
         move_vec = goal_pos - pos
-        distance =  np.linalg.norm(goal_pos-pos)
+        distance = np.linalg.norm(goal_pos - pos)
         move_vec = (move_vec / distance) * 5
         # convert it to a distance check
         # iter over the points till the next valid one found.
-        
+
         if distance < 0.5:
             self.__curr_waypoint_id += 1
             if self.__curr_waypoint_id >= len(self.__waypoints):
@@ -176,8 +175,6 @@ class SensorRig:
         return move_vec
 
     def move(self, time_step):
-        print("Attempting to use waypoint move")
-
         # Retrieve the current position and orientation of the sensor rig
         current_pos, current_rot = self.get_pos_rot()
         current_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])

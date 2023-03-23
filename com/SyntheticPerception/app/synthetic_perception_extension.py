@@ -5,7 +5,7 @@
 # and any modifications thereto.  Any use, reproduction, disclosure or
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
-
+# from guppy import hpy
 import os
 from omni.isaac.examples.base_sample import BaseSampleExtension
 import asyncio
@@ -115,7 +115,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
     def _save_lidar_info_event(self):
         # asyncio.ensure_future(self.sample.save_lidar_data())
-        self.sample.sr.apply_veloc()
+        # self.sample.sr.apply_veloc()
+        # h = hpy()
+        # h.heap()
+        # print(h.heap())
         # self.sample.save_lidar_data()
         return
 
@@ -152,3 +155,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
                 self.add_button("sample sensors", self._on_sample_sensors)
                 self.task_ui_elements["sample sensors"].enabled = True
+        # with frame:
+        #     with ui.VStack(spacing=5):
+        #         # Update the Frame Title
+        #         frame.title = "Task 2312Controls"
+        #         frame.visible = True
+        #
+        #         self.add_button_title("Attachasdsa Sys To Scene", "Attach", self._loadtest)

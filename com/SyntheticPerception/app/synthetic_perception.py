@@ -35,7 +35,7 @@ import omni.replicator.core as rep
 from .sensors import Lidar, DepthCamera, SensorRig
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.synthetic_utils import SyntheticDataHelper
-from .syntehtic_data_watch import SyntheticDataWatch, SyntheticDataWatch_V2
+# from .syntehtic_data_watch import SyntheticDataWatch, SyntheticDataWatch_V2
 import omni.physx as _physx
 from omni.kit.viewport.utility import get_active_viewport
 from omni.isaac.dynamic_control import _dynamic_control
