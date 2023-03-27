@@ -285,5 +285,5 @@ class SyntheticPerception(BaseSample):
 
     def temp_passthrough(self, srx):
         # un comment to enalbe wAYPOINT
-        # self.get_world().add_physics_callback("sim_step", callback_fn=srx.move)
+        self.get_world().add_physics_callback("sim_step", callback_fn=srx.move)
         pass
