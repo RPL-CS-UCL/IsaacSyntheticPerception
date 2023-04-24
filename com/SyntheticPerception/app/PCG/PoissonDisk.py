@@ -1,5 +1,7 @@
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.use('TkAgg')
 
 # Choose up to k points around each reference point as candidates for a new
 # sample point
