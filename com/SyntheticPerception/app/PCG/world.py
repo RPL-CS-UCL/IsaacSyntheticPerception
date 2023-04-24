@@ -28,10 +28,22 @@ class EnvParamReader:
     def __init__(self):
 
         self._file_path = ""
+        self.environments = []
 
-
+    # Finish this function
     def JSON_to_obj(self):
-        pass
+        with open('self._file_path', 'r') as f:
+          data = json.load(f)
+
+          environment = None
+          for environment in data["Enironment"]:
+             environment = Environment() 
+              for region in environment["Regions"]:
+                  for zone in region["Zones"]:
+                      for xObject in zone["XObjects"]:
+
+          
+
 
 
 """
