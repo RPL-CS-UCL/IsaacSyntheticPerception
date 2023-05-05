@@ -44,7 +44,16 @@ import omni.replicator.core as rep
 import omni.appwindow  # Contains handle to keyboard
 import numpy as np
 import carb
+
+
 class SyntheticPerception(BaseSample):
+    """
+
+    Main class
+    """
+
+    # pylint: disable=too-many-instance-attributes
+    # Big class requires lots of attrs.
     def __init__(self) -> None:
         super().__init__()
         self.__created_objs = []
@@ -58,7 +67,6 @@ class SyntheticPerception(BaseSample):
         self._rc = None
 
         self.sr = SensorRig("SensorRig", "/World")
-
 
         self._event_flag = False
 
@@ -81,10 +89,8 @@ class SyntheticPerception(BaseSample):
             "N": [0.0, 0.0, 1.0],
             # yaw command (negative)
             "NUMPAD_9": [0.0, 0.0, -1.0],
-            "M": [0.0, 0.0, -1.0],}
-        
-    
-
+            "M": [0.0, 0.0, -1.0],
+        }
 
     def _sub_keyboard_event(self, event, *args, **kwargs):
         self._event_flag = False
@@ -95,8 +101,8 @@ class SyntheticPerception(BaseSample):
                 print("calling apply veloc")
                 self.sr.apply_veloc(self._input_keyboard_mapping[event.input.name])
         elif event.type == carb.input.KeyboardEventType.KEY_RELEASE:
-            self.sr.apply_veloc([0,0,0])
-                # print(self._input_keyboard_mapping[event.input.name])
+            self.sr.apply_veloc([0, 0, 0])
+            # print(self._input_keyboard_mapping[event.input.name])
         return True
 
     async def load_sample(self):
@@ -204,7 +210,6 @@ class SyntheticPerception(BaseSample):
         self.sr.add_sensor_to_rig(DepthCamera(name="depthcam2"))
         self.sr.add_sensor_to_rig(Lidar(path="coolLidar"))
 
-
     def __clear_max_lidar_points(self, pc, sem, lidar_pos, max_dist):
         "Clears the lidar dome points. - max range points so they do not display or get saved."
         new_points = []
@@ -235,7 +240,9 @@ class SyntheticPerception(BaseSample):
         self._appwindow = omni.appwindow.get_default_app_window()
         self._input = carb.input.acquire_input_interface()
         self._keyboard = self._appwindow.get_keyboard()
-        self._sub_keyboard = self._input.subscribe_to_keyboard_events(self._keyboard, self._sub_keyboard_event)
+        self._sub_keyboard = self._input.subscribe_to_keyboard_events(
+            self._keyboard, self._sub_keyboard_event
+        )
 
     def remove_all_objects(self):
         for i in reversed(range(len(self.__created_objs))):
@@ -248,7 +255,6 @@ class SyntheticPerception(BaseSample):
     async def final_fn(self):
         pos, rot = self.sr.get_pos_rot()
         print(pos, rot)
-
 
     # def init_camera(self):
     #     self.cam = rep.create.camera(position=(0, 0, 0))
@@ -269,7 +275,7 @@ class SyntheticPerception(BaseSample):
     #         "semantic_segmentation"
     #     )
     #     self.sem_annot.attach(self.rp)
-        # asdf
+    # asdf
 
     # def test(self, data):
     #     # asyncio.ensure_future(self._depth_camera.sample_sensor())
@@ -286,4 +292,3 @@ class SyntheticPerception(BaseSample):
     def temp_passthrough(self, srx):
         # un comment to enalbe wAYPOINT
         self.get_world().add_physics_callback("sim_step", callback_fn=srx.move)
-        pass

@@ -24,6 +24,7 @@ import omni
 
 # This file is for UI control. It build on sample extension
 
+
 class SyntheticPerceptionExtension(BaseSampleExtension):
     def on_startup(self, ext_id: str):
         super().on_startup(ext_id)
@@ -47,11 +48,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         frame = self.get_frame(index=1)
         self.build_sensor_ui(frame)
         self._window.visible = True
-        return
 
     def shutdown_cleanup(self):
         self.sample.remove_all_objects()
-        return
 
     def add_button(self, label, on_clicked_fn):
         """Adds a button to the task frame"""
@@ -145,8 +144,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
     def _empty_func(self):
         print("Calling empty onclick")
-        pass
-    
+
     def build_task_controls_ui(self, frame):
         with frame:
             with ui.VStack(spacing=5):
@@ -166,11 +164,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.task_ui_elements["sample sensors"].enabled = True
                 self.add_string_field("test", self._empty_func)
 
-
     def _rebuild_update(self, e):
         print("request rebuild", e)
         if str(e) == "Manual":
-            self.mm=True
+            self.mm = True
 
             # self.task_ui_elements["movement_speed"].enabled = True
         if str(e) == "Waypoints":
@@ -181,13 +178,17 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         # frame = self.get_frame(index=1)
         # self.build_sensor_ui(frame)
         return e
+
     def build_sensor_ui(self, frame):
         with frame:
             with ui.VStack(spacing=5):
                 # Update the Frame Title
                 frame.title = "Sensors"
                 frame.visible = True
-                self.task_ui_elements["movement_mode"] = dropdown_builder(items=["Waypoints","Manual","Linear"],on_clicked_fn=self._rebuild_update)
+                self.task_ui_elements["movement_mode"] = dropdown_builder(
+                    items=["Waypoints", "Manual", "Linear"],
+                    on_clicked_fn=self._rebuild_update,
+                )
                 self.task_ui_elements["movement_speed"] = int_builder("move speed")
 
                 # self.task_ui_elements["movement_speed"].enabled = False
