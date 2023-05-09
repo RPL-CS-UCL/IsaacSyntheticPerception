@@ -1,6 +1,6 @@
 """
 This module contains the required data types and parameter loading
-for PCG world gen.
+for PCG world ge
 
 """
 import json

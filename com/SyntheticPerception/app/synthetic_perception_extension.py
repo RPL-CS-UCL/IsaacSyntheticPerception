@@ -117,7 +117,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
     def _save_lidar_info_event(self):
         # asyncio.ensure_future(self.sample.save_lidar_data())
-        # self.sample.sr.apply_veloc()
+        # self.sample_sensor_rig.apply_veloc()
         # h = hpy()
         # h.heap()
         # print(h.heap())
@@ -130,12 +130,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _testRigWaypoint(self):
         print("init waypoints")
         stage = omni.usd.get_context().get_stage()
-        # self.sr.create_rig(np.array([0,0,0]),np.asarray([1,1,1,1]),stage)
-        # self.sr.initialize_waypoints("",stage)
-        self.sample.sr.initialize_waypoints("", stage)
+        # self_sensor_rig.create_rig(np.array([0,0,0]),np.asarray([1,1,1,1]),stage)
+        # self_sensor_rig.initialize_waypoints("",stage)
+        self.sample_sensor_rig.initialize_waypoints("", stage)
         print("Attach move to callback")
-        self.sample.temp_passthrough(self.sample.sr)
-        # self.sr.move()
+        self.sample.temp_passthrough(self.sample_sensor_rig)
+        # self_sensor_rig.move()
 
     def _loadtest(self):
         # Get the save directory
