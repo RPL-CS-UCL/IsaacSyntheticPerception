@@ -1,20 +1,23 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 from perlin_numpy import (
     generate_perlin_noise_2d, generate_fractal_noise_2d
 )
 
 
-def generate_region(threshold=0.5, show_plot=False):
+def generate_region(threshold=0.5, shape=(256,256), region_value=1, show_plot=False) -> npt.NDArray[np.float64]:
 
-    data = generate_perlin_noise_2d((256, 256), (8, 8))
+    data = generate_perlin_noise_2d(shape, (8, 8))
     data = (data-np.min(data))/(np.max(data)-np.min(data))
     data[data < threshold] = 0
+    data[data >= threshold] = region_value
 
     if show_plot:
         plt.imshow(data, cmap='gray', interpolation='lanczos')
         plt.colorbar()
         plt.show()
+    return data
 
 if __name__ == "__main__":
 
