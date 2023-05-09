@@ -1,7 +1,5 @@
 """
-
-
-
+This module handles area and point generation.
 """
 import numpy as np
 import numpy.typing as npt
@@ -13,6 +11,10 @@ def append_inside_area(
     area_to_add: npt.NDArray[np.float64],
     area_value: float,
 ) -> npt.NDArray[np.float64]:
+    """
+    Function returns a new mask that is only within the first mask
+
+    """
     mask_indices = np.where((area_to_add >= area_value) & (area != 0))
 
     area[mask_indices] = 3  # area_value
@@ -25,6 +27,11 @@ def append_to_area(
     area_to_add: npt.NDArray[np.float64],
     area_value: float,
 ) -> npt.NDArray[np.float64]:
+    """
+    Function returns a mask appended to another one
+
+
+    """
     mask_indices = np.where(area_to_add >= area_value)
 
     area[mask_indices] = area_value
