@@ -3,9 +3,9 @@ This module contains the required data types and parameter loading
 for PCG world ge
 
 """
+from __future__ import annotations
 import json
 from dataclasses import dataclass
-
 
 @dataclass
 class XObject:
