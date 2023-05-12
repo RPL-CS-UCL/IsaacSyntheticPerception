@@ -21,9 +21,10 @@ from .synthetic_perception import SyntheticPerception
 from .sensors import SensorRig
 import numpy as np
 import omni
-
+from .PCG import AreaMaskGenerator
+from omni.isaac.core.objects import DynamicCuboid
 # This file is for UI control. It build on sample extension
-
+from omni.isaac.core import World
 
 class SyntheticPerceptionExtension(BaseSampleExtension):
     def on_startup(self, ext_id: str):
@@ -143,8 +144,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         asyncio.ensure_future(self.sample.load_sample())
 
     def _empty_func(self):
-        print("Calling empty onclick")
-
+        print("Area gen test, passing to sample")
+        self.sample.test_areagen()
     def build_task_controls_ui(self, frame):
         with frame:
             with ui.VStack(spacing=5):
@@ -162,7 +163,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
                 self.add_button("sample sensors", self._on_sample_sensors)
                 self.task_ui_elements["sample sensors"].enabled = True
-                self.add_string_field("test", self._empty_func)
+                # self.add_string_field("test", self._empty_func)
+                self.add_button("area gen test", self._empty_func)
+
+                self.task_ui_elements["area gen test"].enabled = True
 
     def _rebuild_update(self, e):
         print("request rebuild", e)

@@ -17,6 +17,9 @@ from pxr import (
     UsdPhysics,
     Semantics,
 )  # pxr usd imports used to create cube
+
+from .PCG import AreaMaskGenerator
+from omni.isaac.core.objects import DynamicCuboid
 from omni.isaac.examples.base_sample import BaseSample
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.isaac.range_sensor import _range_sensor
@@ -44,7 +47,7 @@ import omni.replicator.core as rep
 import omni.appwindow  # Contains handle to keyboard
 import numpy as np
 import carb
-
+from omni.isaac.core.utils.stage import add_reference_to_stage
 
 class SyntheticPerception(BaseSample):
     """
@@ -292,3 +295,102 @@ class SyntheticPerception(BaseSample):
     def temp_passthrough(self, srx):
         # un comment to enalbe wAYPOINT
         self.get_world().add_physics_callback("sim_step", callback_fn=srx.move)
+
+
+    def spawn_asset(self, asset_path, prim_name, x, y):
+        prim_path = "/World/"+prim_name
+
+
+        prim = self.add_asset_to_stage(asset_path, prim_name, prim_path, self._world.scene,
+
+                            position=np.array([x, y, 0]), # Using the current stage units which is in meters by default.
+                            scale=np.array([0.5015, 0.5015, 0.5015]), # most arguments accept mainly numpy arrays.
+                            )
+    def test_areagen(self):
+        print("running test for area generations")
+        n1,n2 = AreaMaskGenerator.test_func()
+        # world = self.get_world()
+        print(len(n1), len(n2), " this many cubes")
+        for i,n in enumerate(n1):
+            x,y = n
+            print("here:", x,y)
+            p_name = f"tree_{i}"
+            self.spawn_asset("/home/jon/Documents/Isaac content/Assets/Vegetation/Trees/Dogwood.usd", p_name,  0, 0)
+            omni.kit.commands.execute('TransformPrimSRTCommand',
+            path=f"/World/{p_name}",
+            old_rotation_euler=Gf.Vec3f(0, 0, 0),
+            old_rotation_order=Gf.Vec3i(0, 1, 2),
+            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            new_scale=Gf.Vec3f(.01,.01,.01),
+            time_code=Usd.TimeCode(),
+            had_transform_at_key=False)
+        #     fancy_cube = self._world.scene.add(
+        #         DynamicCuboid(
+        #             prim_path=f"/World/random_cube_{i}", # The prim path of the cube in the USD stage
+        #             name=f"fancy_cube_{i}", # The unique name used to retrieve the object from the scene later on
+        #             position=np.array([x, y, 0]), # Using the current stage units which is in meters by default.
+        #             scale=np.array([.1,.1,.1]), # most arguments accept mainly numpy arrays.
+        #             color=np.array([0, 0, 1.0]), # RGB channels, going from 0-1
+        #         ))
+
+    def add_asset_to_stage(self,asset_path, prim_name, prim_path, scene, **kwargs):
+        if scene.object_exists(prim_name):
+            scene.remove_object(prim_name)
+        if "2021" in VERSION: 
+            import omni.kit.commands
+            from omni.usd import _usd, get_context
+            from omni.isaac.core.simulation_context import SimulationContext
+            from pxr import Usd, Gf
+
+            if get_prim_at_path(prim_path) is not None:
+                omni.kit.commands.execute('DeletePrims',
+                        paths=[prim_path])
+
+            context = get_context() 
+            #prim_path = '/_4042_750_mL_Wine_Bottle_r_v1_L3' 
+            omni.kit.commands.execute('CreateReferenceCommand',
+                usd_context=context,
+                path_to=prim_path,
+                asset_path=asset_path,
+                instanceable=False)
+            
+            if "scale" in kwargs.keys():
+                scale_np = kwargs["scale"]
+                scale = Gf.Vec3d(scale_np[0], scale_np[1], scale_np[2])
+            else:
+                scale = Gf.Vec3d(1.,1.,1.)
+
+            if "orientation_euler" in kwargs.keys():
+                ori_np = kwargs["orientation_euler"]
+                ori = Gf.Vec3d(ori_np[0], ori_np[1], ori_np[2])
+            else:
+                ori = Gf.Vec3d(0.,0.,0.)
+
+            pos = kwargs["position"]
+            transform(prim_path, pos,ori,scale)
+            if "semantic_class" in kwargs.keys(): sc = kwargs["semantic_class"]
+            else: sc=None
+            prim = ColliderPrim(prim_path = prim_path, name=prim_name, semantic_class=sc)
+            scene.add(prim)
+
+        else:
+            from pxr import Usd, Gf
+            if "scale" in kwargs.keys():
+                scale_np = kwargs["scale"]
+                scale = Gf.Vec3d(scale_np[0], scale_np[1], scale_np[2])
+            else:
+                scale = Gf.Vec3d(1.,1.,1.)
+            if "orientation_euler" in kwargs.keys():
+                ori_np = kwargs["orientation_euler"]
+                ori = Gf.Vec3d(ori_np[0], ori_np[1], ori_np[2])
+            else:
+                ori = Gf.Vec3d(0.,0.,0.)
+            pos = kwargs["position"]
+
+            add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
+            if "make_rigid" in kwargs.keys():
+                if kwargs["make_rigid"] == False: return None
+            if "semantic_class" in kwargs.keys(): 
+                sc = kwargs["semantic_class"]
+                del kwargs["semantic_class"]
+            else: sc=None
