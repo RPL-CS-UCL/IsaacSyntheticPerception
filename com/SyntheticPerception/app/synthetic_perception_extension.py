@@ -48,6 +48,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.build_task_controls_ui(frame)
         frame = self.get_frame(index=1)
         self.build_sensor_ui(frame)
+
+        frame = self.get_frame(index=1)
+        self.build_worldgen_ui(frame)
         self._window.visible = True
 
     def shutdown_cleanup(self):
@@ -146,6 +149,14 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _empty_func(self):
         print("Area gen test, passing to sample")
         self.sample.test_areagen()
+
+
+
+    def ui_init_world(self):
+        asyncio.ensure_future(self.sample.init_world())
+    def ui_init_semantics(self):
+        self.sample.init_semantics_in_scene()
+
     def build_task_controls_ui(self, frame):
         with frame:
             with ui.VStack(spacing=5):
@@ -164,8 +175,15 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.add_button("sample sensors", self._on_sample_sensors)
                 self.task_ui_elements["sample sensors"].enabled = True
                 # self.add_string_field("test", self._empty_func)
-                self.add_button("area gen test", self._empty_func)
 
+
+                
+                self.add_button("init_world", self.ui_init_world)
+                self.task_ui_elements["init_world"].enabled = True
+
+                self.add_button("init_semantics", self.ui_init_semantics)
+                self.task_ui_elements["init_semantics"].enabled = True
+                self.add_button("area gen test", self._empty_func)
                 self.task_ui_elements["area gen test"].enabled = True
 
     def _rebuild_update(self, e):
@@ -208,3 +226,18 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 # self.task_ui_elements["sample sensors"].enabled = True
                 # self.add_string_field("test", self._empty_func)
                 # print(self.task_ui_elements["test"].get_value_as_float())
+    
+    def build_worldgen_ui(self, frame):
+        with frame:
+            with ui.VStack(spacing=5):
+                # Update the Frame Title
+                frame.title = "World Gen"
+                frame.visible = True
+                self.add_button("init_world", self.ui_init_world)
+                self.task_ui_elements["init_world"].enabled = True
+
+                self.add_button("init_semantics", self.ui_init_semantics)
+                self.task_ui_elements["init_semantics"].enabled = True
+                self.add_button("area gen test", self._empty_func)
+                self.task_ui_elements["area gen test"].enabled = True
+

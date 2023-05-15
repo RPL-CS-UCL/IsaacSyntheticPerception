@@ -17,7 +17,7 @@ from pxr import (
     UsdPhysics,
     Semantics,
 )  # pxr usd imports used to create cube
-
+from pxr import Usd, Gf
 from .PCG import AreaMaskGenerator
 from omni.isaac.core.objects import DynamicCuboid
 from omni.isaac.examples.base_sample import BaseSample
@@ -188,6 +188,33 @@ class SyntheticPerception(BaseSample):
         print("position:", object_pose.p)
         print("rotation:", object_pose.r)
 
+    async def init_world(self):
+
+        if World.instance() is None:
+            self._world = World(**self._world_settings)
+            await self._world.initialize_simulation_context_async()
+            self.setup_scene()
+        else:
+            self._world = World.instance()
+        await self._world.reset_async()
+        await self._world.pause_async()
+        self.world_cleanup()
+        stage = omni.usd.get_context().get_stage()
+     
+        self.stage = omni.usd.get_context().get_stage()  # Used to access Geometry
+        self.timeline = (
+            omni.timeline.get_timeline_interface())
+        self._world_settings = {
+            "physics_dt": 1.0 / 60.0,
+            "stage_units_in_meters": 1.0,
+            "rendering_dt": 1.0 / 60.0,
+        }
+
+        self._appwindow = omni.appwindow.get_default_app_window()
+
+
+    def init_semantics_in_scene(self):
+        self.__add_semantics_to_all(self.stage)
     def init_sensor_and_semantics(self):
         "Initializes sensors and the replicator package"
         self.world_cleanup()
@@ -197,12 +224,7 @@ class SyntheticPerception(BaseSample):
         self.stage = omni.usd.get_context().get_stage()  # Used to access Geometry
         self.timeline = (
             omni.timeline.get_timeline_interface()
-        )  # Used to interact with simulation
-
-        # self._depth_camera = DepthCamera()
-        # self._editor_event = _physx.get_physx_interface().subscribe_physics_step_events(
-        #     self._controller_update
-        # )
+        )  
 
     def init_sensor_rig(self):
         "Initializes the sensor rig and adds individual sensors"
@@ -259,46 +281,19 @@ class SyntheticPerception(BaseSample):
         pos, rot = self.sr.get_pos_rot()
         print(pos, rot)
 
-    # def init_camera(self):
-    #     self.cam = rep.create.camera(position=(0, 0, 0))
-    #     self.rp = rep.create.render_product(self.cam, (512, 512))
-    #
-    #     self.rgb_annot = self.rep.AnnotatorRegistry.get_annotator("rgb")
-    #     self.rgb_annot.attach(self.rp)
-    #
-    #     self.depth_annot = self.rep.AnnotatorRegistry.get_annotator(
-    #         "distance_to_camera"
-    #     )
-    #     self.depth_annot.attach(self.rp)
-    #
-    #     # self.pc_annot = self.rep.AnnotatorRegistry.get_annotator("pointcloud")
-    #     # self.pc_annot.attach(self.rp)
-    #
-    #     self.sem_annot = self.rep.AnnotatorRegistry.get_annotator(
-    #         "semantic_segmentation"
-    #     )
-    #     self.sem_annot.attach(self.rp)
-    # asdf
-
-    # def test(self, data):
-    #     # asyncio.ensure_future(self._depth_camera.sample_sensor())
-    #     print(data)
-    #
-    #     self.sr.apply_veloc()
+  
 
     def sample_sensors(self):
         self.sr.sample_sensors()
 
-    def tt(self, time_step):
-        pass
 
     def temp_passthrough(self, srx):
         # un comment to enalbe wAYPOINT
         self.get_world().add_physics_callback("sim_step", callback_fn=srx.move)
 
 
-    def spawn_asset(self, asset_path, prim_name, x, y):
-        prim_path = "/World/"+prim_name
+    def spawn_asset(self, asset_path, class_name,prim_name, x, y,z):
+        prim_path = "/World/"+"class_"+class_name + "/" +prim_name
 
 
         prim = self.add_asset_to_stage(asset_path, prim_name, prim_path, self._world.scene,
@@ -306,6 +301,25 @@ class SyntheticPerception(BaseSample):
                             position=np.array([x, y, 0]), # Using the current stage units which is in meters by default.
                             scale=np.array([0.5015, 0.5015, 0.5015]), # most arguments accept mainly numpy arrays.
                             )
+
+        omni.kit.commands.execute('TransformPrimSRTCommand',
+        path=prim_path,#f"/World/{p_name}",
+
+        old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+        new_scale=Gf.Vec3f(.01,.01,.01),
+        old_translation=Gf.Vec3f(x,y,z),
+        new_translation=Gf.Vec3f(x,y,z),
+        time_code=Usd.TimeCode(),
+        had_transform_at_key=False)
+        omni.kit.commands.execute('TransformPrimSRTCommand',
+        path=prim_path,#f"/World/{p_name}",
+
+        old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+        new_scale=Gf.Vec3f(.01,.01,.01),
+        old_translation=Gf.Vec3f(x,y,z),
+        new_translation=Gf.Vec3f(x,y,z),
+        time_code=Usd.TimeCode(),
+        had_transform_at_key=False)
     def test_areagen(self):
         print("running test for area generations")
         n1,n2 = AreaMaskGenerator.test_func()
@@ -313,17 +327,20 @@ class SyntheticPerception(BaseSample):
         print(len(n1), len(n2), " this many cubes")
         for i,n in enumerate(n1):
             x,y = n
-            print("here:", x,y)
+            x = float(x)
+            y = float(y)
+            z = float(0)
             p_name = f"tree_{i}"
-            self.spawn_asset("/home/jon/Documents/Isaac content/Assets/Vegetation/Trees/Dogwood.usd", p_name,  0, 0)
-            omni.kit.commands.execute('TransformPrimSRTCommand',
-            path=f"/World/{p_name}",
-            old_rotation_euler=Gf.Vec3f(0, 0, 0),
-            old_rotation_order=Gf.Vec3i(0, 1, 2),
-            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-            new_scale=Gf.Vec3f(.01,.01,.01),
-            time_code=Usd.TimeCode(),
-            had_transform_at_key=False)
+            self.spawn_asset("C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\American_Beech.usd", "treeN", p_name,  x, y, z)
+        for i,n in enumerate(n2):
+            
+            x,y = n
+            x = float(x)
+            y = float(y)
+            z = float(0)
+            p_name = f"tree_pine_{i}"
+            self.spawn_asset("C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\White_pine.usd", "treeP", p_name,  x, y, z)
+
         #     fancy_cube = self._world.scene.add(
         #         DynamicCuboid(
         #             prim_path=f"/World/random_cube_{i}", # The prim path of the cube in the USD stage
@@ -333,7 +350,36 @@ class SyntheticPerception(BaseSample):
         #             color=np.array([0, 0, 1.0]), # RGB channels, going from 0-1
         #         ))
 
+
     def add_asset_to_stage(self,asset_path, prim_name, prim_path, scene, **kwargs):
+        if scene.object_exists(prim_name):
+            scene.remove_object(prim_name)
+       
+        
+        if "scale" in kwargs.keys():
+            scale_np = kwargs["scale"]
+            scale = Gf.Vec3d(scale_np[0], scale_np[1], scale_np[2])
+        else:
+            scale = Gf.Vec3d(1.,1.,1.)
+        if "orientation_euler" in kwargs.keys():
+            ori_np = kwargs["orientation_euler"]
+            ori = Gf.Vec3d(ori_np[0], ori_np[1], ori_np[2])
+        else:
+            ori = Gf.Vec3d(0.,0.,0.)
+        pos = kwargs["position"]
+
+        add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
+        if "make_rigid" in kwargs.keys():
+            if kwargs["make_rigid"] == False: return None
+        if "semantic_class" in kwargs.keys(): 
+            sc = kwargs["semantic_class"]
+            del kwargs["semantic_class"]
+        else: sc=None
+
+
+
+        
+    def add_asset_to_stage_archive(self,asset_path, prim_name, prim_path, scene, **kwargs):
         if scene.object_exists(prim_name):
             scene.remove_object(prim_name)
         if "2021" in VERSION: 
