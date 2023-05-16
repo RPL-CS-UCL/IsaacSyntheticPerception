@@ -134,8 +134,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _testRigWaypoint(self):
         print("init waypoints")
         stage = omni.usd.get_context().get_stage()
-        # self_sensor_rig.create_rig(np.array([0,0,0]),np.asarray([1,1,1,1]),stage)
-        # self_sensor_rig.initialize_waypoints("",stage)
         self.sample_sensor_rig.initialize_waypoints("", stage)
         print("Attach move to callback")
         self.sample.temp_passthrough(self.sample_sensor_rig)
@@ -191,14 +189,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         if str(e) == "Manual":
             self.mm = True
 
-            # self.task_ui_elements["movement_speed"].enabled = True
         if str(e) == "Waypoints":
             self.mm = False
 
-            # self.task_ui_elements["movement_speed"].enabled = False
         print(self.mm)
-        # frame = self.get_frame(index=1)
-        # self.build_sensor_ui(frame)
         return e
 
     def build_sensor_ui(self, frame):
@@ -212,20 +206,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     on_clicked_fn=self._rebuild_update,
                 )
                 self.task_ui_elements["movement_speed"] = int_builder("move speed")
-
-                # self.task_ui_elements["movement_speed"].enabled = False
-                # self.add_button_title("Attach Sys To Scene", "Attach", self._loadtest)
-                # self.add_button_title(
-                #     "Init waypoints & attach", "Attach", self._testRigWaypoint
-                # )
-                #
-                # self.add_button("veloc", self._save_lidar_info_event)
-                # self.task_ui_elements["veloc"].enabled = True
-                #
-                # self.add_button("sample sensors", self._on_sample_sensors)
-                # self.task_ui_elements["sample sensors"].enabled = True
-                # self.add_string_field("test", self._empty_func)
-                # print(self.task_ui_elements["test"].get_value_as_float())
     
     def build_worldgen_ui(self, frame):
         with frame:

@@ -176,6 +176,29 @@ class SyntheticPerception(BaseSample):
                         if "class" in word:
                             prim_class = word
                     self.add_semantic(p, prim_class)
+    
+    def __add_semantics_to_all2(self, stage):
+        "Add semantic information to all prims on stage based on parent xform"
+        prim_class = self.__undefined_class_string
+        completed_classes = []
+        for prim_ref in stage.Traverse():
+            prim_ref_name = str(prim_ref.GetPrimPath())
+            len_of_prim = len(prim_ref_name.split("/"))
+            for word in prim_ref_name.split("/"):
+ 
+                if "class" in word and word not in completed_classes:
+
+                    prim_class = word
+
+                    for i in range(len(prim_ref.GetChildren())):
+                        prim_child = prim_ref.GetChildren()[i]
+                        len_of_child = len(str(prim_child.GetPrimPath()).split("/"))
+                        print(len_of_prim, " : ", len_of_child)
+                        if abs(len_of_prim-len_of_child) == 1:
+                            print(prim_child)
+                            self.add_semantic(prim_child, prim_class)
+
+                    completed_classes.append(prim_class)
 
     def _get_translate(self, prim_path):
         "Gettgs the tranformation of a prim at a path"
@@ -211,10 +234,11 @@ class SyntheticPerception(BaseSample):
         }
 
         self._appwindow = omni.appwindow.get_default_app_window()
+        #self.__add_semantics_to_all2(stage)
 
 
     def init_semantics_in_scene(self):
-        self.__add_semantics_to_all(self.stage)
+        self.__add_semantics_to_all2(self.stage)
     def init_sensor_and_semantics(self):
         "Initializes sensors and the replicator package"
         self.world_cleanup()
@@ -321,6 +345,8 @@ class SyntheticPerception(BaseSample):
         time_code=Usd.TimeCode(),
         had_transform_at_key=False)
     def test_areagen(self):
+        self.test_areagen2()
+        return
         print("running test for area generations")
         n1,n2 = AreaMaskGenerator.test_func()
         # world = self.get_world()
@@ -349,6 +375,32 @@ class SyntheticPerception(BaseSample):
         #             scale=np.array([.1,.1,.1]), # most arguments accept mainly numpy arrays.
         #             color=np.array([0, 0, 1.0]), # RGB channels, going from 0-1
         #         ))
+        
+        
+    def spawn_loop(self, path, class_name, p_name, coll):
+        for i,n in enumerate(coll):
+            x,y = n
+            x = float(x)
+            y = float(y)
+            z = float(0)
+            
+            _p_name = f"{p_name}_{i}"
+            self.spawn_asset(path, class_name, _p_name,  x, y, z)
+
+
+    def test_areagen2(self):
+        tree1, tree2, rocks, rocks2 = AreaMaskGenerator.test_world()
+        tree1_path = "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\American_Beech.usd"
+        tree2_path = "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\Black_Oak.usd"
+        rocks_path =  "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Shrub\\Fountain_Grass_Tall.usd"
+        rocks2_path = "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Plant_Tropical\\Jungle_Flame.usd"
+        print("how many to generate")
+        print(len(tree1),len(tree2),len(rocks),len(rocks2))
+        self.spawn_loop(tree1_path, "tree1", "tree_1_", tree1)
+        self.spawn_loop(tree2_path, "tree2", "tree_2_", tree2)
+        self.spawn_loop(rocks_path, "shrub1", "shrub_1_", rocks)
+        self.spawn_loop(rocks2_path, "shrub2", "shrub_2_", rocks2)
+
 
 
     def add_asset_to_stage(self,asset_path, prim_name, prim_path, scene, **kwargs):

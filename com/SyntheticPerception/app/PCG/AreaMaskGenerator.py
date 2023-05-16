@@ -72,12 +72,42 @@ def fill_area(
 
     return area, new_points
 
+def test_world():
+
+    n = 256
+    forrest_region = PerlinNoise.generate_region(shape=(n,n), threshold=0.5, show_plot=False)
+    treeone_region = PerlinNoise.generate_region(
+        shape=(n,n), threshold=0.5, show_plot=False, region_value=2
+    )
+
+    treeone_region2 = PerlinNoise.generate_region(
+        shape=(n,n), threshold=0.5, show_plot=False, region_value=3
+    )
+    forrest_region_treeone = append_inside_area(np.array(forrest_region), np.array(treeone_region), 2.0)
+
+    area = append_inside_area(np.array(forrest_region_treeone), np.array(treeone_region2), 3.0)
+
+    sand_region = PerlinNoise.generate_region(shape=(n,n), threshold=0.3, show_plot=False, region_value=3)
+    
+    sand_region_two = PerlinNoise.generate_region(
+        shape=(n,n), threshold=0.5, show_plot=False, region_value=4)
+
+    sand_region_zones = append_inside_area(np.array(sand_region), np.array(sand_region_two), 4.0)
+    #fill trees
+    area, trees1 = fill_area(area, 3, 1, 10)
+
+    area, trees2 = fill_area(area, 6, 2, 11)
+    
+    area, rocks = fill_area(area, 2,1, 12)
+    area, rocks2 = fill_area(area, 2,2, 13)
+
+    return trees1, trees2, rocks, rocks2
+
 
 def test_func():
     print("running now")
     n = 256
     reg1 = PerlinNoise.generate_region(shape=(n,n), threshold=0.5, show_plot=False)
-    # print(reg1)
     reg2 = PerlinNoise.generate_region(
         shape=(n,n), threshold=0.5, show_plot=False, region_value=2
     )
