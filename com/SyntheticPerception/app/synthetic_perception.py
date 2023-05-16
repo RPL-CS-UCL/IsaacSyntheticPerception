@@ -49,6 +49,7 @@ import numpy as np
 import carb
 from omni.isaac.core.utils.stage import add_reference_to_stage
 
+
 class SyntheticPerception(BaseSample):
     """
 
@@ -239,6 +240,7 @@ class SyntheticPerception(BaseSample):
 
     def init_semantics_in_scene(self):
         self.__add_semantics_to_all2(self.stage)
+        
     def init_sensor_and_semantics(self):
         "Initializes sensors and the replicator package"
         self.world_cleanup()

@@ -47,35 +47,35 @@ for PCG world ge
 #     regions: list[Region] = []
 #
 #
-# class EnvParamAndData:
-#     """
-#     DOCstring
-#     """
-#
-#     def __init__(self):
-#         self._file_path = ""
-#         self.environments = []
-#
-#     # Finish this function
-#     def json_to_obj(self) -> None:
-#         """
-#         doc
-#         """
-#         with open(self._file_path, "r", encoding="utf-8") as file:
-#             data = json.load(file)
-#
-#             for environment in data["Enironment"]:
-#                 for region in environment["Regions"]:
-#                     for zone in region["Zones"]:
-#                         for x_object in zone["XObjects"]:
-#                             print(x_object)
-#
-#     def get_environemnt_params(self) -> Environment:
-#         """
-#         doc
-#         """
-#         return Environment()
-#
+class EnvParamAndData:
+     """
+     DOCstring
+     """
+
+     def __init__(self):
+         self._file_path = ""
+         self.environments = []
+
+     # Finish this function
+     def json_to_obj(self) -> None:
+         """
+         doc
+         """
+         with open(self._file_path, "r", encoding="utf-8") as file:
+             data = json.load(file)
+
+             for environment in data["Enironment"]:
+                 for region in environment["Regions"]:
+                     for zone in region["Zones"]:
+                         for x_object in zone["XObjects"]:
+                             print(x_object)
+
+     def get_environemnt_params(self) -> None:
+         """
+         doc
+         """
+         return None
+
 #
 # """
 #
