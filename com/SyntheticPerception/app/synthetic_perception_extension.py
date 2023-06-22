@@ -7,6 +7,8 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # from guppy import hpy
 import os
+
+from pxr import Usd, Gf, Ar,Pcp, Sdf, UsdRi
 from omni.isaac.examples.base_sample import BaseSampleExtension
 import asyncio
 import omni.ui as ui
@@ -19,6 +21,7 @@ from omni.isaac.ui.ui_utils import (
     str_builder,
     xyz_builder,
 )  # , str_builder
+from omni.isaac.ui import FloatField, CheckBox, StateButton, DropDown, StringField
 from .synthetic_perception import SyntheticPerception
 from .sensors import SensorRig
 import numpy as np
@@ -29,6 +32,27 @@ from omni.isaac.core.objects import DynamicCuboid
 # This file is for UI control. It build on sample extension
 from omni.isaac.core import World
 
+
+
+class SelectedPrim:
+
+    def __init__(self) -> None:
+        self.prim = None
+        self.prim_path = None
+        self.object_scale = 1
+        self.object_scale_delta = 0
+        self.allow_y_rot = False
+        self.unique_id = ""
+        self.usd_path = ""
+    
+    def get_y_rot_state(self):
+        if self.allow_y_rot:
+            return "Enabled"
+        return "Disabled"
+
+    def __str__(self) -> str:
+        return f"prim: {self.prim} \n prim_path: {self.prim_path}\n Object Scale: {self.object_scale}\n \
+                object scale delta: {self.object_scale_delta}\n allow y rot: {self.allow_y_rot}\n usdpath: {self.usd_path}\n unique_id: {self.unique_id}"
 
 class SyntheticPerceptionExtension(BaseSampleExtension):
     def on_startup(self, ext_id: str):
@@ -49,6 +73,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.task_ui_elements = {}
         self.world_gen_ui_elements = {}
         self.usd_context = omni.usd.get_context()
+        self.selected_prim = SelectedPrim()
 
         self.mm = False
         frame = self.get_frame(index=0)
@@ -111,6 +136,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         }
 
         dict_to_use[label] = float_builder(**dict)
+        # dict_to_use[label].enabled = True
         # dict_to_use[label].on_value_changed_fn(self.talk)
 
     def add_xyz(self, label, dict_to_use):
@@ -279,18 +305,53 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.add_button('area gen test', self._empty_func)
                 self.task_ui_elements['area gen test'].enabled = True
 
+    def update_scale(self, val):
+        if self.prim and val > 0:
+            _ = self.prim.GetAttribute('xformOp:scale').Set(Gf.Vec3d([val,val,val]))
+            self.selected_prim.object_scale = val
+    def update_scale_delta(self, val):
+        if self.prim and val > 0:
+            #update the local info
+            # _ = self.prim.GetAttribute('xformOp:scale').Set(Gf.Vec3d([val,val,val]))
+            self.selected_prim.object_scale_delta=val
+    def update_yrot(self, val):
+        if self.prim and val != "Not Selected":
+            print("Updating y rot")
+            #update the local info
+            enable_y_rot = False
+            if val == "Enabled":#self.world_gen_ui_elements["AllowYRot"].get_selected() == "Enabled":
+                enable_y_rot = True
+            print("setting y rot to ", enable_y_rot, "   ", val)
+            self.selected_prim.allow_y_rot = enable_y_rot
+    def prim_name_update(self, val):
+        print("Updating prim name")
+        if self.prim:
+            self.selected_prim.unique_id = val
+            print(self.selected_prim.unique_id)
+            print(self.selected_prim)
+            
+
     def setup_worldgen_ui(self, frame):
 
         with frame:
             with ui.VStack(spacing=5):
                 # Update the Frame Title
-                frame.title = 'Setup world Gen'
+                frame.title = 'Object set up'
                 frame.visible = True
 
-                self.add_button('get_selected', self._get_obj_details)
-                self.task_ui_elements['get_selected'].enabled = True
+                # self.add_button('get_selected', self._get_obj_details)
+                # self.task_ui_elements['get_selected'].enabled = True
                 # self.add_xyz('xyz',self.world_gen_ui_elements)
-                self.add_float('Scale', self.world_gen_ui_elements)
+                # self.add_float('Scale', self.world_gen_ui_elements)
+                self.world_gen_ui_elements["PrimName"] = StringField("Prim Name", "None", read_only=False, on_value_changed_fn=self.prim_name_update)
+                self.world_gen_ui_elements["PrimName"].set_value("None")
+                self.world_gen_ui_elements["SelectedObjScale"] = FloatField("Object Scale", default_value = 1.0, on_value_changed_fn = self.update_scale)
+
+                self.world_gen_ui_elements["SelectedObjScaleDelta"] = FloatField("Object Scale Delta +/-", on_value_changed_fn = self.update_scale_delta)
+
+                # self.world_gen_ui_elements["AllowYRot"] = CheckBox("Allow Y-axis rotation", default_value = False, on_click_fn=self.update_yrot)
+                self.world_gen_ui_elements["AllowYRot"] = DropDown("Allow Y-axis rotation",  on_selection_fn=self.update_yrot)
+                self.world_gen_ui_elements["AllowYRot"].set_items(["Not Selected", "Enabled", "Disabled"])
 
                 # self.task_ui_elements['xyz'].enabled = True
 
@@ -309,23 +370,80 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         prim_path = self.usd_context.get_selection().get_selected_prim_paths()
 
         if not prim_path:
-            self.world_gen_ui_elements['Scale'].set_value(0)
+            print("unselecting")
+            for key in self.world_gen_ui_elements:
+                print(type(self.world_gen_ui_elements[key]))
+                if type(self.world_gen_ui_elements[key]) == FloatField:
+                    self.world_gen_ui_elements[key].set_value(0)
+
+                if type(self.world_gen_ui_elements[key]) == DropDown:
+                    print("resetting dropdown")
+
+
+                    self.world_gen_ui_elements[key].set_selection("Not Selected")
+                if type(self.world_gen_ui_elements[key]) == StringField:
+
+                    self.world_gen_ui_elements[key].set_value("None")
+                    
+                    # self.world_gen_ui_elements[key].set_value(False)
+                # if self.world_gen_ui_elements[key] is 
+            # print("")
+            # self.world_gen_ui_elements['SelectedObjScale'].set_value(0)
             return
 
         stage = self.usd_context.get_stage()
 
         prim = stage.GetPrimAtPath(prim_path[0])
+        print(prim)
 
         self.prim = prim
 
         self.current_path = prim_path[0]
+        self.selected_prim.prim = prim
+        self.selected_prim.prim_path = prim_path[0]
 
         # print('prim: ' + str(prim), " ", self.prim.GetAttributes())
         obj_scale = self.prim.GetAttribute('xformOp:scale').Get()
-        obj_scale_average = sum(obj_scale) / len(obj_scale)
-        self.world_gen_ui_elements['Scale'].set_value(obj_scale_average)
-        ori = self.prim.GetAttribute('xformOp:orient').Get()
+        self.selected_prim.object_scale = sum(obj_scale) / len(obj_scale)
+        
+        if self.selected_prim.unique_id == "" or self.selected_prim.unique_id == "None":
+            print("setting unique id")
+            self.selected_prim.unique_id = self.current_path
+        self.world_gen_ui_elements["PrimName"].set_value(self.selected_prim.unique_id)
+        self.world_gen_ui_elements['SelectedObjScale'].set_value(self.selected_prim.object_scale)
+        self.world_gen_ui_elements["SelectedObjScaleDelta"].set_value(self.selected_prim.object_scale_delta)
 
-        print('att: ', obj_scale, '    ori: ', ori)
+        self.world_gen_ui_elements["AllowYRot"].set_selection(self.selected_prim.get_y_rot_state())
+        print(self.selected_prim)
+        print(self.prim.GetAttributes())
+        payloads = self.prim.GetPayloads()
+        # print(payloads.GetPrim().assetPath)
+        print(" =========")
+        # print(self.prim.GetPrimDefinition().GetMetadata())
+        # print(stage.GetRelationshipAtPath(self.current_path))
+        # print(stage.GetPathResolverContext(self.prim))
+        print(stage.GetObjectAtPath(self.current_path))
+        # Sdf.Layer.GetAssetInfo(self.current_path)
+        # UsdRi.RisObject.GetFilePathAttr(prim)
+        # print(self.prim.GetAuthoredAttributes())
+        # print(self.prim.GetPath() ) 
+        # print(type(payloads))
+        # print(self.prim.GetPrimStack())
+        # print(type(self.prim.GetPrimStack()[0]))
+        # prim_stack = self.prim.GetPrimStack()[5]
+        # print(type(prim_stack))
+        # for i in range(len(prim_stack)):
+        #     print("h")
+        #     potential_path = prim_stack[i]
+        #     if "anon" not in potential_path:
+        #         print(potential_path)
+        # print(self.prim.GetPrimDefinition().GetDo cumentation())
+        # print(self.prim.GetRelationships())
+        # print(payloads.GetAsset()))
+        # print(dir(payloads)# )
+        # payloads.AddPayload()
+        # ori = self.prim.GetAttribute('xformOp:orient').Get()
+
+        # print('att: ', obj_scale, '    ori: ', ori)
         # self.world_gen_ui_elements["xyz"][0].set_value(10)
 
