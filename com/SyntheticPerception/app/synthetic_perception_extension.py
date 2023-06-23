@@ -53,6 +53,7 @@ class SelectedPrim:
         self.allow_y_rot = False
         self.unique_id = ''
         self.usd_path = ''
+        self.class_name = ''
 
     def get_y_rot_state(self):
         if self.allow_y_rot:
@@ -356,6 +357,13 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             # print(self.selected_prim.unique_id)
             # print(self.selected_prim)
 
+    def class_name_update(self, val):
+        if self.prim and val != '':
+            self.selected_prim_dict[self.current_path].class_name = val
+            print('!! Updating clss name to ', val)
+            # print(self.selected_prim.unique_id)
+            # print(self.selected_prim)
+
     def update_usd_path(self, val):
         if self.prim and val != '':
             print('setting usd path to ', val)
@@ -397,7 +405,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             )
             return
 
-        if self.selected_prim_dict[self.current_path].usd_path == "":
+        if self.selected_prim_dict[self.current_path].usd_path == '':
             dialog = FormDialog(
                 title='ERROR no usd path',
                 message='No USD path was specified. This is required and must exist!',
@@ -413,9 +421,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         with open(self.object_data_save_path, 'r+') as infile:
             try:
                 data = json.load(infile)
-                print("old file loaded")
+                print('old file loaded')
             except:
-                print("couldnt load the file")
+                print('couldnt load the file')
                 pass
             selected = self.selected_prim_dict[self.current_path]
         with open(self.object_data_save_path, 'w+') as outfile:
@@ -423,6 +431,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 'object_scale': selected.object_scale,
                 'object_scale_delta': selected.object_scale_delta,
                 'allow_y_rot': selected.allow_y_rot,
+                'class_name': selected.class_name,
                 'usd_path': selected.usd_path,
             }
             data[selected.unique_id] = specific_data
@@ -450,12 +459,19 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 # self.add_xyz('xyz',self.world_gen_ui_elements)
                 # self.add_float('Scale', self.world_gen_ui_elements)
                 self.world_gen_ui_elements['PrimName'] = StringField(
-                    'Prim Name',
+                    'Unique Name',
                     'None',
                     read_only=False,
                     on_value_changed_fn=self.prim_name_update,
                 )
                 self.world_gen_ui_elements['PrimName'].set_value('None')
+
+                self.world_gen_ui_elements['ClassName'] = StringField(
+                    'Class Name',
+                    'None',
+                    read_only=False,
+                    on_value_changed_fn=self.class_name_update,
+                )
                 self.world_gen_ui_elements['SelectedObjScale'] = FloatField(
                     'Object Scale',
                     default_value=1.0,
@@ -514,7 +530,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 if type(self.world_gen_ui_elements[key]) == DropDown:
                     print('resetting dropdown')
 
-                    self.world_gen_ui_elements[key].set_selection('Not Selected')
+                    self.world_gen_ui_elements[key].set_selection(
+                        'Not Selected'
+                    )
                 if type(self.world_gen_ui_elements[key]) == StringField:
 
                     self.world_gen_ui_elements[key].set_value('')
@@ -561,6 +579,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.world_gen_ui_elements['PrimName'].set_value(
             self.selected_prim_dict[self.current_path].unique_id
         )
+        self.world_gen_ui_elements['ClassName'].set_value(
+            self.selected_prim_dict[self.current_path].class_name
+        )
         self.world_gen_ui_elements['SelectedObjScale'].set_value(
             self.selected_prim_dict[self.current_path].object_scale
         )
@@ -578,35 +599,3 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.world_gen_ui_elements['USDPath'].set_value(
             self.selected_prim_dict[self.current_path].usd_path
         )
-        # print(self.selected_prim)
-        # print(self.prim.GetAttributes())
-        # payloads = self.prim.GetPayloads()
-        # print(payloads.GetPrim().assetPath)
-        # print(" =========")
-        # print(self.prim.GetPrimDefinition().GetMetadata())
-        # print(stage.GetRelationshipAtPath(self.current_path))
-        # print(stage.GetPathResolverContext(self.prim))
-        # print(stage.GetObjectAtPath(self.current_path))
-        # Sdf.Layer.GetAssetInfo(self.current_path)
-        # UsdRi.RisObject.GetFilePathAttr(prim)
-        # print(self.prim.GetAuthoredAttributes())
-        # print(self.prim.GetPath() )
-        # print(type(payloads))
-        # print(self.prim.GetPrimStack())
-        # print(type(self.prim.GetPrimStack()[0]))
-        # prim_stack = self.prim.GetPrimStack()[5]
-        # print(type(prim_stack))
-        # for i in range(len(prim_stack)):
-        #     print("h")
-        #     potential_path = prim_stack[i]
-        #     if "anon" not in potential_path:
-        #         print(potential_path)
-        # print(self.prim.GetPrimDefinition().GetDo cumentation())
-        # print(self.prim.GetRelationships())
-        # print(payloads.GetAsset()))
-        # print(dir(payloads)# )
-        # payloads.AddPayload()
-        # ori = self.prim.GetAttribute('xformOp:orient').Get()
-
-        # print('att: ', obj_scale, '    ori: ', ori)
-        # self.world_gen_ui_elements["xyz"][0].set_value(10)
