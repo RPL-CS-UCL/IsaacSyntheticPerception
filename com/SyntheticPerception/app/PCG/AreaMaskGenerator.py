@@ -1,6 +1,8 @@
 """
 This module handles area and point generation.
 """
+import json
+import os 
 import numpy as np
 import numpy.typing as npt
 # from . import PerlinNoise
@@ -20,10 +22,10 @@ def append_inside_area(
 
     """
     mask_indices = np.where((area_to_add >= area_value) & (area != 0))
+    area2 = np.copy(area)
+    area2[mask_indices] = area_value  # area_value
 
-    area[mask_indices] = area_value  # area_value
-
-    return area
+    return area2
 
 
 def append_to_area(
@@ -71,6 +73,59 @@ def fill_area(
             new_points.append(p)
 
     return area, new_points
+
+
+class ObjectPrim:
+    def __init__(self, scale, scale_delta, y_rot, u_id, usd_path, class_name, poisson_size) -> None:
+        self.object_scale = scale
+        self.object_scale_delta = scale_delta
+        self.allow_y_rot = y_rot
+        self.unique_id = u_id
+        self.usd_path = usd_path
+        self.class_name = class_name
+        self.poisson_size = poisson_size
+
+    def __str__(self) -> str:
+        return f"""
+    {self.unique_id} 
+            scale: {self.object_scale} +/- {self.object_scale_delta}  
+            allow y rot: {self.allow_y_rot}  
+            poisson size: {self.poisson_size} 
+            class name: {self.class_name}  
+            usd path: {self.usd_path}
+
+    """
+        pass
+
+class WorldHandler:
+    def __init__(self, world_path, object_path) -> None:
+        self.objects = []
+        self._object_path = object_path
+        self._world_path = world_path
+
+    def _read_objects(self):
+        with open(self._object_path, 'r+') as infile:
+            data = json.load(infile)
+            for key in data:
+                scale = data[key]["object_scale"]
+                scale_delta =data[key]["object_scale_delta"]
+                y_rot = data[key]["allow_y_rot"]
+                u_id = key
+                usd_path = data[key]["usd_path"]
+                class_name = data[key]["class_name"]
+                poisson_size = data[key]["poisson_size"]
+                tmp = ObjectPrim(scale, scale_delta, y_rot, u_id, usd_path, class_name, poisson_size)
+                self.objects.append(tmp)
+
+        print("Loaded the following objects")
+        for i in self.objects:
+            print(i)
+
+
+def generate_world_from_file(world_path, object_path):
+    world = WorldHandler(world_path, object_path)
+    world._read_objects()
+
 
 def test_world():
 

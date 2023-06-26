@@ -8,6 +8,7 @@ from perlin_numpy import (
 
 def generate_region(threshold=0.5, shape=(256,256), region_value=1, show_plot=False) -> npt.NDArray[np.float64]:
 
+    np.random.seed(0)
     data = generate_perlin_noise_2d(shape, (8, 8))
     data = (data-np.min(data))/(np.max(data)-np.min(data))
     data[data < threshold] = 0

@@ -54,6 +54,7 @@ class SelectedPrim:
         self.unique_id = ''
         self.usd_path = ''
         self.class_name = ''
+        self.posson_size = 1
 
     def get_y_rot_state(self):
         if self.allow_y_rot:
@@ -87,6 +88,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.selected_prim = SelectedPrim()
         self.selected_prim_dict = {}
 
+        self._object_path = ""
+        self._world_path = ""
         self.mm = False
         frame = self.get_frame(index=0)
         self.build_task_controls_ui(frame)
@@ -98,6 +101,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
         frame = self.get_frame(index=2)
         self.setup_worldgen_ui(frame)
+        self._window.visible = True
+        frame = self.get_frame(index=3)
+        self.build_pcg_env_ui(frame)
         self._window.visible = True
 
         self.events = self.usd_context.get_stage_event_stream()
@@ -334,6 +340,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
             self.selected_prim_dict[self.current_path].object_scale_delta = val
 
+    def update_poisson_size(self, val):
+        if self.prim and val > 0:
+            # update the local info
+            # _ = self.prim.GetAttribute('xformOp:scale').Set(Gf.Vec3d([val,val,val]))
+
+            self.selected_prim_dict[self.current_path].posson_size= val
     def update_yrot(self, val):
         if self.prim and val != 'Not Selected':
             print('Updating y rot')
@@ -430,6 +442,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             specific_data = {
                 'object_scale': selected.object_scale,
                 'object_scale_delta': selected.object_scale_delta,
+                'poisson_size' : selected.posson_size,
                 'allow_y_rot': selected.allow_y_rot,
                 'class_name': selected.class_name,
                 'usd_path': selected.usd_path,
@@ -485,6 +498,11 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     on_value_changed_fn=self.update_scale_delta,
                 )
 
+                self.world_gen_ui_elements['PoissonSize'] = FloatField(
+                    'Poisson Point Size',
+                    default_value=1.0,
+                    on_value_changed_fn=self.update_poisson_size,
+                )
                 # self.world_gen_ui_elements["AllowYRot"] = CheckBox("Allow Y-axis rotation", default_value = False, on_click_fn=self.update_yrot)
                 self.world_gen_ui_elements['AllowYRot'] = DropDown(
                     'Allow Y-axis rotation', on_selection_fn=self.update_yrot
@@ -589,6 +607,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             self.selected_prim_dict[self.current_path].object_scale_delta
         )
 
+        self.world_gen_ui_elements['PoissonSize'].set_value(
+            self.selected_prim_dict[self.current_path].posson_size
+        )
         self.world_gen_ui_elements['AllowYRot'].set_selection(
             self.selected_prim_dict[self.current_path].get_y_rot_state()
         )
@@ -599,3 +620,77 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.world_gen_ui_elements['USDPath'].set_value(
             self.selected_prim_dict[self.current_path].usd_path
         )
+
+    def _update_object_path(self, val):
+        self._object_path = val
+    def _update_world_path(self,val):
+        self._world_path = val
+    def _check_file_exists(self,path):
+        try:
+            with open(path, 'r+') as infile:
+                return True
+        except:
+            return False
+    def _run_world_creation(self):
+        errors = [] 
+
+        if self._object_path== '':
+            errors.append("No Object path specified.")
+        if '.json' not in self._object_path:
+            errors.append("Object path does not contain .json extension.")
+        if self._world_path== '':
+            errors.append("No world path environment file was specified.")
+        if '.json' not in self._world_path:
+            errors.append("World path does not contain .json exntension.")
+
+        # Check if both files exist
+        if not self._check_file_exists(self._object_path):
+            errors.append("Object path file specified does not exist.")
+
+        if not self._check_file_exists(self._world_path):
+            errors.append("World path file specified does not exist.")
+
+
+        if len(errors) != 0:
+            message_out = "".join([str + "\n" for str in errors])
+            dialog = FormDialog(
+                title='ERROR',
+                message=message_out,
+                ok_handler=lambda dialog: print(
+                    f"Form accepted: '{dialog.get_values()}'"
+                ),
+            )
+            return
+        # If we get to here all paths valid. Pass to sample and build the world
+        self.sample.generate_world(self._object_path, self._world_path)
+    def build_pcg_env_ui(self, frame):
+
+
+
+        with frame:
+            with ui.VStack(spacing=5):
+                # Update the Frame Title
+                frame.title = 'World set up'
+                frame.visible = True
+
+                self.world_gen_ui_elements['ObjectsPath'] = StringField(
+                    'Objects Path',
+                    'None',
+                    read_only=False,
+                    use_folder_picker=True,
+                    item_filter_fn=self._true,
+                    on_value_changed_fn=self._update_object_path,
+                )
+                self.world_gen_ui_elements['WorldPath'] = StringField(
+                    'World Path',
+                    'None',
+                    read_only=False,
+                    use_folder_picker=True,
+                    item_filter_fn=self._true,
+                    on_value_changed_fn=self._update_world_path,
+                )
+                self.world_gen_ui_elements['SAVE'] = Button(
+                    'Initialize world generation',
+                    'Create World',
+                    on_click_fn=self._run_world_creation,
+                )

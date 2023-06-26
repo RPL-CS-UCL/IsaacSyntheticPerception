@@ -384,6 +384,9 @@ class SyntheticPerception(BaseSample):
         self.spawn_loop(tree2_path, "tree2", "tree_2_", tree2)
         self.spawn_loop(rocks_path, "shrub1", "shrub_1_", rocks)
         self.spawn_loop(rocks2_path, "shrub2", "shrub_2_", rocks2)
+    def generate_world(self,obj_path, world_path):
+        print("Starting world gen")
+        AreaMaskGenerator.generate_world_from_file(obj_path, world_path)
 
     def add_asset_to_stage(self, asset_path, prim_name, prim_path, scene, **kwargs):
         if scene.object_exists(prim_name):
