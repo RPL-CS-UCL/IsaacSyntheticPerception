@@ -196,16 +196,21 @@ def create_regions():
                 ' in int form ',
                 int(entry.identifier),
             )
+            print("base array")
+            print(arr)
             # check the parent zone. if it is not 0 we need to generate it inside this zone
             # we want to keep both tho.
             # the inside zone one must not completely overwite the parent REGION
             # in this case we dont add it to the main array we just perfrom the calculation and save it
-            new_arr = PerlinNoise.generate_region(
+            new_arr = PerlinNoise.generate_region2(
+                    seed=int(entry.identifier),
                 shape=(n, n),
                 threshold=float(entry.threshold),
                 show_plot=False,
                 region_value=int(entry.identifier),
             )
+            print("new array")
+            print(new_arr)
             # This zone will be saved and used later
             if entry.in_zone != 0:
                 zone_to_save = AreaMaskGenerator.append_inside_area(
@@ -213,36 +218,39 @@ def create_regions():
                 )
                 arr = zone_to_save
             else:
+                print("Adding region to general area")
                 arr = AreaMaskGenerator.append_to_area(
                     arr, new_arr, int(entry.identifier)
                 )
-        if len(entry_list) > 100:
-            # colors_ = [f'#{0:02x}{0:02x}{0:02x}']
-            colors_ = []
-            for entry in entry_list:
-                colors_.append(entry.color)
-            cmap = colors.ListedColormap(colors_)
-            bounds = []
-            for entry in entry_list:
-                bounds.append(int(entry.identifier))
-            norm = colors.BoundaryNorm(bounds, cmap.N)
+            print("arrays appended")
             print(arr)
-            ax.imshow(
-                arr,
-                interpolation='nearest',
-                origin='lower',
-                cmap=cmap,
-                norm=norm,
-            )
-        else:
-            i = ax.imshow(arr)
+        # if len(entry_list) > 100:
+        #     # colors_ = [f'#{0:02x}{0:02x}{0:02x}']
+        #     colors_ = []
+        #     for entry in entry_list:
+        #         colors_.append(entry.color)
+        #     cmap = colors.ListedColormap(colors_)
+        #     bounds = []
+        #     for entry in entry_list:
+        #         bounds.append(int(entry.identifier))
+        #     norm = colors.BoundaryNorm(bounds, cmap.N)
+        #     print(arr)
+        #     ax.imshow(
+        #         arr,
+        #         interpolation='nearest',
+        #         origin='lower',
+        #         cmap=cmap,
+        #         norm=norm,
+        #     )
+        # else:
+        i = ax.imshow(arr)
 
-            cbar = fig.colorbar(i)
-            cbar_ticks = [
-                int(e.identifier) for e in entry_list
-            ]  # np.linspace(0.0, 1.0, num=6, endpoint=True)
-            cbar.set_ticks(cbar_ticks)
-            cbar.draw_all()
+        cbar = fig.colorbar(i)
+        cbar_ticks = [
+            int(e.identifier) for e in entry_list
+        ]  # np.linspace(0.0, 1.0, num=6, endpoint=True)
+        cbar.set_ticks(cbar_ticks)
+        cbar.draw_all()
         # ax.bar(x, y, color=colors)
         # ax.set_xlabel('Entry')
         # ax.set_ylabel('Threshold')
