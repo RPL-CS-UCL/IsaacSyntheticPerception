@@ -25,6 +25,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 from PCG import AreaMaskGenerator
 from PCG import PerlinNoise
+from PCG.AreaMaskGenerator import ObjectPrim, WorldHandler
 
 # def load_objects():
 #     # Code for the "Load Objects" page
@@ -36,9 +37,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import random
 import numpy as np
 from matplotlib import colors
-cbar = None
 
+cbar = None
+import json
 import tkinter.ttk as ttk
+from tkinter.filedialog import askopenfilename, askdirectory
 
 
 class EntryInfo:
@@ -49,14 +52,21 @@ class EntryInfo:
         self.color = None
         self.in_region = None
         self.objects_in_zone = []
+        self.is_region = True
 
     def get_objs_as_str(self):
-        return "".join(self.objects_in_zone)
+        return ''.join(self.objects_in_zone)
+
+
+worldHandler = WorldHandler(',', '')
 
 
 def load_objects():
     # Code for the "Load Objects" page
     print('Load Objects page')
+    filename = askopenfilename()
+    worldHandler._object_path = filename
+    worldHandler._read_objects()
 
 
 def create_regions():
@@ -71,6 +81,8 @@ def create_regions():
     entries_frame = tk.Frame(regions_window)
     entries_frame.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
 
+    yscrollbar = Scrollbar(entries_frame)
+    yscrollbar.pack(side=RIGHT, fill=Y)
     entries_label = tk.Label(entries_frame, text='Entries:')
     entries_label.pack()
     options = ['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5']
@@ -80,6 +92,36 @@ def create_regions():
     # List to store entry objects
     entry_list = []
 
+    def write_data():
+        data = {}
+        for entry in entry_list:
+            pass
+            if entry.is_region:
+                data[entry.identifier] = {}
+                data[entry.identifier]['objects'] = entry.objects_in_zone
+                data[entry.identifier]['zones'] = {}
+            else:
+                # we are in a zone - get the region we are in
+                id = int(entry.in_zone)
+                print(id)
+                # if not data[id]["zones"][entry.identifier]:
+                if not id in data.keys():
+                    data[id]['zones'][entry.identifier] = {}
+                if not entry.identifier in data[id]['zones'].keys():
+                    data[id]['zones'][entry.identifier] = {}
+
+                data[id]['zones'][entry.identifier][
+                    'objects'
+                ] = entry.objects_in_zone
+
+        # json.dump(data)
+        full_data = {}
+        full_data['seed'] = 0
+        full_data['regions'] = data
+        folder_path = askdirectory()
+        with open(f'{folder_path}/worlddata.json', 'w') as f:
+            json.dump(full_data, f)
+        print(full_data)
     # Function to delete an entry from the list
     def delete_entry(entry, index):
         entry.destroy()
@@ -109,6 +151,7 @@ def create_regions():
             entry_info.color = generate_random_color()
             if parent_zone != '':
                 entry_info.in_zone = parent_zone
+                entry_info.is_region = False
             else:
                 entry_info.in_zone = 0
                 parent_zone = 0
@@ -166,8 +209,9 @@ def create_regions():
             # This zone will be saved and used later
             if entry.in_zone != 0:
                 zone_to_save = AreaMaskGenerator.append_inside_area(
-                    arr, new_arr, int(entry.identifer)
+                    arr, new_arr, int(entry.identifier)
                 )
+                arr = zone_to_save
             else:
                 arr = AreaMaskGenerator.append_to_area(
                     arr, new_arr, int(entry.identifier)
@@ -254,8 +298,8 @@ def create_regions():
     input_label4 = tk.Label(inputs_frame, text='Add to zone with the ID of:')
     input_label4.pack()
 
-    input_entry4 = tk.Entry(inputs_frame)
-    input_entry4.pack()
+    # input_entry4 = tk.Entry(inputs_frame)
+    # input_entry4.pack()
     # combobox = ttk.Combobox(
     #     inputs_frame,
     #     values=options,
@@ -273,48 +317,9 @@ def create_regions():
     )
 
     listbx.pack(padx=10, pady=10, expand=YES, fill='both')
-    x = [
-
-        'C',
-        'C++',
-        'C#',
-        'Java',
-        'Python',
-        'R',
-        'Go',
-        'Ruby',
-        'JavaScript',
-        'Swift',
-        'SQL',
-        'Perl',
-        'XML',
-        'C',
-        'C++',
-        'C#',
-        'Java',
-        'Python',
-        'R',
-        'Go',
-        'Ruby',
-        'JavaScript',
-        'Swift',
-        'SQL',
-        'Perl',
-        'XML',
-        'C',
-        'C++',
-        'C#',
-        'Java',
-        'Python',
-        'R',
-        'Go',
-        'Ruby',
-        'JavaScript',
-        'Swift',
-        'SQL',
-        'Perl',
-        'XML',
-    ]
+    x = []
+    for item in worldHandler.objects:
+        x.append(item.unique_id)
 
     for each_item in range(len(x)):
 
@@ -330,6 +335,10 @@ def create_regions():
     third_column_frame = tk.Frame(regions_window)
     third_column_frame.grid(row=0, column=2, padx=10, pady=10, sticky='nsew')
 
+    save_all_button = tk.Button(
+        inputs_frame, text='save all', command= write_data)
+    
+    save_all_button.pack()
     # Example Matplotlib plot
     fig, ax = plt.subplots()
     canvas = FigureCanvasTkAgg(fig, master=third_column_frame)
