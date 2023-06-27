@@ -92,7 +92,9 @@ def create_regions():
     # List to store entry objects
     entry_list = []
 
+
     def write_data():
+        global n
         data = {}
         for entry in entry_list:
             pass
@@ -100,7 +102,7 @@ def create_regions():
                 data[entry.identifier] = {}
                 data[entry.identifier]['objects'] = entry.objects_in_zone
                 data[entry.identifier]['zones'] = {}
-                data[entry.identifier]["threshold"] = entry.threshold
+                data[entry.identifier]['threshold'] = entry.threshold
             else:
                 # we are in a zone - get the region we are in
                 id = int(entry.in_zone)
@@ -122,10 +124,12 @@ def create_regions():
         full_data = {}
         full_data['seed'] = 0
         full_data['regions'] = data
+        full_data['size'] = n
         folder_path = askdirectory()
         with open(f'{folder_path}/worlddata.json', 'w') as f:
             json.dump(full_data, f)
         print(full_data)
+
     # Function to delete an entry from the list
     def delete_entry(entry, index):
         entry.destroy()
@@ -188,9 +192,9 @@ def create_regions():
     def update_plot():
         # fig.clear()
         global cbar
+        global n
         cbar.remove()
         ax.clear()
-        n = 256
         arr = np.zeros((n, n))
         past_id = 0
         for entry in entry_list:
@@ -200,20 +204,20 @@ def create_regions():
                 ' in int form ',
                 int(entry.identifier),
             )
-            print("base array")
+            print('base array')
             print(arr)
             # check the parent zone. if it is not 0 we need to generate it inside this zone
             # we want to keep both tho.
             # the inside zone one must not completely overwite the parent REGION
             # in this case we dont add it to the main array we just perfrom the calculation and save it
             new_arr = PerlinNoise.generate_region2(
-                    seed=int(entry.identifier),
+                seed=int(entry.identifier),
                 shape=(n, n),
                 threshold=float(entry.threshold),
                 show_plot=False,
                 region_value=int(entry.identifier),
             )
-            print("new array")
+            print('new array')
             print(new_arr)
             # This zone will be saved and used later
             if entry.in_zone != 0:
@@ -222,31 +226,10 @@ def create_regions():
                 )
                 arr = zone_to_save
             else:
-                print("Adding region to general area")
+                print('Adding region to general area')
                 arr = AreaMaskGenerator.append_to_area(
                     arr, new_arr, int(entry.identifier)
                 )
-            print("arrays appended")
-            print(arr)
-        # if len(entry_list) > 100:
-        #     # colors_ = [f'#{0:02x}{0:02x}{0:02x}']
-        #     colors_ = []
-        #     for entry in entry_list:
-        #         colors_.append(entry.color)
-        #     cmap = colors.ListedColormap(colors_)
-        #     bounds = []
-        #     for entry in entry_list:
-        #         bounds.append(int(entry.identifier))
-        #     norm = colors.BoundaryNorm(bounds, cmap.N)
-        #     print(arr)
-        #     ax.imshow(
-        #         arr,
-        #         interpolation='nearest',
-        #         origin='lower',
-        #         cmap=cmap,
-        #         norm=norm,
-        #     )
-        # else:
         i = ax.imshow(arr)
 
         cbar = fig.colorbar(i)
@@ -277,7 +260,6 @@ def create_regions():
         b = random.randint(0, 255)
         color = f'#{r:02x}{g:02x}{b:02x}'
         return color
-
     # Second column: Text entries and a button
     inputs_frame = tk.Frame(regions_window)
     inputs_frame.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
@@ -348,14 +330,15 @@ def create_regions():
     third_column_frame.grid(row=0, column=2, padx=10, pady=10, sticky='nsew')
 
     save_all_button = tk.Button(
-        inputs_frame, text='save all', command= write_data)
-    
+        inputs_frame, text='save all', command=write_data
+    )
+
     save_all_button.pack()
     # Example Matplotlib plot
     fig, ax = plt.subplots()
     canvas = FigureCanvasTkAgg(fig, master=third_column_frame)
     canvas.get_tk_widget().pack()
-    n = 256
+    global n
     global cbar
     arr = np.zeros((n, n))
     i = ax.imshow(arr)
@@ -367,7 +350,6 @@ def create_zones():
     # Code for the "Create Zones" page
     print('Create Zones page')
 
-
 def main_page():
     main_window = tk.Tk()
     main_window.title('Main Window')
@@ -377,15 +359,34 @@ def main_page():
     )
     load_objects_button.pack()
 
+
+    input_sizelabel= tk.Label(main_window, text='World Size:')
+    input_sizelabel.pack()
+
+    input_sizeentry = tk.Entry(main_window)
+    input_sizeentry.pack()
+
+    def size():
+        global n
+        n = int(input_sizeentry.get())
+        if not n or n < 0:
+            n = 256
+
+    set_size_button = tk.Button(
+        main_window, text='set size', command=size
+    )
+
+    set_size_button.pack()
+
     create_regions_button = tk.Button(
         main_window, text='Create Regions', command=create_regions
     )
     create_regions_button.pack()
 
-    create_zones_button = tk.Button(
-        main_window, text='Create Zones', command=create_zones
-    )
-    create_zones_button.pack()
+    # create_zones_button = tk.Button(
+    #     main_window, text='Create Zones', command=create_zones
+    # )
+    # create_zones_button.pack()
 
     main_window.mainloop()
 

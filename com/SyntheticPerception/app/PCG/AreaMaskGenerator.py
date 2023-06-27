@@ -128,12 +128,12 @@ class WorldHandler:
     def _read_world(self):
         print("here")
         self.objects_to_spawn = {}
-        n = 256
-        arr = np.zeros((n, n))
         data = None
         with open(self._world_path, 'r+') as infile:
             data = json.load(infile)
         if data != None:
+            n = data["size"] 
+            arr = np.zeros((n, n))
             regions = data["regions"]
             for region_id in regions:
                 region_id = str(region_id)

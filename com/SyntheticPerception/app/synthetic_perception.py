@@ -48,7 +48,7 @@ import omni.replicator.core as rep
 import omni.appwindow  # Contains handle to keyboard
 import numpy as np
 import carb
-from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.stage import add_reference_to_stage, is_stage_loading, update_stage_async
 
 
 class SyntheticPerception(BaseSample):
@@ -314,6 +314,7 @@ class SyntheticPerception(BaseSample):
         z,
         scale,
         object_scale_delta,
+        allow_rot
     ):
         prim_path = '/World/' + 'class_' + class_name + '/' + prim_name
 
@@ -333,8 +334,9 @@ class SyntheticPerception(BaseSample):
         high_lim = scale + object_scale_delta
         scale = random.uniform(low_lim, high_lim) / 100
 
-
-        random_rotation = random.uniform(0,360)
+        random_rotation = 0
+        if allow_rot:
+            random_rotation = random.uniform(0,360)
         # x = x *100
         # y = y *100
 
@@ -414,7 +416,7 @@ class SyntheticPerception(BaseSample):
         #         ))
 
     def spawn_loop(
-        self, path, class_name, p_name, coll, scale=1, object_scale_delta=0
+        self, path, class_name, p_name, coll, scale=1, object_scale_delta=0, allow_rot=True
     ):
         for i, n in enumerate(coll):
             x, y = n
@@ -424,7 +426,7 @@ class SyntheticPerception(BaseSample):
 
             _p_name = f'{p_name}_{i}'
             self.spawn_asset(
-                path, class_name, _p_name, x, y, z, scale, object_scale_delta
+                path, class_name, _p_name, x, y, z, scale, object_scale_delta, allow_rot
             )
 
     def test_areagen2(self):
@@ -462,17 +464,65 @@ class SyntheticPerception(BaseSample):
             # print("checking if world is activev")
             # print(self._world)
             print('trying to spawn ', path, ' ', counter, ' / ', length)
+            class_name = obj.class_name
+            if class_name == "":
+                class_name = obj.unique_id
             self.spawn_loop(
                 path,
-                obj.unique_id,
+                class_name,
                 f'{obj.unique_id}_',
                 obs_to_spawn[key],
                 scale=obj.object_scale,
                 object_scale_delta=obj.object_scale_delta,
+                allow_rot=obj.allow_y_rot,
             )
             counter += 1
         print('AREA GENERATION FINISHED')
 
+    async def generate_world_generator(self, obj_path, world_path):
+        print('Starting world gen')
+
+        if World.instance() is None:
+            self._world = World(**self._world_settings)
+            self.setup_scene()
+        else:
+            self._world = World.instance()
+        print('checking if world is activev')
+        print(self._world)
+        obs_to_spawn, object_dict = AreaMaskGenerator.generate_world_from_file(
+            obj_path, world_path
+        )
+        length = len(obs_to_spawn)
+        counter = 1
+        for key in obs_to_spawn:
+
+            #check if assets are currently being spawned
+            # load_bool = is_stage_loading()
+            # print(" =================================== ", load_bool)
+            obj = object_dict[key]
+            path = object_dict[key].usd_path
+
+            # print("checking if world is activev")
+            # print(self._world)
+            print('trying to spawn ', path, ' ', counter, ' / ', length)
+            class_name = obj.class_name
+            if class_name == "":
+                class_name = obj.unique_id
+            self.spawn_loop(
+                path,
+                class_name,
+                f'{obj.unique_id}_',
+                obs_to_spawn[key],
+                scale=obj.object_scale,
+                object_scale_delta=obj.object_scale_delta,
+                allow_rot=obj.allow_y_rot,
+            )
+            print("we should now wait")
+            await update_stage_async()
+            print("some time should have passed")
+            # return
+            counter += 1
+        print('AREA GENERATION FINISHED')
     def add_asset_to_stage(
         self, asset_path, prim_name, prim_path, scene, **kwargs
     ):

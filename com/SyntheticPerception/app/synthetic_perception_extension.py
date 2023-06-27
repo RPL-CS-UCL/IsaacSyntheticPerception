@@ -41,6 +41,7 @@ from omni.isaac.core.objects import DynamicCuboid
 from omni.isaac.core import World
 import json
 
+from omni.isaac.core.utils.stage import add_reference_to_stage, is_stage_loading, update_stage_async
 import os
 
 
@@ -635,7 +636,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             return False
     def _run_world_creation(self):
         print("callingworld gen")
-        self.sample.generate_world("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
+        # self.sample.generate_world("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
+        # self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
+        asyncio.ensure_future(self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json"))
+        print(" ========================= ", is_stage_loading())
         return
         errors = [] 
 
