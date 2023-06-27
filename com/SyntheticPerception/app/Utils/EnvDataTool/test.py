@@ -100,6 +100,7 @@ def create_regions():
                 data[entry.identifier] = {}
                 data[entry.identifier]['objects'] = entry.objects_in_zone
                 data[entry.identifier]['zones'] = {}
+                data[entry.identifier]["threshold"] = entry.threshold
             else:
                 # we are in a zone - get the region we are in
                 id = int(entry.in_zone)
@@ -114,6 +115,9 @@ def create_regions():
                     'objects'
                 ] = entry.objects_in_zone
 
+                data[id]['zones'][entry.identifier][
+                    'threshold'
+                ] = entry.threshold
         # json.dump(data)
         full_data = {}
         full_data['seed'] = 0

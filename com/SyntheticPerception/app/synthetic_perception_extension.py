@@ -622,9 +622,11 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         )
 
     def _update_object_path(self, val):
-        self._object_path = val
+        if val != "":
+            self._object_path = val
     def _update_world_path(self,val):
-        self._world_path = val
+        if val != "":
+            self._world_path = val
     def _check_file_exists(self,path):
         try:
             with open(path, 'r+') as infile:
@@ -632,6 +634,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         except:
             return False
     def _run_world_creation(self):
+        print("callingworld gen")
+        self.sample.generate_world("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
+        return
         errors = [] 
 
         if self._object_path== '':

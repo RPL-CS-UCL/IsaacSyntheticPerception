@@ -99,13 +99,16 @@ class ObjectPrim:
 
 class WorldHandler:
     def __init__(self, world_path, object_path) -> None:
-        self.objects = []
+        # self.objects = []
+        self.objects_dict = {}
         self._object_path = object_path
         self._world_path = world_path
+        self.objects_to_spawn = {}
 
     def _read_objects(self):
         with open(self._object_path, 'r+') as infile:
             data = json.load(infile)
+            print(data)
             for key in data:
                 scale = data[key]["object_scale"]
                 scale_delta =data[key]["object_scale_delta"]
@@ -115,16 +118,84 @@ class WorldHandler:
                 class_name = data[key]["class_name"]
                 poisson_size = data[key]["poisson_size"]
                 tmp = ObjectPrim(scale, scale_delta, y_rot, u_id, usd_path, class_name, poisson_size)
-                self.objects.append(tmp)
+                # self.objects.append(tmp)
+                self.objects_dict[u_id] = tmp
 
         print("Loaded the following objects")
-        for i in self.objects:
-            print(i)
+        # for i in self.objects:
+        #     print(i)
+
+    def _read_world(self):
+        print("here")
+        self.objects_to_spawn = {}
+        n = 256
+        arr = np.zeros((n, n))
+        data = None
+        with open(self._world_path, 'r+') as infile:
+            data = json.load(infile)
+        if data != None:
+            regions = data["regions"]
+            for region_id in regions:
+                region_id = str(region_id)
+
+                new_arr = PerlinNoise.generate_region2(
+                        seed=int(region_id),
+                    shape=(n, n),
+                    threshold=float(regions[region_id]["threshold"]),
+                    show_plot=False,
+                    region_value=int(region_id),
+                )
+
+                arr = append_to_area(
+                    arr, new_arr, int(region_id)
+                )
+                # handle objects in the zone
+                objs = regions[region_id]["objects"]
+                if len(objs) > 0:
+                    for obj_uid in objs:
+                        # get corresponding object from objects
+                        object_prim = self.objects_dict[str(obj_uid)]
+
+                        area, coords = fill_area(arr, object_prim.poisson_size, int(region_id), 999)#object_prim.unique_id
+                        self.objects_to_spawn[object_prim.unique_id] = coords 
+
+                # now we need to deal with sub zones
+                zones = regions[region_id]["zones"]
+                for zone_id in zones:
+
+                    new_arr = PerlinNoise.generate_region2(
+                            seed=int(zone_id),
+                        shape=(n, n),
+                        threshold=float(zones[zone_id]["threshold"]),
+                        show_plot=False,
+                        region_value=int(zone_id),
+                    )
+
+                    zone_to_save =append_inside_area(
+                        arr, new_arr, int(zone_id)
+                    )
+                    objs = zones[zone_id]["objects"]
+                    if len(objs) > 0:
+                        for obj_uid in objs:
+                            # get corresponding object from objects
+                            object_prim = self.objects_dict[obj_uid]
+
+                            area, coords = fill_area(zone_to_save, object_prim.poisson_size, int(zone_id), 999)
+                            # print(coords)
+                            self.objects_to_spawn[object_prim.unique_id] = coords 
+        # print(objects_to_spawn)
+                            
+        pass
 
 
 def generate_world_from_file(world_path, object_path):
+    print("creating world obj")
     world = WorldHandler(world_path, object_path)
+    print("reading objs")
     world._read_objects()
+    print("reading world")
+    world._read_world()
+    return world.objects_to_spawn, world.objects_dict
 
 
 def test_world():

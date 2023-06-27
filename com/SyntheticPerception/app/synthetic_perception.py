@@ -10,7 +10,8 @@ try:
 
     VERSION = v.get_version()[0]
 except:
-    VERSION = "2021"
+    VERSION = '2021'
+import random
 from pxr import (
     UsdGeom,
     Gf,
@@ -64,36 +65,36 @@ class SyntheticPerception(BaseSample):
         self.save_count = 0
         self.pri = None
         self.obstacles = []
-        self.__undefined_class_string = "undef"
+        self.__undefined_class_string = 'undef'
         self.__sensor = None
         self._rp = None
         self._depth_camera = None
         self._rc = None
 
-        self.sr = SensorRig("SensorRig", "/World")
+        self.sr = SensorRig('SensorRig', '/World')
 
         self._event_flag = False
 
         # bindings for keyboard to command
         self._input_keyboard_mapping = {
             # forward command
-            "NUMPAD_8": [1.5, 0.0, 0.0],
-            "UP": [1.5, 0.0, 0.0],
+            'NUMPAD_8': [1.5, 0.0, 0.0],
+            'UP': [1.5, 0.0, 0.0],
             # back command
-            "NUMPAD_2": [-1.5, 0.0, 0.0],
-            "DOWN": [-1.5, 0.0, 0.0],
+            'NUMPAD_2': [-1.5, 0.0, 0.0],
+            'DOWN': [-1.5, 0.0, 0.0],
             # left command
-            "NUMPAD_6": [0.0, -1.0, 0.0],
-            "RIGHT": [0.0, -1.0, 0.0],
+            'NUMPAD_6': [0.0, -1.0, 0.0],
+            'RIGHT': [0.0, -1.0, 0.0],
             # right command
-            "NUMPAD_4": [0.0, 1.0, 0.0],
-            "LEFT": [0.0, 1.0, 0.0],
+            'NUMPAD_4': [0.0, 1.0, 0.0],
+            'LEFT': [0.0, 1.0, 0.0],
             # yaw command (positive)
-            "NUMPAD_7": [0.0, 0.0, 1.0],
-            "N": [0.0, 0.0, 1.0],
+            'NUMPAD_7': [0.0, 0.0, 1.0],
+            'N': [0.0, 0.0, 1.0],
             # yaw command (negative)
-            "NUMPAD_9": [0.0, 0.0, -1.0],
-            "M": [0.0, 0.0, -1.0],
+            'NUMPAD_9': [0.0, 0.0, -1.0],
+            'M': [0.0, 0.0, -1.0],
         }
 
     def _sub_keyboard_event(self, event, *args, **kwargs):
@@ -101,10 +102,11 @@ class SyntheticPerception(BaseSample):
         # when a key is pressedor released  the command is adjusted w.r.t the key-mapping
         if event.type == carb.input.KeyboardEventType.KEY_PRESS:
             if event.input.name in self._input_keyboard_mapping:
-                print(f"Here: {event.input.name}")
-                print("calling apply veloc")
+                print(f'Here: {event.input.name}')
+                print('calling apply veloc')
                 self.sr.apply_veloc(
-                    self._input_keyboard_mapping[event.input.name])
+                    self._input_keyboard_mapping[event.input.name]
+                )
         elif event.type == carb.input.KeyboardEventType.KEY_RELEASE:
             self.sr.apply_veloc([0, 0, 0])
             # print(self._input_keyboard_mapping[event.input.name])
@@ -127,12 +129,12 @@ class SyntheticPerception(BaseSample):
 
     async def setup_pre_reset(self):
         world = self.get_world()
-        if world.physics_callback_exists("sim_step"):
-            world.remove_physics_callback("sim_step")
-        if world.physics_callback_exists("sim_timestep"):
-            world.remove_physics_callback("sim_timestep")
+        if world.physics_callback_exists('sim_step'):
+            world.remove_physics_callback('sim_step')
+        if world.physics_callback_exists('sim_timestep'):
+            world.remove_physics_callback('sim_timestep')
         stage = omni.usd.get_context().get_stage()
-        self.sr.initialize_waypoints("", stage)
+        self.sr.initialize_waypoints('', stage)
 
     # async def setup_post_load(self):
     #     self._world_settings = {"physics_dt": 1.0 / 60.0, "stage_units_in_meters": 1.0, "rendering_dt": 1.0 / 60.0}
@@ -142,57 +144,57 @@ class SyntheticPerception(BaseSample):
         return
 
     def add_semantic(self, p, prim_class):
-        "Adds semantic to prim"
+        """Adds semantic to prim"""
         sem_dict = get_semantics(p)
         collisionAPI = UsdPhysics.CollisionAPI.Apply(p)
-        if "Semantics" not in sem_dict:
+        if 'Semantics' not in sem_dict:
             print(
-                "adding semantics and collider to ",
+                'adding semantics and collider to ',
                 p.GetPrimPath(),
-                " of class ",
+                ' of class ',
                 prim_class,
             )
-            sem = Semantics.SemanticsAPI.Apply(p, "Semantics")
+            sem = Semantics.SemanticsAPI.Apply(p, 'Semantics')
             sem.CreateSemanticTypeAttr()
             sem.CreateSemanticDataAttr()
-            sem.GetSemanticTypeAttr().Set("class")
+            sem.GetSemanticTypeAttr().Set('class')
             sem.GetSemanticDataAttr().Set(prim_class)
 
-
     def __add_semantics_to_all2(self, stage):
-        "Add semantic information to all prims on stage based on parent xform"
+        """Add semantic information to all prims on stage based on parent xform"""
         prim_class = self.__undefined_class_string
         completed_classes = []
         for prim_ref in stage.Traverse():
             prim_ref_name = str(prim_ref.GetPrimPath())
-            len_of_prim = len(prim_ref_name.split("/"))
-            for word in prim_ref_name.split("/"):
+            len_of_prim = len(prim_ref_name.split('/'))
+            for word in prim_ref_name.split('/'):
 
-                if "class" in word and word not in completed_classes:
+                if 'class' in word and word not in completed_classes:
 
                     prim_class = word
 
                     for i in range(len(prim_ref.GetChildren())):
                         prim_child = prim_ref.GetChildren()[i]
                         len_of_child = len(
-                            str(prim_child.GetPrimPath()).split("/"))
-                        print(len_of_prim, " : ", len_of_child)
-                        if abs(len_of_prim-len_of_child) == 1:
+                            str(prim_child.GetPrimPath()).split('/')
+                        )
+                        print(len_of_prim, ' : ', len_of_child)
+                        if abs(len_of_prim - len_of_child) == 1:
                             print(prim_child)
                             self.add_semantic(prim_child, prim_class)
 
                     completed_classes.append(prim_class)
 
     def _get_translate(self, prim_path):
-        "Gettgs the tranformation of a prim at a path"
+        """Gettgs the tranformation of a prim at a path"""
         # prim = stage.GetPrimAtPath(prim_path)
         dc = _dynamic_control.acquire_dynamic_control_interface()
 
         object = dc.get_rigid_body(prim_path)
         object_pose = dc.get_rigid_body_pose(object)
 
-        print("position:", object_pose.p)
-        print("rotation:", object_pose.r)
+        print('position:', object_pose.p)
+        print('rotation:', object_pose.r)
 
     async def init_world(self):
 
@@ -207,13 +209,14 @@ class SyntheticPerception(BaseSample):
         self.world_cleanup()
         stage = omni.usd.get_context().get_stage()
 
-        self.stage = omni.usd.get_context().get_stage()  # Used to access Geometry
-        self.timeline = (
-            omni.timeline.get_timeline_interface())
+        self.stage = (
+            omni.usd.get_context().get_stage()
+        )  # Used to access Geometry
+        self.timeline = omni.timeline.get_timeline_interface()
         self._world_settings = {
-            "physics_dt": 1.0 / 60.0,
-            "stage_units_in_meters": 1.0,
-            "rendering_dt": 1.0 / 60.0,
+            'physics_dt': 1.0 / 60.0,
+            'stage_units_in_meters': 1.0,
+            'rendering_dt': 1.0 / 60.0,
         }
 
         self._appwindow = omni.appwindow.get_default_app_window()
@@ -223,28 +226,31 @@ class SyntheticPerception(BaseSample):
         self.__add_semantics_to_all2(self.stage)
 
     def init_sensor_and_semantics(self):
-        "Initializes sensors and the replicator package"
+        """Initializes sensors and the replicator package"""
         self.world_cleanup()
         stage = omni.usd.get_context().get_stage()
         # self.__sensor = Lidar()
         self.__add_semantics_to_all(stage)
-        self.stage = omni.usd.get_context().get_stage()  # Used to access Geometry
-        self.timeline = (
-            omni.timeline.get_timeline_interface()
-        )
+        self.stage = (
+            omni.usd.get_context().get_stage()
+        )  # Used to access Geometry
+        self.timeline = omni.timeline.get_timeline_interface()
 
     def init_sensor_rig(self):
-        "Initializes the sensor rig and adds individual sensors"
-        print(" ============================================================== ")
-        print("trying to load sensor rig")
-        self.sr.create_rig(np.array([0, 5, 0]),
-                           np.asarray([1, 1, 1, 1]), self.stage)
+        """Initializes the sensor rig and adds individual sensors"""
+        print(
+            ' ============================================================== '
+        )
+        print('trying to load sensor rig')
+        self.sr.create_rig(
+            np.array([0, 5, 0]), np.asarray([1, 1, 1, 1]), self.stage
+        )
         # self.sr.add_depth_camera_to_rig( (0, 0, 0), (0, 0, 0), (512, 512), True,"DepthCamera")
-        self.sr.add_sensor_to_rig(DepthCamera(name="depthcam2"))
-        self.sr.add_sensor_to_rig(Lidar(path="coolLidar"))
+        self.sr.add_sensor_to_rig(DepthCamera(name='depthcam2'))
+        self.sr.add_sensor_to_rig(Lidar(path='coolLidar'))
 
     def __clear_max_lidar_points(self, pc, sem, lidar_pos, max_dist):
-        "Clears the lidar dome points. - max range points so they do not display or get saved."
+        """Clears the lidar dome points. - max range points so they do not display or get saved."""
         new_points = []
         new_sems = []
         for seq_id in range(len(pc)):
@@ -259,18 +265,19 @@ class SyntheticPerception(BaseSample):
 
     async def save_lidar_data(self):
         pc, sem = self.__sensor.get_pc_and_semantic(
-            save_path="/home/jon/Desktop/")
+            save_path='/home/jon/Desktop/'
+        )
 
     async def setup_post_load(self):
         self._world_settings = {
-            "physics_dt": 1.0 / 60.0,
-            "stage_units_in_meters": 1.0,
-            "rendering_dt": 1.0 / 60.0,
+            'physics_dt': 1.0 / 60.0,
+            'stage_units_in_meters': 1.0,
+            'rendering_dt': 1.0 / 60.0,
         }
 
         self.init_sensor_and_semantics()
         self.init_sensor_rig()
-        print("Aquiring keyboard interface")
+        print('Aquiring keyboard interface')
         self._appwindow = omni.appwindow.get_default_app_window()
         self._input = carb.input.acquire_input_interface()
         self._keyboard = self._appwindow.get_keyboard()
@@ -295,63 +302,107 @@ class SyntheticPerception(BaseSample):
 
     def temp_passthrough(self, srx):
         # un comment to enalbe wAYPOINT
-        self.get_world().add_physics_callback("sim_step", callback_fn=srx.move)
+        self.get_world().add_physics_callback('sim_step', callback_fn=srx.move)
 
-    def spawn_asset(self, asset_path, class_name, prim_name, x, y, z):
-        prim_path = "/World/"+"class_"+class_name + "/" + prim_name
+    def spawn_asset(
+        self,
+        asset_path,
+        class_name,
+        prim_name,
+        x,
+        y,
+        z,
+        scale,
+        object_scale_delta,
+    ):
+        prim_path = '/World/' + 'class_' + class_name + '/' + prim_name
 
-        prim = self.add_asset_to_stage(asset_path, prim_name, prim_path, self._world.scene,
+        prim = self.add_asset_to_stage(
+            asset_path,
+            prim_name,
+            prim_path,
+            self._world.scene,
+            # Using the current stage units which is in meters by default.
+            position=np.array([x, y, 0]),
+            # most arguments accept mainly numpy arrays.
+            scale=np.array([0.5015, 0.5015, 0.5015]),
+        )
 
-                                       # Using the current stage units which is in meters by default.
-                                       position=np.array([x, y, 0]),
-                                       # most arguments accept mainly numpy arrays.
-                                       scale=np.array(
-                                           [0.5015, 0.5015, 0.5015]),
-                                       )
+        # here we want to modify the scale
+        low_lim = scale - object_scale_delta
+        high_lim = scale + object_scale_delta
+        scale = random.uniform(low_lim, high_lim) / 100
 
-        omni.kit.commands.execute('TransformPrimSRTCommand',
-                                  path=prim_path,  # f"/World/{p_name}",
 
-                                  old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-                                  new_scale=Gf.Vec3f(.01, .01, .01),
-                                  old_translation=Gf.Vec3f(x, y, z),
-                                  new_translation=Gf.Vec3f(x, y, z),
-                                  time_code=Usd.TimeCode(),
-                                  had_transform_at_key=False)
-        omni.kit.commands.execute('TransformPrimSRTCommand',
-                                  path=prim_path,  # f"/World/{p_name}",
+        random_rotation = random.uniform(0,360)
+        # x = x *100
+        # y = y *100
 
-                                  old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-                                  new_scale=Gf.Vec3f(.01, .01, .01),
-                                  old_translation=Gf.Vec3f(x, y, z),
-                                  new_translation=Gf.Vec3f(x, y, z),
-                                  time_code=Usd.TimeCode(),
-                                  had_transform_at_key=False)
+        omni.kit.commands.execute(
+            'TransformPrimSRTCommand',
+            path=prim_path,  # f"/World/{p_name}",
+            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            new_scale=Gf.Vec3f(scale, scale, scale),
+            old_translation=Gf.Vec3f(x, y, z),
+            new_translation=Gf.Vec3f(x, y, z),
+            old_rotation_euler=Gf.Vec3f(0, 0, 0),
+            old_rotation_order=Gf.Vec3i(0, 1, 2),
+            new_rotation_euler=Gf.Vec3f(0, 0, random_rotation),
+            new_rotation_order=Gf.Vec3i(0, 1, 2),
+            time_code=Usd.TimeCode(),
+            had_transform_at_key=False,
+        )
+        omni.kit.commands.execute(
+            'TransformPrimSRTCommand',
+            path=prim_path,  # f"/World/{p_name}",
+            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            new_scale=Gf.Vec3f(scale, scale, scale),
+            old_translation=Gf.Vec3f(x, y, z),
+            new_translation=Gf.Vec3f(x, y, z),
+            old_rotation_euler=Gf.Vec3f(0, 0, 0),
+            old_rotation_order=Gf.Vec3i(0, 1, 2),
+            new_rotation_euler=Gf.Vec3f(0, 0, random_rotation),
+            new_rotation_order=Gf.Vec3i(0, 1, 2),
+            time_code=Usd.TimeCode(),
+            had_transform_at_key=False,
+        )
 
     def test_areagen(self):
         self.test_areagen2()
         return
-        print("running test for area generations")
+        print('running test for area generations')
         n1, n2 = AreaMaskGenerator.test_func()
         # world = self.get_world()
-        print(len(n1), len(n2), " this many cubes")
+        print(len(n1), len(n2), ' this many cubes')
         for i, n in enumerate(n1):
             x, y = n
             x = float(x)
             y = float(y)
             z = float(0)
-            p_name = f"tree_{i}"
+            p_name = f'tree_{i}'
             self.spawn_asset(
-                "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\American_Beech.usd", "treeN", p_name,  x, y, z)
+                'C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\American_Beech.usd',
+                'treeN',
+                p_name,
+                x,
+                y,
+                z,
+            )
         for i, n in enumerate(n2):
 
             x, y = n
             x = float(x)
             y = float(y)
             z = float(0)
-            p_name = f"tree_pine_{i}"
+            p_name = f'tree_pine_{i}'
             self.spawn_asset(
-                "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\White_pine.usd", "treeP", p_name,  x, y, z)
+                'C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\White_pine.usd',
+                'treeP',
+                p_name,
+                x,
+                y,
+                z,
+            )
 
         #     fancy_cube = self._world.scene.add(
         #         DynamicCuboid(
@@ -362,122 +413,167 @@ class SyntheticPerception(BaseSample):
         #             color=np.array([0, 0, 1.0]), # RGB channels, going from 0-1
         #         ))
 
-    def spawn_loop(self, path, class_name, p_name, coll):
+    def spawn_loop(
+        self, path, class_name, p_name, coll, scale=1, object_scale_delta=0
+    ):
         for i, n in enumerate(coll):
             x, y = n
             x = float(x)
             y = float(y)
             z = float(0)
 
-            _p_name = f"{p_name}_{i}"
-            self.spawn_asset(path, class_name, _p_name,  x, y, z)
+            _p_name = f'{p_name}_{i}'
+            self.spawn_asset(
+                path, class_name, _p_name, x, y, z, scale, object_scale_delta
+            )
 
     def test_areagen2(self):
         tree1, tree2, rocks, rocks2 = AreaMaskGenerator.test_world()
-        tree1_path = "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\American_Beech.usd"
-        tree2_path = "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\Black_Oak.usd"
-        rocks_path = "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Shrub\\Fountain_Grass_Tall.usd"
-        rocks2_path = "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Plant_Tropical\\Jungle_Flame.usd"
-        print("how many to generate")
+        tree1_path = 'C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\American_Beech.usd'
+        tree2_path = 'C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\Black_Oak.usd'
+        rocks_path = 'C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Shrub\\Fountain_Grass_Tall.usd'
+        rocks2_path = 'C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Plant_Tropical\\Jungle_Flame.usd'
+        print('how many to generate')
         print(len(tree1), len(tree2), len(rocks), len(rocks2))
-        self.spawn_loop(tree1_path, "tree1", "tree_1_", tree1)
-        self.spawn_loop(tree2_path, "tree2", "tree_2_", tree2)
-        self.spawn_loop(rocks_path, "shrub1", "shrub_1_", rocks)
-        self.spawn_loop(rocks2_path, "shrub2", "shrub_2_", rocks2)
-    def generate_world(self,obj_path, world_path):
-        print("Starting world gen")
-        AreaMaskGenerator.generate_world_from_file(obj_path, world_path)
+        self.spawn_loop(tree1_path, 'tree1', 'tree_1_', tree1)
+        self.spawn_loop(tree2_path, 'tree2', 'tree_2_', tree2)
+        self.spawn_loop(rocks_path, 'shrub1', 'shrub_1_', rocks)
+        self.spawn_loop(rocks2_path, 'shrub2', 'shrub_2_', rocks2)
 
-    def add_asset_to_stage(self, asset_path, prim_name, prim_path, scene, **kwargs):
+    def generate_world(self, obj_path, world_path):
+        print('Starting world gen')
+
+        if World.instance() is None:
+            self._world = World(**self._world_settings)
+            self.setup_scene()
+        else:
+            self._world = World.instance()
+        print('checking if world is activev')
+        print(self._world)
+        obs_to_spawn, object_dict = AreaMaskGenerator.generate_world_from_file(
+            obj_path, world_path
+        )
+        length = len(obs_to_spawn)
+        counter = 1
+        for key in obs_to_spawn:
+            obj = object_dict[key]
+            path = object_dict[key].usd_path
+
+            # print("checking if world is activev")
+            # print(self._world)
+            print('trying to spawn ', path, ' ', counter, ' / ', length)
+            self.spawn_loop(
+                path,
+                obj.unique_id,
+                f'{obj.unique_id}_',
+                obs_to_spawn[key],
+                scale=obj.object_scale,
+                object_scale_delta=obj.object_scale_delta,
+            )
+            counter += 1
+        print('AREA GENERATION FINISHED')
+
+    def add_asset_to_stage(
+        self, asset_path, prim_name, prim_path, scene, **kwargs
+    ):
+
+        add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
+        return
         if scene.object_exists(prim_name):
             scene.remove_object(prim_name)
 
-        if "scale" in kwargs.keys():
-            scale_np = kwargs["scale"]
+        if 'scale' in kwargs.keys():
+            scale_np = kwargs['scale']
             scale = Gf.Vec3d(scale_np[0], scale_np[1], scale_np[2])
         else:
-            scale = Gf.Vec3d(1., 1., 1.)
-        if "orientation_euler" in kwargs.keys():
-            ori_np = kwargs["orientation_euler"]
+            scale = Gf.Vec3d(1.0, 1.0, 1.0)
+        if 'orientation_euler' in kwargs.keys():
+            ori_np = kwargs['orientation_euler']
             ori = Gf.Vec3d(ori_np[0], ori_np[1], ori_np[2])
         else:
-            ori = Gf.Vec3d(0., 0., 0.)
-        pos = kwargs["position"]
-
+            ori = Gf.Vec3d(0.0, 0.0, 0.0)
+        pos = kwargs['position']
+        # print("is error before adding reference ", prim_path)
         add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
-        if "make_rigid" in kwargs.keys():
-            if kwargs["make_rigid"] == False:
+        # print("is error after adding reference")
+        if 'make_rigid' in kwargs.keys():
+            if kwargs['make_rigid'] == False:
                 return None
-        if "semantic_class" in kwargs.keys():
-            sc = kwargs["semantic_class"]
-            del kwargs["semantic_class"]
+        if 'semantic_class' in kwargs.keys():
+            sc = kwargs['semantic_class']
+            del kwargs['semantic_class']
         else:
             sc = None
 
-    def add_asset_to_stage_archive(self, asset_path, prim_name, prim_path, scene, **kwargs):
+    def add_asset_to_stage_archive(
+        self, asset_path, prim_name, prim_path, scene, **kwargs
+    ):
         if scene.object_exists(prim_name):
             scene.remove_object(prim_name)
-        if "2021" in VERSION:
+        if '2021' in VERSION:
             import omni.kit.commands
             from omni.usd import _usd, get_context
             from omni.isaac.core.simulation_context import SimulationContext
             from pxr import Usd, Gf
 
             if get_prim_at_path(prim_path) is not None:
-                omni.kit.commands.execute('DeletePrims',
-                                          paths=[prim_path])
+                omni.kit.commands.execute('DeletePrims', paths=[prim_path])
 
             context = get_context()
             # prim_path = '/_4042_750_mL_Wine_Bottle_r_v1_L3'
-            omni.kit.commands.execute('CreateReferenceCommand',
-                                      usd_context=context,
-                                      path_to=prim_path,
-                                      asset_path=asset_path,
-                                      instanceable=False)
+            omni.kit.commands.execute(
+                'CreateReferenceCommand',
+                usd_context=context,
+                path_to=prim_path,
+                asset_path=asset_path,
+                instanceable=False,
+            )
 
-            if "scale" in kwargs.keys():
-                scale_np = kwargs["scale"]
+            if 'scale' in kwargs.keys():
+                scale_np = kwargs['scale']
                 scale = Gf.Vec3d(scale_np[0], scale_np[1], scale_np[2])
             else:
-                scale = Gf.Vec3d(1., 1., 1.)
+                scale = Gf.Vec3d(1.0, 1.0, 1.0)
 
-            if "orientation_euler" in kwargs.keys():
-                ori_np = kwargs["orientation_euler"]
+            if 'orientation_euler' in kwargs.keys():
+                ori_np = kwargs['orientation_euler']
                 ori = Gf.Vec3d(ori_np[0], ori_np[1], ori_np[2])
             else:
-                ori = Gf.Vec3d(0., 0., 0.)
+                ori = Gf.Vec3d(0.0, 0.0, 0.0)
 
-            pos = kwargs["position"]
+            pos = kwargs['position']
             transform(prim_path, pos, ori, scale)
-            if "semantic_class" in kwargs.keys():
-                sc = kwargs["semantic_class"]
+            if 'semantic_class' in kwargs.keys():
+                sc = kwargs['semantic_class']
             else:
                 sc = None
-            prim = ColliderPrim(prim_path=prim_path,
-                                name=prim_name, semantic_class=sc)
+            prim = ColliderPrim(
+                prim_path=prim_path, name=prim_name, semantic_class=sc
+            )
             scene.add(prim)
 
         else:
             from pxr import Usd, Gf
-            if "scale" in kwargs.keys():
-                scale_np = kwargs["scale"]
+
+            if 'scale' in kwargs.keys():
+                scale_np = kwargs['scale']
                 scale = Gf.Vec3d(scale_np[0], scale_np[1], scale_np[2])
             else:
-                scale = Gf.Vec3d(1., 1., 1.)
-            if "orientation_euler" in kwargs.keys():
-                ori_np = kwargs["orientation_euler"]
+                scale = Gf.Vec3d(1.0, 1.0, 1.0)
+            if 'orientation_euler' in kwargs.keys():
+                ori_np = kwargs['orientation_euler']
                 ori = Gf.Vec3d(ori_np[0], ori_np[1], ori_np[2])
             else:
-                ori = Gf.Vec3d(0., 0., 0.)
-            pos = kwargs["position"]
+                ori = Gf.Vec3d(0.0, 0.0, 0.0)
+            pos = kwargs['position']
 
             add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
-            if "make_rigid" in kwargs.keys():
-                if kwargs["make_rigid"] == False:
+            if 'make_rigid' in kwargs.keys():
+                if kwargs['make_rigid'] == False:
                     return None
-            if "semantic_class" in kwargs.keys():
-                sc = kwargs["semantic_class"]
-                del kwargs["semantic_class"]
+            if 'semantic_class' in kwargs.keys():
+                sc = kwargs['semantic_class']
+                del kwargs['semantic_class']
             else:
                 sc = None
 
