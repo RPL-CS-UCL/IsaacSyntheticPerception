@@ -504,7 +504,7 @@ class SyntheticPerception(BaseSample):
 
             # print("checking if world is activev")
             # print(self._world)
-            print('trying to spawn ', path, ' ', counter, ' / ', length)
+            print('trying to spawn ', path, ' ', counter, ' / ', length, " with ", len(obs_to_spawn[key]), " objects")
             class_name = obj.class_name
             if class_name == "":
                 class_name = obj.unique_id
@@ -519,7 +519,7 @@ class SyntheticPerception(BaseSample):
             )
             print("we should now wait")
             await update_stage_async()
-            print("some time should have passed")
+            # print("some time should have passed")
             # return
             counter += 1
         print('AREA GENERATION FINISHED')
