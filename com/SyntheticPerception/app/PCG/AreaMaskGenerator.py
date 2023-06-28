@@ -104,6 +104,7 @@ class WorldHandler:
         self._object_path = object_path
         self._world_path = world_path
         self.objects_to_spawn = {}
+        self._WORLD_TO_POISSON_SCALE = 1.6
 
     def _read_objects(self):
         with open(self._object_path, 'r+') as infile:
@@ -156,7 +157,7 @@ class WorldHandler:
                         # get corresponding object from objects
                         object_prim = self.objects_dict[str(obj_uid)]
 
-                        area, coords = fill_area(arr, object_prim.poisson_size, int(region_id), 999)#object_prim.unique_id
+                        area, coords = fill_area(arr, object_prim.poisson_size / self._WORLD_TO_POISSON_SCALE , int(region_id), 999)#object_prim.unique_id
                         self.objects_to_spawn[object_prim.unique_id] = coords 
 
                 # now we need to deal with sub zones
@@ -180,7 +181,7 @@ class WorldHandler:
                             # get corresponding object from objects
                             object_prim = self.objects_dict[obj_uid]
 
-                            area, coords = fill_area(zone_to_save, object_prim.poisson_size, int(zone_id), 999)
+                            area, coords = fill_area(zone_to_save, object_prim.poisson_size / self._WORLD_TO_POISSON_SCALE  , int(zone_id), 999)
                             # print(coords)
                             self.objects_to_spawn[object_prim.unique_id] = coords 
         # print(objects_to_spawn)

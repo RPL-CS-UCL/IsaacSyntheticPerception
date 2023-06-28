@@ -236,10 +236,13 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
     def _testRigWaypoint(self):
         print('init waypoints')
+        self.sample.init_world()
         stage = omni.usd.get_context().get_stage()
-        self.sample_sensor_rig.initialize_waypoints('', stage)
+        # self.sample_sensor_rig.initialize_waypoints('', stage)
+        self.sample.init_sensor_rig()
+        self.sample.sr.initialize_waypoints('', stage)
         print('Attach move to callback')
-        self.sample.temp_passthrough(self.sample_sensor_rig)
+        self.sample.temp_passthrough(self.sample.sr)
         # self_sensor_rig.move()
 
     def _loadtest(self):
@@ -637,8 +640,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _run_world_creation(self):
         print("callingworld gen")
         # self.sample.generate_world("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
-        # self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
-        asyncio.ensure_future(self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json"))
+        # self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save_new.json")
+        asyncio.ensure_future(self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\new_objects_save.json"))
         print(" ========================= ", is_stage_loading())
         return
         errors = [] 
