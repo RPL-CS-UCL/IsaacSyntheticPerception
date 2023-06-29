@@ -31,6 +31,7 @@ import carb
 from pxr import Sdf
 from .Sensors.LIDAR import Lidar
 from .Sensors.Camera import DepthCamera
+from omni.isaac.core.utils.rotations import lookat_to_quatf, quat_to_euler_angles,  gf_quat_to_np_array
 #.
 
 
@@ -96,10 +97,44 @@ class SensorRig:
         print(self.get_pos_rot())
         print(self._dc)
 
-    def apply_veloc(self, veloc):
+    def apply_veloc(self, veloc, ang_veloc):
         print("applying ", veloc)
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         self._dc.set_rigid_body_linear_velocity(self._rb, veloc)
+
+        object_pose = self._dc.get_rigid_body_pose(self._rb)
+        object_pose.r = ang_veloc
+        self._dc.set_rigid_body_pos(self._rb, ang_veloc)
+
+        # omni.kit.commands.execute(
+        #     'TransformPrimSRTCommand',
+        #     path=prim_path,  # f"/World/{p_name}",
+        #     old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+        #     new_scale=Gf.Vec3f(scale, scale, scale),
+        #     old_translation=Gf.Vec3f(x, y, z),
+        #     new_translation=Gf.Vec3f(x, y, z),
+        #     old_rotation_euler=Gf.Vec3f(0, 0, 0),
+        #     old_rotation_order=Gf.Vec3i(0, 1, 2),
+        #     new_rotation_euler=Gf.Vec3f(0, 0, random_rotation),
+        #     new_rotation_order=Gf.Vec3i(0, 1, 2),
+        #     time_code=Usd.TimeCode(),
+        #     had_transform_at_key=False,
+        # )
+        # omni.kit.commands.execute(
+        #     'TransformPrimSRTCommand',
+        #     path=prim_path,  # f"/World/{p_name}",
+        #     old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+        #     new_scale=Gf.Vec3f(scale, scale, scale),
+        #     old_translation=Gf.Vec3f(x, y, z),
+        #     new_translation=Gf.Vec3f(x, y, z),
+        #     old_rotation_euler=Gf.Vec3f(0, 0, 0),
+        #     old_rotation_order=Gf.Vec3i(0, 1, 2),
+        #     new_rotation_euler=Gf.Vec3f(0, 0, random_rotation),
+        #     new_rotation_order=Gf.Vec3i(0, 1, 2),
+        #     time_code=Usd.TimeCode(),
+        #     had_transform_at_key=False,
+        # )
+        # self._dc.set_rigid_body_angular_velocity(self._rb, ang_veloc)
 
     def add_depth_camera_to_rig(
         self,
@@ -161,6 +196,11 @@ class SensorRig:
         # Get the goal position and convert it into the correct type
         goal_pos = self.__waypoints[self.__curr_waypoint_id]
         goal_pos = Gf.Vec3d(goal_pos)
+        ori_ = lookat_to_quatf(pos, goal_pos, Gf.Vec3d(0,0,1))
+        rot_vec=ori_
+        # ori_np = gf_quat_to_np_array(ori_)
+        # rot_vec = quat_to_euler_angles(ori_np)
+        print( " =============== ", ori_)
 
         # Calculate the diff vector
         move_vec = goal_pos - pos
@@ -175,16 +215,18 @@ class SensorRig:
                 self.__curr_waypoint_id = 0
             return self._waypoint_update(pos)
 
-        return move_vec
+        return move_vec, rot_vec
 
     def move(self, time_step):
         # Retrieve the current position and orientation of the sensor rig
         current_pos, current_rot = self.get_pos_rot()
         current_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])
+        print("The current orientation of the SR is ", current_rot)
 
         # Load the correct waypoint, check if we should change to next one ..
         # and then calculate the required move vector.
-        move_vec = self._waypoint_update(current_pos)
+        move_vec,rot_vec = self._waypoint_update(current_pos)
 
         # Apply the required veloc
-        self.apply_veloc(move_vec)
+        self.apply_veloc(move_vec,rot_vec)
+
