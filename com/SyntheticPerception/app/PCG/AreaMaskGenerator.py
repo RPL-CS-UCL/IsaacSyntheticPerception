@@ -12,6 +12,126 @@ from . import PerlinNoise
 import matplotlib.pyplot as plt
 from typing import Tuple
 
+# import open3d as o3d
+# import numpy as np
+#
+# from perlin_numpy import generate_perlin_noise_2d, generate_fractal_noise_2d
+# from sklearn.preprocessing import normalize
+# from perlin_noise import PerlinNoise
+# import matplotlib.pyplot as plt
+#
+# # Step 1: Install Open3D if needed
+# # !pip install open3d
+#
+# l = 256
+# shape = (l, l)
+# noise1 = PerlinNoise(octaves=3)
+# noise2 = PerlinNoise(octaves=6)
+# noise3 = PerlinNoise(octaves=12)
+# noise4 = PerlinNoise(octaves=24)
+#
+# xpix, ypix = l, l
+# pic = []
+# for i in range(xpix):
+#     row = []
+#     for j in range(ypix):
+#         noise_val = noise1([i / xpix, j / ypix])
+#         noise_val += 0.5 * noise2([i / xpix, j / ypix])
+#         noise_val += 0.25 * noise3([i / xpix, j / ypix])
+#         noise_val += 0.125 * noise4([i / xpix, j / ypix])
+#
+#         row.append(noise_val)
+#     pic.append(row)
+# a = np.array(pic)
+# arr = abs(a)
+# points = []
+# all_verts = []
+# for x in range(len(arr)):
+#     for y in range(len(arr)):
+#         # vertex 0
+#         mypoint = [x, y, arr[x][y]*20]
+#
+#         all_verts.append(mypoint)
+#         points.append(mypoint)
+# print(a)
+#
+# faces = []
+# for i in range(1, len(all_verts) - 1):
+#     face = [i - 1, i, i + 1]  # Create a face using three consecutive vertices
+#     faces.append(face)
+# # print('here 2 222 l, faces', faces)
+# faces = []
+# subdivisions= l - 1
+# for j in range(subdivisions):
+#     for i in range(subdivisions):
+#         index = j * (subdivisions + 1) + i
+#         face1 = [index, index + 1, index + subdivisions + 2]
+#         face2 = [index, index + subdivisions + 2, index + subdivisions + 1]
+#         faces.append(face1)
+#         faces.append(face2)
+# # Step 3: Create an array representing the mesh vertices
+# vertices = np.array(points)  # Vertex 4
+# print(vertices.shape)
+# print(type(vertices))
+#
+# # Step 4: Create a TriangleMesh object and assign the vertices
+# mesh = o3d.geometry.TriangleMesh()
+# mesh.vertices = o3d.utility.Vector3dVector(vertices)
+# print('here4')
+#
+# # Step 5: Define the triangle faces
+# faces = np.array(faces)  # Triangle 2 (vertices 1, 3, 4)
+# print('faces')
+# print(faces)
+#
+# # Step 6: Assign the faces to the mesh
+# mesh.triangles = o3d.utility.Vector3iVector(faces)
+# mesh.paint_uniform_color([1, 0.706, 0])
+#
+# # Step 7: Compute the normals of the mesh
+# mesh.compute_vertex_normals()
+# mesh =mesh.filter_smooth_laplacian(number_of_iterations=10)
+#
+# mesh.compute_vertex_normals()
+# # Step 8: Visualize the mesh
+# o3d.visualization.draw_geometries([mesh])
+#
+# # Step 1: Define the list of face indices for splitting
+# split_indices = [i for i in range(int(len(mesh.triangles)/2))]  # List of face indices for splitting
+#
+# # Step 3: Create empty TriangleMesh objects for split meshes
+# mesh1 = o3d.geometry.TriangleMesh()
+# mesh2 = o3d.geometry.TriangleMesh()
+#
+# # Step 4: Iterate through the face indices and assign each face to the corresponding mesh
+# for index in range(np.asarray(mesh.triangles).shape[0]):
+#     face = mesh.triangles[index]
+#     if index in split_indices:
+#         mesh1.triangles.append(face)
+#     else:
+#         mesh2.triangles.append(face)
+#
+# # Step 5: Assign the original vertices and vertex normals to split meshes
+# mesh1.vertices = mesh.vertices
+# mesh1.vertex_normals = mesh.vertex_normals
+# mesh2.vertices = mesh.vertices
+# mesh2.vertex_normals = mesh.vertex_normals
+# mesh1 = mesh1.remove_unreferenced_vertices()
+#
+# mesh2 = mesh2.remove_unreferenced_vertices()
+#
+# mesh1.paint_uniform_color([1, 0, 2])
+#
+# mesh2.paint_uniform_color([1, 0.706, 1])
+# # Step 6: Compute the normals for split meshes
+# mesh1.compute_vertex_normals()
+# mesh2.compute_vertex_normals()
+#
+# # Step 7: Visualize the split meshes
+# o3d.visualization.draw_geometries([mesh1,mesh2])
+# print('done')
+# import bpy, math
+# import numpy as np
 def append_inside_area(
     area: npt.NDArray[np.float64],
     area_to_add: npt.NDArray[np.float64],
