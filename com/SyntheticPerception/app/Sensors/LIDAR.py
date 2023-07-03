@@ -113,7 +113,7 @@ class Lidar:
     def get_pc_and_semantic(self, save_path="/home/jon/Documents/temp/a"):
         pointcloud = self.__lidarInterface.get_point_cloud_data(self.__lidar_path)
         semantics = self.__lidarInterface.get_semantic_data(self.__lidar_path)
-        lidar_position = self.__get_position()
+        # lidar_position = self.__get_position()
         # pointcloud, semantics = self.__clear_max_lidar_points(
         #     pointcloud, semantics, lidar_position, self.__max_range
         # )

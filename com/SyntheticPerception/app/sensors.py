@@ -165,8 +165,6 @@ class SensorRig:
             # sensor.sample_sensor()
             asyncio.ensure_future(sensor.sample_sensor())
         return
-        # save position and rotation of sensor rig as a whole, and for each sensor.
-        pos, rot = self.get_pos_rot()
 
     def get_pos_rot(self):
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
@@ -177,7 +175,7 @@ class SensorRig:
         # Reset the waypoints
         self.__waypoints = []
         # Get the current sensor rig position and orientation
-        current_pos, current_rot = self.get_pos_rot()
+        # current_pos, current_rot = self.get_pos_rot()
 
         # iter over the stage and get all the waypoints
         # go through each child and save its tranform details to the waypoints list.

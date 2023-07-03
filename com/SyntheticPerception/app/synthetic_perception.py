@@ -144,9 +144,9 @@ class SyntheticPerception(BaseSample):
             'rendering_dt': 1.0 / 60.0,
         }
 
-        self.init_sensor_and_semantics()
-        self.init_sensor_rig()
-        print('Aquiring keyboard interface')
+        # self.init_sensor_and_semantics()
+        # self.init_sensor_rig()
+        # print('Aquiring keyboard interface')
         self._appwindow = omni.appwindow.get_default_app_window()
         self._input = carb.input.acquire_input_interface()
         self._keyboard = self._appwindow.get_keyboard()
@@ -169,11 +169,10 @@ class SyntheticPerception(BaseSample):
         if world.physics_callback_exists('sim_timestep'):
             world.remove_physics_callback('sim_timestep')
         stage = omni.usd.get_context().get_stage()
-        self.sr.initialize_waypoints('', stage)
+        # self.sr.initialize_waypoints('', stage)
 
     def world_cleanup(self):
         self.remove_all_objects()
-        return
 
     def init_semantics_in_scene(self):
         self.__add_semantics_to_all2(self.stage)
@@ -246,11 +245,6 @@ class SyntheticPerception(BaseSample):
         self.sr.add_sensor_to_rig(Lidar(path='coolLidar'))
 
 
-    async def save_lidar_data(self):
-        # pc, sem = self.__sensor.get_pc_and_semantic(
-        #     save_path='/home/jon/Desktop/'
-        # )
-        pass
 
     async def final_fn(self):
         pos, rot = self.sr.get_pos_rot()

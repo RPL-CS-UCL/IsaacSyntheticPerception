@@ -7,7 +7,6 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # from guppy import hpy
 import os
-
 from pxr import Usd, Gf, Ar, Pcp, Sdf, UsdRi
 from omni.isaac.examples.base_sample import BaseSampleExtension
 from omni.kit.window.popup_dialog import FormDialog
@@ -31,17 +30,14 @@ from omni.isaac.ui import (
     Button,
 )
 from .synthetic_perception import SyntheticPerception
-from .sensors import SensorRig
-import numpy as np
 import omni
-from .PCG import AreaMaskGenerator
-from omni.isaac.core.objects import DynamicCuboid
-
-# This file is for UI control. It build on sample extension
-from omni.isaac.core import World
 import json
 
-from omni.isaac.core.utils.stage import add_reference_to_stage, is_stage_loading, update_stage_async
+from omni.isaac.core.utils.stage import (
+    add_reference_to_stage,
+    is_stage_loading,
+    update_stage_async,
+)
 import os
 
 
@@ -73,7 +69,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         super().start_extension(
             menu_name='ExtensionName',
             submenu_name='',
-            name='Extension Name',
+            name='Synth perception',
             title='ExtensionName Task',
             doc_link='https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/overview.html',
             overview="This Example shows how to follow a target using Franka robot in Isaac Sim.\n\nPress the 'Open in IDE' button to view the source code.",
@@ -90,8 +86,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.selected_prim_dict = {}
         self.prim = None
 
-        self._object_path = ""
-        self._world_path = ""
+        self._object_path = ''
+        self._world_path = ''
         self.mm = False
         frame = self.get_frame(index=0)
         self.build_task_controls_ui(frame)
@@ -231,7 +227,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.sample.init_sensor_rig()
         self.sample.sr.initialize_waypoints('', stage)
         print('Attach move to callback')
-        self.sample.temp_passthrough(self.sample.sr)
+        self.sample.attach_sensor_waypoint_callback(self.sample.sr)
+
         # self_sensor_rig.move()
 
     def _loadtest(self):
@@ -253,7 +250,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         with frame:
             with ui.VStack(spacing=5):
                 # Update the Frame Title
-                frame.title = 'Task Controls'
+                frame.title = 'Sensor Controls'
                 frame.visible = True
 
                 self.add_button_title(
@@ -263,8 +260,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     'Init waypoints & attach', 'Attach', self._testRigWaypoint
                 )
 
-                self.add_button('veloc', self._save_lidar_info_event)
-                self.task_ui_elements['veloc'].enabled = True
+                # self.add_button('veloc', self._save_lidar_info_event)
+                # self.task_ui_elements['veloc'].enabled = True
 
                 self.add_button('sample sensors', self._on_sample_sensors)
                 self.task_ui_elements['sample sensors'].enabled = True
@@ -272,11 +269,16 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
                 self.add_button('init_world', self.ui_init_world)
                 self.task_ui_elements['init_world'].enabled = True
+                
 
-                self.add_button('init_semantics', self.ui_init_semantics)
-                self.task_ui_elements['init_semantics'].enabled = True
-                self.add_button('area gen test', self._empty_func)
-                self.task_ui_elements['area gen test'].enabled = True
+                #OTHER UI NEEDED
+                # load sensor rig
+                # ^ let the above handle waypoints and everything
+
+                # self.add_button('init_semantics', self.ui_init_semantics)
+                # self.task_ui_elements['init_semantics'].enabled = True
+                # self.add_button('area gen test', self._empty_func)
+                # self.task_ui_elements['area gen test'].enabled = True
 
     def _rebuild_update(self, e):
         if str(e) == 'Manual':
@@ -313,8 +315,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
                 self.add_button('init_semantics', self.ui_init_semantics)
                 self.task_ui_elements['init_semantics'].enabled = True
-                self.add_button('area gen test', self._empty_func)
-                self.task_ui_elements['area gen test'].enabled = True
+                # self.add_button('area gen test', self._empty_func)
+                # self.task_ui_elements['area gen test'].enabled = True
 
     def update_scale(self, val):
         if self.prim and val > 0:
@@ -337,7 +339,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             # update the local info
             # _ = self.prim.GetAttribute('xformOp:scale').Set(Gf.Vec3d([val,val,val]))
 
-            self.selected_prim_dict[self.current_path].posson_size= val
+            self.selected_prim_dict[self.current_path].posson_size = val
+
     def update_yrot(self, val):
         if self.prim and val != 'Not Selected':
             enable_y_rot = False
@@ -368,7 +371,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
     def _true(self, val):
         return True
-
 
     def save_object_data_to_file(self):
         def where_json(file_name):
@@ -420,7 +422,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             specific_data = {
                 'object_scale': selected.object_scale,
                 'object_scale_delta': selected.object_scale_delta,
-                'poisson_size' : selected.posson_size,
+                'poisson_size': selected.posson_size,
                 'allow_y_rot': selected.allow_y_rot,
                 'class_name': selected.class_name,
                 'usd_path': selected.usd_path,
@@ -575,45 +577,52 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         )
 
     def _update_object_path(self, val):
-        if val != "":
+        if val != '':
             self._object_path = val
-    def _update_world_path(self,val):
-        if val != "":
+
+    def _update_world_path(self, val):
+        if val != '':
             self._world_path = val
-    def _check_file_exists(self,path):
+
+    def _check_file_exists(self, path):
         try:
             with open(path, 'r+') as infile:
                 return True
         except:
             return False
+
     def _run_world_creation(self):
-        print("callingworld gen")
+        print('callingworld gen')
         # self.sample.generate_world("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
         # self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save_new.json")
-        asyncio.ensure_future(self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\new_objects_save.json"))
-        print(" ========================= ", is_stage_loading())
+        asyncio.ensure_future(
+            self.sample.generate_world_generator(
+                'C:\\Users\\jonem\\Desktop\\worlddata.json',
+                'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
+            )
+        )
+        print(' ========================= ', is_stage_loading())
         return
-        errors = [] 
+        errors = []
 
-        if self._object_path== '':
-            errors.append("No Object path specified.")
+        if self._object_path == '':
+            errors.append('No Object path specified.')
         if '.json' not in self._object_path:
-            errors.append("Object path does not contain .json extension.")
-        if self._world_path== '':
-            errors.append("No world path environment file was specified.")
+            errors.append('Object path does not contain .json extension.')
+        if self._world_path == '':
+            errors.append('No world path environment file was specified.')
         if '.json' not in self._world_path:
-            errors.append("World path does not contain .json exntension.")
+            errors.append('World path does not contain .json exntension.')
 
         # Check if both files exist
         if not self._check_file_exists(self._object_path):
-            errors.append("Object path file specified does not exist.")
+            errors.append('Object path file specified does not exist.')
 
         if not self._check_file_exists(self._world_path):
-            errors.append("World path file specified does not exist.")
-
+            errors.append('World path file specified does not exist.')
 
         if len(errors) != 0:
-            message_out = "".join([str + "\n" for str in errors])
+            message_out = ''.join([str + '\n' for str in errors])
             dialog = FormDialog(
                 title='ERROR',
                 message=message_out,
@@ -624,9 +633,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             return
         # If we get to here all paths valid. Pass to sample and build the world
         self.sample.generate_world(self._object_path, self._world_path)
+
     def build_pcg_env_ui(self, frame):
-
-
 
         with frame:
             with ui.VStack(spacing=5):
