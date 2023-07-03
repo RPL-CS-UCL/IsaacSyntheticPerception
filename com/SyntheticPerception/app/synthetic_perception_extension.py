@@ -241,7 +241,80 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.sample.test_areagen()
 
     def ui_init_world(self):
-        asyncio.ensure_future(self.sample.init_world())
+        print(' =========================== ')
+        mat_path = 'http://omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Natural/Dirt.mdl'
+        prim_path = '/World/mesh_1'
+        mat = '/World/Looks/Dirt'
+
+        stage = omni.usd.get_context().get_stage()
+        p = stage.GetPrimAtPath(mat)
+        material_attributes = p.GetAttributes()
+
+        # Get the current UV tile size attribute value
+
+        uv_tile_size_attr = material_attributes.GetAttribute(
+            'info:albedo:tiling:size'
+        )
+
+        # Print the current UV tile size
+
+        print('Current UV Tile Size:', uv_tile_size_attr.Get())
+
+        # Set the new UV tile size
+
+        new_uv_tile_size = 2.8888
+
+        setattr(uv_tile_size_attr, 'value', new_uv_tile_size)
+        print(p.GetAttributes())
+        mat_name = 'Dirt'
+        omni.kit.commands.execute(
+            'CreateMdlMaterialPrimCommand',
+            mtl_url=mat_path,
+            mtl_name=f'{mat_name}',
+            mtl_path=f'/World/Looks/{mat_name}',
+        )
+
+        omni.kit.commands.execute(
+            'BindMaterialCommand',
+            prim_path=prim_path,
+            material_path=f'/World/Looks/{mat_name}',
+        )
+
+        omni.kit.commands.execute(
+            'ChangeProperty',
+            prop_path=Sdf.Path(
+                f'/World/Looks/{mat_name}/Shader.inputs:project_uvw'
+            ),
+            value=True,
+            prev=None,
+        )
+
+        omni.kit.commands.execute(
+            'ChangeProperty',
+            prop_path=Sdf.Path(
+                f'/World/Looks/{mat_name}/Shader.inputs:project_uvw'
+            ),
+            value=True,
+            prev=None,
+        )
+        omni.kit.commands.execute(
+            'ChangeProperty',
+            prop_path=Sdf.Path(
+                f'/World/Looks/{mat_name}/Shader.inputs:texture_scale'
+            ),
+            prev=Gf.Vec2f(1.0, 1.0),
+            value=Gf.Vec2f(0.001, 0.001),
+        )
+
+        omni.kit.commands.execute(
+            'ChangeProperty',
+            prop_path=Sdf.Path(
+                f'/World/Looks/{mat_name}/Shader.inputs:texture_scale'
+            ),
+            prev=Gf.Vec2f(1.0, 1.0),
+            value=Gf.Vec2f(0.001, 0.001),
+        )
+        # asyncio.ensure_future(self.sample.init_world())
 
     def ui_init_semantics(self):
         self.sample.init_semantics_in_scene()
@@ -269,9 +342,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
                 self.add_button('init_world', self.ui_init_world)
                 self.task_ui_elements['init_world'].enabled = True
-                
 
-                #OTHER UI NEEDED
+                # OTHER UI NEEDED
                 # load sensor rig
                 # ^ let the above handle waypoints and everything
 

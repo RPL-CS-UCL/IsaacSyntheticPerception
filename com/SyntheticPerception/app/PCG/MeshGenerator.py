@@ -1,201 +1,387 @@
 import open3d as o3d
 import numpy as np
-
+import os
 from perlin_numpy import generate_perlin_noise_2d, generate_fractal_noise_2d
 from sklearn.preprocessing import normalize
 from perlin_noise import PerlinNoise
 import matplotlib.pyplot as plt
 import cv2
-
+import py3d
 import colorsys
+import pymeshlab as ml
 
-# Step 1: Install Open3D if needed
+# 0.001
+# enable project uvw coordinates
+# Ste 1: Install Open3D if needed
 # !pip install open3d
+# shape = (256, 256)
+# threshold = 0.5
+# region_value = 1
+# # Convert to pymeshlab mesh
+# l = shape[0] * 10   # 2560
+# data = generate_perlin_noise_2d(shape, (8, 8))
+# data = (data - np.min(data)) / (np.max(data) - np.min(data))
+# data[data < threshold] = 0
+# data[data >= threshold] = region_value
+# res = cv2.resize(data, dsize=(l, l), interpolation=cv2.INTER_NEAREST)
+# print('the amount of materials to make should be', np.unique(res))
+# print(res)
+# shape = (l, l)
+# noise1 = PerlinNoise(octaves=3)
+# noise2 = PerlinNoise(octaves=6)
+# noise3 = PerlinNoise(octaves=12)
+# noise4 = PerlinNoise(octaves=24)
+# # _in = [(x,y) for x in range(l) for y in range(l)]
+# # print(_in)
+# # result = vectorize_calculate_value(_in)
+# # print(result)
+# xpix, ypix = l, l
+# pic = []
+# # for i in range(xpix):
+# #     row = []
+# #     for j in range(ypix):
+# #         noise_val = noise1([i / xpix, j / ypix])
+# #         # noise_val += 0.5 * noise2([i / xpix, j / ypix])
+# #         # noise_val += 0.25 * noise3([i / xpix, j / ypix])
+# #         # noise_val += 0.125 * noise4([i / xpix, j / ypix])
+# #
+# #         row.append(noise_val)
+# #     pic.append(row)
+# # a = np.array(pic)
+# # arr = abs(a)
+print('generating initial mesh noise')
+points = []
+all_verts = []
+
+
+class MeshGen:
+    def __init__(self, map_size, map_scale, regions_map, save_path) -> None:
+        pass
+        self._size = map_size
+        self._scale = map_scale
+        self._map_shape = (self._size * self._scale, self._size * self._scale)
+        self._points = np.zeros(shape=(l * l, 3))
+        self._noise_map_xy = None
+        self._faces = []
+        self._mesh = None
+        self._regions_map = cv2.resize(
+            regions_map,
+            dsize=(self._size * self._scale, self._size * self._scale),
+            interpolation=cv2.INTER_NEAREST,
+        )
+        self._save_path = save_path
+        self.meshes = []
+        self._o = '[MeshGenerator] '
+        self._files_to_clean = []
+
+    def generate_terrain_mesh(self):
+        self._create_noise_map()
+        self._compute_base_mesh()
+        self._create_mesh_by_region()
+        self._save_meshes()
+
+    def clean_up_files(self):
+        def file_exists(file_path):
+            return os.path.exists(file_path)
+
+        for file_path in self._files_to_clean:
+            if file_exists(file_path):
+                os.remove(file_path)
+
+    def _save_meshes(self):
+
+        print(f'{self._o} Saving meshes to folder {self._save_path}.')
+        for i, m in enumerate(self.meshes):
+            self._files_to_clean.append(f'{self._save_path}/mesh_{i}.obj')
+            o3d.io.write_triangle_mesh(
+                filename=f'{self._save_path}/mesh_{i}.obj',
+                mesh=m,
+                compressed=False,
+                write_vertex_normals=True,
+                # write_vertex_colors=True,
+                # write_triangle_uvs=True,
+                print_progress=False,
+            )
+
+    def _create_noise_map(self):
+        print(f'{self._o} Creating Noise Map for terrain heights.')
+
+        self._noise_map_xy = generate_fractal_noise_2d(
+            self._map_shape, (8, 8), 3
+        )
+
+        x = np.linspace(
+            0,
+            self._size * self._scale,
+            self._size * self._scale,
+            dtype=np.int32,
+        )
+        y = np.linspace(
+            0,
+            self._size * self._scale,
+            self._size * self._scale,
+            dtype=np.int32,
+        )
+        noise_flat = self._noise_map_xy.flatten()
+        X, Y = np.meshgrid(x, y)
+
+        self._points = np.column_stack(
+            (X.ravel(), Y.ravel(), abs(noise_flat) * 300)
+        )
+
+    def _compute_base_mesh(self):
+        print(f'{self._o} Computing the base mesh.')
+        self._faces = []
+        subdivisions = (self._size * self._scale) - 1
+        for j in range(subdivisions):
+            for i in range(subdivisions):
+                index = j * (subdivisions + 1) + i
+                face1 = [index, index + 1, index + subdivisions + 2]
+                face2 = [
+                    index,
+                    index + subdivisions + 2,
+                    index + subdivisions + 1,
+                ]
+                self._faces.append(face1)
+                self._faces.append(face2)
+
+        self._mesh = o3d.geometry.TriangleMesh()
+        self._mesh.vertices = o3d.utility.Vector3dVector(self._points)
+        self._mesh.triangles = o3d.utility.Vector3iVector(
+            np.array(self._faces)
+        )
+        self._mesh.paint_uniform_color([1, 0.706, 0])
+
+        self._mesh.compute_vertex_normals()
+        self._mesh = self._mesh.filter_smooth_laplacian(
+            number_of_iterations=10
+        )
+
+        self._mesh = self._mesh.compute_vertex_normals()
+
+    def _create_mesh_by_region(self):
+
+        print(f'{self._o} Creating each submesh by region.')
+        materials = np.unique(self._regions_map)
+        self.meshes = [
+            o3d.geometry.TriangleMesh() for i in range(len(materials))
+        ]
+        index_to_try = 0
+        other_id = 0
+        while index_to_try < len(self._mesh.triangles):
+            face = self._mesh.triangles[index_to_try]
+            face2 = self._mesh.triangles[index_to_try + 1]
+            l = self._scale * self._size
+            ind = np.unravel_index(other_id, (l, l))
+            res_ind = self._regions_map[ind]
+            self.meshes[int(res_ind)].triangles.append(face)
+            self.meshes[int(res_ind)].triangles.append(face2)
+            index_to_try += 2
+            other_id += 1
+
+        N = len(materials)
+        HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
+        RGB_tuples = list(map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples))
+
+        for i, mesh2 in enumerate(self.meshes):
+            mesh2.vertices = self._mesh.vertices
+
+            mesh2.vertex_normals = self._mesh.vertex_normals
+            # v_uv = np.random.rand(len(mesh.triangles) * 3, 2)
+            # mesh2.triangle_uvs = v_uv
+            mesh2 = mesh2.remove_unreferenced_vertices()
+            mesh2.paint_uniform_color(RGB_tuples[i])
+            mesh2 = mesh2.compute_vertex_normals()
+            mesh2 = mesh2.compute_triangle_normals()
+
+
+print('starting class')
+
 shape = (256, 256)
 threshold = 0.5
 region_value = 1
-
-l = 2560
+# Convert to pymeshlab mesh
+l = shape[0] * 10   # 2560
 data = generate_perlin_noise_2d(shape, (8, 8))
 data = (data - np.min(data)) / (np.max(data) - np.min(data))
 data[data < threshold] = 0
 data[data >= threshold] = region_value
-res = cv2.resize(data, dsize=(l, l), interpolation=cv2.INTER_NEAREST)
-print("the amount of materials to make should be", np.unique(res))
-print(res)
-l = 2560
-shape = (l, l)
-noise1 = PerlinNoise(octaves=3)
-noise2 = PerlinNoise(octaves=6)
-noise3 = PerlinNoise(octaves=12)
-noise4 = PerlinNoise(octaves=24)
-
-xpix, ypix = l, l
-pic = []
-# for i in range(xpix):
-#     row = []
-#     for j in range(ypix):
-#         noise_val = noise1([i / xpix, j / ypix])
-#         # noise_val += 0.5 * noise2([i / xpix, j / ypix])
-#         # noise_val += 0.25 * noise3([i / xpix, j / ypix])
-#         # noise_val += 0.125 * noise4([i / xpix, j / ypix])
+mGen = MeshGen(
+    256,
+    10,
+    data,
+    'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG',
+)
+mGen.generate_terrain_mesh()
+# asdasd
 #
-#         row.append(noise_val)
-#     pic.append(row)
+# # points_np = np.zeros(shape=(l * l, 3))
+#
+# # def vec_fill(x):
+# #     x,y = x
+# #     noise_val = noise1([x / xpix, y / ypix])
+# #     return [x, y, abs(noise_val) * 200]
+# # fill_array = np.vectorize(vec_fill)
+# # array = fill_array([x,y] for y in range(l) for x in range(l))
+# # print(array)
+#
+# points_np = np.zeros(shape=(l * l, 3))
+# shape2 = (l, l)
+# res = generate_perlin_noise_2d(shape2, (8, 8))
+#
+#
+#
+#
+# x = np.linspace(0, l, l, dtype=np.int32)
+# print(x.shape)
+#
+# y = np.linspace(0, l, l, dtype=np.int32)
+# print(y.shape)
+# res2 = res.flatten()
+# print(res2.shape)
+# X, Y = np.meshgrid(x, y)
+#
+# # Stack the X and Y grids into a 2-column array
+# points_np= np.column_stack((X.ravel(), Y.ravel(),res2*500))
+# # result = np.stack((x, y, res.flatten()), axis=1)
+#
+# # print(result.shape)
+# # vectorize_calculate_value = np.vectorize(calculate_value)
+# # points_np = vectorize_calculate_value(res.flatten(), np.zeros((len(res.flatten()))))
+# print('initial gen done')
 # a = np.array(pic)
 # arr = abs(a)
-print("generating initial mesh noise")
-points = []
-all_verts = []
-points_np = np.zeros(shape=(l*l,3))
-
-# def vec_fill(x):
-#     x,y = x
-#     noise_val = noise1([x / xpix, y / ypix])
-#     return [x, y, abs(noise_val) * 200]
-# fill_array = np.vectorize(vec_fill)
-# array = fill_array([x,y] for y in range(l) for x in range(l))
-# print(array)
-for x in range(l):
-    row = []
-    for y in range(l):
-        # vertex 0
-
-        noise_val = noise1([x / xpix, y / ypix])
-        i = x
-        j = y
-        # noise_val += 0.5 * noise2([i / xpix, j / ypix])
-        # noise_val += 0.25 * noise3([i / xpix, j / ypix])
-        # noise_val += 0.125 * noise4([i / xpix, j / ypix])
-        mypoint = [x, y, abs(noise_val) * 500]
-        points_np[ x* l + y] = mypoint
-
-        # all_verts.append(mypoint)
-        # points.append(mypoint)
-        # row.append(noise_val)
-    # pic.append(row)
-
-a = np.array(pic)
-arr = abs(a)
+# # faces = []
+# # for i in range(1, len(all_verts) - 1):
+# #     face = [i - 1, i, i + 1]  # Create a face using three consecutive vertices
+# #     faces.append(face)
+# # print('here 2 222 l, faces', faces)
+# print('generating triangle face index')
 # faces = []
-# for i in range(1, len(all_verts) - 1):
-#     face = [i - 1, i, i + 1]  # Create a face using three consecutive vertices
-#     faces.append(face)
-# print('here 2 222 l, faces', faces)
-print("generating triangle face index")
-faces = []
-subdivisions = l - 1
-for j in range(subdivisions):
-    for i in range(subdivisions):
-        index = j * (subdivisions + 1) + i
-        face1 = [index, index + 1, index + subdivisions + 2]
-        face2 = [index, index + subdivisions + 2, index + subdivisions + 1]
-        faces.append(face1)
-        faces.append(face2)
-# Step 3: Create an array representing the mesh vertices
-vertices = points_np#np.array(points)  # Vertex 4
-print(vertices.shape)
-print(type(vertices))
-
-# Step 4: Create a TriangleMesh object and assign the vertices
-mesh = o3d.geometry.TriangleMesh()
-mesh.vertices = o3d.utility.Vector3dVector(vertices)
-print('here4')
-
-# Step 5: Define the triangle faces
-faces = np.array(faces)  # Triangle 2 (vertices 1, 3, 4)
-print('faces')
-print(faces)
-
-# Step 6: Assign the faces to the mesh
-mesh.triangles = o3d.utility.Vector3iVector(faces)
-mesh.paint_uniform_color([1, 0.706, 0])
-
-# Step 7: Compute the normals of the mesh
-mesh.compute_vertex_normals()
-mesh = mesh.filter_smooth_laplacian(number_of_iterations=10)
-
-mesh.compute_vertex_normals()
-# Step 8: Visualize the mesh
-o3d.visualization.draw_geometries([mesh])
-
-
-
-# Step 1: Define the list of face indices for splitting
-# split_indices = [i for i in range(int(len(mesh.trian-1gles)/2))]  # List of face indices for splitting
-materials = np.unique(res)
-print("The amount of materials to make, ", len(materials))
-new_meshes = [o3d.geometry.TriangleMesh() for i in range(len(materials))]
-print("The amount of meshes to make  ", len(new_meshes))
-
-print("The amount of triangles in the original mesh ", len(mesh.triangles), "   ", np.asarray(mesh.triangles).shape[0])
-print("The length of the res ", len(res))
-# for index in range(0, np.asarray(mesh.triangles).shape[0], 2):
-#     if index >= len(mesh.triangles):
-#         print("This index is too high", index)
-#     if index < len(mesh.triangles) and index < l*l:
-#         face = mesh.triangles[index]
-#         face2 = mesh.triangles[index+1]
-#         # get the value in the array
-#         ind = np.unravel_index(index, (l, l))
-#         res_ind = res[ind]
-#         new_meshes[int(res_ind)].triangles.append(face)
-#         new_meshes[int(res_ind)].triangles.append(face2)
-#     else:
-#         print(f"index {index}")
-index_to_try = 0
-other_id = 0
-while index_to_try < len(mesh.triangles):
-    face = mesh.triangles[index_to_try]
-    face2 = mesh.triangles[index_to_try+1]
-    ind = np.unravel_index(other_id, (l, l))
-    res_ind = res[ind]
-    new_meshes[int(res_ind)].triangles.append(face)
-    new_meshes[int(res_ind)].triangles.append(face2)
-    index_to_try += 2
-    other_id += 1
-print("the amount of triangles in the meshes added together ", (len(new_meshes[0].triangles) + len(new_meshes[1].triangles)))
-# # Step 3: Create empty TriangleMesh objects for split meshes
-# mesh1 = o3d.geometry.TriangleMesh()
-# mesh2 = o3d.geometry.TriangleMesh()
+# subdivisions = l - 1
+# for j in range(subdivisions):
+#     for i in range(subdivisions):
+#         index = j * (subdivisions + 1) + i
+#         face1 = [index, index + 1, index + subdivisions + 2]
+#         face2 = [index, index + subdivisions + 2, index + subdivisions + 1]
+#         faces.append(face1)
+#         faces.append(face2)
+# # Step 3: Create an array representing the mesh vertices
+# vertices = points_np  # np.array(points)  # Vertex 4
+# print(vertices.shape)
+# print(type(vertices))
 #
-# # Step 4: Iterate through the face indices and assign each face to the corresponding mesh
-# for index in range(np.asarray(mesh.triangles).shape[0]):
-#     face = mesh.triangles[index]
-#     if index in split_indices:
-#         mesh1.triangles.append(face)
-#     else:
-#         mesh2.triangles.append(face)
+# # Step 4: Create a TriangleMesh object and assign the vertices
+# self._mesh = o3d.geometry.TriangleMesh()
+# self._mesh.vertices = o3d.utility.Vector3dVector(vertices)
+# print('here4')
 #
-# Step 5: Assign the original vertices and vertex normals to split meshes
-
-N = len(materials)
-HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
-RGB_tuples = list(map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples))
-
-for i, mesh2 in enumerate(new_meshes):
-    mesh2.vertices = mesh.vertices
-
-    mesh2.vertex_normals = mesh.vertex_normals
-    mesh2 = mesh2.remove_unreferenced_vertices()
-    mesh2.paint_uniform_color(RGB_tuples[i])
-    mesh2.compute_vertex_normals()
-# mesh1.vertices = mesh.vertices
-# mesh1.vertex_normals = mesh.vertex_normals
-# mesh2.vertices = mesh.vertices
-# mesh2.vertex_normals = mesh.vertex_normals
-# mesh1 = mesh1.remove_unreferenced_vertices()
+# # Step 5: Define the triangle faces
+# faces = np.array(faces)  # Triangle 2 (vertices 1, 3, 4)
+# print('faces')
+# print(faces)
 #
-# mesh2 = mesh2.remove_unreferenced_vertices()
+# # Step 6: Assign the faces to the mesh
+# self._mesh.triangles = o3d.utility.Vector3iVector(faces)
+# self._mesh.paint_uniform_color([1, 0.706, 0])
 #
-# mesh1.paint_uniform_color([1, 0, 2])
+# # Step 7: Compute the normals of the mesh
+# self._mesh.compute_vertex_normals()
+# self._mesh = self._mesh.filter_smooth_laplacian(number_of_iterations=10)
 #
-# mesh2.paint_uniform_color([1, 0.706, 1])
-# # Step 6: Compute the normals for split meshes
-# mesh1.compute_vertex_normals()
-# mesh2.compute_vertex_normals()
-
-# Step 7: Visualize the split meshes
-o3d.visualization.draw_geometries(new_meshes)
-o3d.visualization.draw_geometries([mesh])
-print('done')
+# self._mesh.compute_vertex_normals()
+# # Step 8: Visualize the mesh
+# o3d.visualization.draw_geometries([self._mesh])
+#
+# pymesh = ml.Mesh(self._mesh.vertices, self._mesh.triangles)
+# # pymesh.compute_normals()
+#
+# # Create pymeshlab instance and add the mesh
+# ms = ml.MeshSet()
+# ms.add_mesh(pymesh)
+#
+# # Save as USD file
+# usd_path = 'FINAL2.stl'
+# ms.save_current_mesh(usd_path)
+#
+# # Step 1: Define the list of face indices for splitting
+# # split_indices = [i for i in range(int(len(mesh.trian-1gles)/2))]  # List of face indices for splitting
+# materials = np.unique(res)
+# print('The amount of materials to make, ', len(materials))
+# new_meshes = [o3d.geometry.TriangleMesh() for i in range(len(materials))]
+# print('The amount of meshes to make  ', len(new_meshes))
+#
+# print(
+#     'The amount of triangles in the original mesh ',
+#     len(self._mesh.triangles),
+#     '   ',
+#     np.asarray(self._mesh.triangles).shape[0],
+# )
+# print('The length of the res ', len(res))
+# # for index in range(0, np.asarray(mesh.triangles).shape[0], 2):
+# #     if index >= len(mesh.triangles):
+# #         print("This index is too high", index)
+# #     if index < len(mesh.triangles) and index < l*l:
+# #         face = mesh.triangles[index]
+# #         face2 = mesh.triangles[index+1]
+# #         # get the value in the array
+# #         ind = np.unravel_index(index, (l, l))
+# #         res_ind = res[ind]
+# #         new_meshes[int(res_ind)].triangles.append(face)
+# #         new_meshes[int(res_ind)].triangles.append(face2)
+# #     else:
+# #         print(f"index {index}")
+# index_to_try = 0
+# other_id = 0
+# while index_to_try < len(self._mesh.triangles):
+#     face = self._mesh.triangles[index_to_try]
+#     face2 = self._mesh.triangles[index_to_try + 1]
+#     ind = np.unravel_index(other_id, (l, l))
+#     res_ind = res[ind]
+#     new_meshes[int(res_ind)].triangles.append(face)
+#     new_meshes[int(res_ind)].triangles.append(face2)
+#     index_to_try += 2
+#     other_id += 1
+# print(
+#     'the amount of triangles in the meshes added together ',
+#     (len(new_meshes[0].triangles) + len(new_meshes[1].triangles)),
+# )
+# # # Step 3: Create empty TriangleMesh objects for split meshes
+# # mesh1 = o3d.geometry.TriangleMesh()
+# # mesh2 = o3d.geometry.TriangleMesh()
+# #
+# # # Step 4: Iterate through the face indices and assign each face to the corresponding mesh
+# # for index in range(np.asarray(mesh.triangles).shape[0]):
+# #     face = mesh.triangles[index]
+# #     if index in split_indices:
+# #         mesh1.triangles.append(face)
+# #     else:
+# #         mesh2.triangles.append(face)
+# #
+# # Step 5: Assign the original vertices and vertex normals to split meshes
+#
+# N = len(materials)
+# HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
+# RGB_tuples = list(map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples))
+#
+# for i, mesh2 in enumerate(new_meshes):
+#     mesh2.vertices = self._mesh.vertices
+#
+#     mesh2.vertex_normals = self._mesh.vertex_normals
+#     # v_uv = np.random.rand(len(mesh.triangles) * 3, 2)
+#     # mesh2.triangle_uvs = v_uv
+#     mesh2 = mesh2.remove_unreferenced_vertices()
+#     mesh2.paint_uniform_color(RGB_tuples[i])
+#     mesh2 = mesh2.compute_vertex_normals()
+#     mesh2 = mesh2.compute_triangle_normals()
+# for i, m in enumerate(new_meshes):
+#     o3d.io.write_triangle_mesh(
+#         filename=f'mesh3_{i}.obj',
+#         mesh=m,
+#         compressed=False,
+#         write_vertex_normals=True,
+#         # write_vertex_colors=True,
+#         # write_triangle_uvs=True,
+#         print_progress=False,
+#     )
+# print('done')
