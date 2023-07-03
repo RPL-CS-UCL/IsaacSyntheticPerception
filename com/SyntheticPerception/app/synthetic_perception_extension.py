@@ -88,6 +88,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.usd_context = omni.usd.get_context()
         self.selected_prim = SelectedPrim()
         self.selected_prim_dict = {}
+        self.prim = None
 
         self._object_path = ""
         self._world_path = ""
@@ -115,10 +116,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
     def on_stage_event(self, event):
 
-        # NEW: if statement to only check when selection changed
-
         if event.type == int(omni.usd.StageEventType.SELECTION_CHANGED):
-            print('selection changed')
 
             prim_path = (
                 self.usd_context.get_selection().get_selected_prim_paths()
@@ -177,14 +175,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         }
         self.task_ui_elements[label] = str_builder(**dict)
 
-    # def add_int_field(self, label, on_clicked_fn):
-    #     "Adds a string to the task frame ()"
-    #     dict = {
-    #         "label": label,
-    #         "use_folder_picker": True,
-    #         "on_clicked_fn": on_clicked_fn,
-    #     }
-    #     self.task_ui_elements[label] = str_builder(**dict)
     def add_button_title(self, label, title, on_clicked_fn):
         """Adds a button"""
         dict = {
@@ -205,7 +195,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         _, self.task_ui_elements[label] = combo_floatfield_slider_builder(
             **dict
         )
-        print(self.task_ui_elements[label].__dict__)
         self.task_ui_elements[label].enabled = False
 
     def _add_to_scene_event(self):
@@ -290,7 +279,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.task_ui_elements['area gen test'].enabled = True
 
     def _rebuild_update(self, e):
-        print('request rebuild', e)
         if str(e) == 'Manual':
             self.mm = True
 
@@ -352,14 +340,11 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             self.selected_prim_dict[self.current_path].posson_size= val
     def update_yrot(self, val):
         if self.prim and val != 'Not Selected':
-            print('Updating y rot')
-            # update the local info
             enable_y_rot = False
             if (
                 val == 'Enabled'
             ):  # self.world_gen_ui_elements["AllowYRot"].get_selected() == "Enabled":
                 enable_y_rot = True
-            print('setting y rot to ', enable_y_rot, '   ', val)
             self.selected_prim.allow_y_rot = enable_y_rot
 
             self.selected_prim_dict[
@@ -369,22 +354,14 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def prim_name_update(self, val):
         if self.prim and val != '':
             self.selected_prim_dict[self.current_path].unique_id = val
-            print('!! Updating prim name to ', val)
-            # print(self.selected_prim.unique_id)
-            # print(self.selected_prim)
 
     def class_name_update(self, val):
         if self.prim and val != '':
             self.selected_prim_dict[self.current_path].class_name = val
-            print('!! Updating clss name to ', val)
-            # print(self.selected_prim.unique_id)
-            # print(self.selected_prim)
 
     def update_usd_path(self, val):
         if self.prim and val != '':
-            print('setting usd path to ', val)
             self.selected_prim_dict[self.current_path].usd_path = val
-            print(self.selected_prim_dict[self.current_path].usd_path)
 
     def save_path_update(self, val):
         self.object_data_save_path = val
@@ -392,9 +369,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _true(self, val):
         return True
 
-    # def save_object_data_to_file(self):
-    #     if self.object_data_save_path == '':
-    #         return
 
     def save_object_data_to_file(self):
         def where_json(file_name):
@@ -471,10 +445,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     item_filter_fn=self._true,
                     on_value_changed_fn=self.save_path_update,
                 )
-                # self.add_button('get_selected', self._get_obj_details)
-                # self.task_ui_elements['get_selected'].enabled = True
-                # self.add_xyz('xyz',self.world_gen_ui_elements)
-                # self.add_float('Scale', self.world_gen_ui_elements)
                 self.world_gen_ui_elements['PrimName'] = StringField(
                     'Unique Name',
                     'None',
@@ -525,32 +495,20 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     on_click_fn=self.save_object_data_to_file,
                 )
 
-                # self.task_ui_elements['xyz'].enabled = True
-
-                # self.add_button('area gen test2', self._empty_func)
-                # self.task_ui_elements['area gen test2'].enabled = True
         self.prim = None
 
         self.position = [0, 0, 0]
 
-        # Save the UsdContext name (we currently only work with a single Context)
-
-        # Track selection changes
-
     def _get_obj_details(self, event):
-        print('==== Selection occured ====')
         prim_path = self.usd_context.get_selection().get_selected_prim_paths()
 
         self.world_gen_ui_elements['SavePath'] = self.object_data_save_path
         if not prim_path:
-            print('unselecting')
             for key in self.world_gen_ui_elements:
-                print(type(self.world_gen_ui_elements[key]))
                 if type(self.world_gen_ui_elements[key]) == FloatField:
                     self.world_gen_ui_elements[key].set_value(0)
 
                 if type(self.world_gen_ui_elements[key]) == DropDown:
-                    print('resetting dropdown')
 
                     self.world_gen_ui_elements[key].set_selection(
                         'Not Selected'
@@ -559,10 +517,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
                     self.world_gen_ui_elements[key].set_value('')
 
-                    # self.world_gen_ui_elements[key].set_value(False)
-                # if self.world_gen_ui_elements[key] is
-            # print("")
-            # self.world_gen_ui_elements['SelectedObjScale'].set_value(0)
             return
 
         stage = self.usd_context.get_stage()
@@ -594,7 +548,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             self.selected_prim_dict[self.current_path].unique_id == ''
             or self.selected_prim_dict[self.current_path].unique_id == 'None'
         ):
-            print('setting unique id')
             self.selected_prim_dict[
                 self.current_path
             ].unique_id = self.current_path
@@ -616,10 +569,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         )
         self.world_gen_ui_elements['AllowYRot'].set_selection(
             self.selected_prim_dict[self.current_path].get_y_rot_state()
-        )
-        print(
-            '===== usd path ',
-            self.selected_prim_dict[self.current_path].usd_path,
         )
         self.world_gen_ui_elements['USDPath'].set_value(
             self.selected_prim_dict[self.current_path].usd_path

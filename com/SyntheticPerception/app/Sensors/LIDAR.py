@@ -83,7 +83,7 @@ class Lidar:
     def init_sensor(self, parent):
         print(f"init the lidar {parent}")
         # self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
-        result, self.__lidar_prim = omni.kit.commands.execute(
+        _, self.__lidar_prim = omni.kit.commands.execute(
             "RangeSensorCreateLidar",
             path=self.__path,
             parent=parent,
