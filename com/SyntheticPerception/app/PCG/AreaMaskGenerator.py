@@ -1,6 +1,7 @@
 """
 This module handles area and point generation.
 """
+from .MeshGenerator import MeshGen
 import omni.kit.commands
 import json
 import os 
@@ -71,7 +72,7 @@ def fill_area(
         x_int = int(p[0])
         y_int = int(p[1])
         if area[y_int][x_int] == region_value:
-            area[y_int][x_int] = object_value
+            # area[y_int][x_int] = object_value
             new_points.append(p)
 
     return area, new_points
@@ -98,6 +99,11 @@ class ObjectPrim:
 
     """
         pass
+class TerrainPrim:
+    def __init__(self, mesh_path, mat_path, scale = 0.001) -> None:
+        self.mesh_path = mesh_path
+        self.material_path = mat_path
+        self.scale = scale
 
 class WorldHandler:
     def __init__(self, world_path, object_path) -> None:
@@ -143,7 +149,7 @@ class WorldHandler:
         #     print(i)
 
     def _read_world(self):
-        print("here")
+        # print("here")
         self.objects_to_spawn = {}
         data = None
         with open(self._world_path, 'r+') as infile:
@@ -151,10 +157,15 @@ class WorldHandler:
         if data != None:
             n = data["size"] 
             arr = np.zeros((n, n))
+            total_arr = np.zeros((n, n))
             regions = data["regions"]
+            terrain_info = {}
+            # print( " == ", np.unique(total_arr))
             for region_id in regions:
                 region_id = str(region_id)
 
+                terrain_info[region_id] = TerrainPrim("",regions[region_id]["material_path"], regions[region_id]["material_scale"])
+                print("terrrain info key type ", type(region_id))
                 new_arr = PerlinNoise.generate_region2(
                         seed=int(region_id),
                     shape=(n, n),
@@ -166,8 +177,13 @@ class WorldHandler:
                 arr = append_to_area(
                     arr, new_arr, int(region_id)
                 )
+                total_arr = arr
                 # handle objects in the zone
                 objs = regions[region_id]["objects"]
+                # print("region == ", region_id, "   ", int(region_id))
+                #
+                # unique, counts = np.unique(total_arr, return_counts=True)
+                # print(dict(zip(unique, counts)))
                 if len(objs) > 0:
                     for obj_uid in objs:
                         # get corresponding object from objects
@@ -180,6 +196,7 @@ class WorldHandler:
                 zones = regions[region_id]["zones"]
                 for zone_id in zones:
 
+                    terrain_info[str(zone_id)] = TerrainPrim("",zones[zone_id]["material_path"],zones[zone_id]["material_scale"])
                     new_arr = PerlinNoise.generate_region2(
                             seed=int(zone_id),
                         shape=(n, n),
@@ -191,7 +208,16 @@ class WorldHandler:
                     zone_to_save =append_inside_area(
                         arr, new_arr, int(zone_id)
                     )
+
+                    # print("zone == ", zone_id, "  ", zone_id)
+                    total_arr = zone_to_save
                     objs = zones[zone_id]["objects"]
+
+                    # unique, counts = np.unique(total_arr, return_counts=True)
+                    # print(dict(zip(unique, counts)))
+                    # print("for zone append inside area before we add to taotal")
+                    unique, counts = np.unique(new_arr, return_counts=True)
+                    print(dict(zip(unique, counts)))
                     if len(objs) > 0:
                         for obj_uid in objs:
                             # get corresponding object from objects
@@ -201,8 +227,9 @@ class WorldHandler:
                             # print(coords)
                             self.objects_to_spawn[object_prim.unique_id] = coords 
         # print(objects_to_spawn)
+
                             
-        pass
+            return total_arr, n, terrain_info
 
 
 def generate_world_from_file(world_path, object_path):
@@ -211,8 +238,35 @@ def generate_world_from_file(world_path, object_path):
     print("reading objs")
     world._read_objects()
     print("reading world")
-    world._read_world()
-    return world.objects_to_spawn, world.objects_dict
+    res = world._read_world()
+     
+    terrain_mesh_paths = []
+    if res:
+        region_map, map_size, terrain_info= res
+        # print(" ------- ")
+        # print(map_size, 10, region_map.shape)
+        # print(set(region_map.flatten()))
+        # unique, counts = np.unique(region_map, return_counts=True)
+        # print(dict(zip(unique, counts)))
+        # return None
+
+        m_path = 'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG'
+        meshGen = MeshGen(map_size, 10, region_map, m_path)
+        meshGen.generate_terrain_mesh()
+
+        regs = list(np.unique(region_map))
+        for key in terrain_info: 
+            if key in regs:
+                print(key)
+                print(terrain_info)
+                print(meshGen.final_mesh_paths_dict)
+                terrain_info[str(key)].mesh_path = meshGen.final_mesh_paths_dict[int(key)]
+        print(f"[AreaMaskGenerator] All terrain infos updated. Passing data back to main sample to genereate objects and load the terrain in.")
+
+
+        return world.objects_to_spawn, world.objects_dict, terrain_info 
+    return world.objects_to_spawn, world.objects_dict, None
+
 
 
 def test_world():

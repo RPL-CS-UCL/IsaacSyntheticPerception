@@ -353,7 +353,17 @@ class SyntheticPerception(BaseSample):
                 allow_rot,
             )
 
-
+    def create_terrains(self, terrain_info):
+        for key in terrain_info:
+           mesh_path = terrain_info[key].mesh_path 
+           scale = terrain_info[key].scale
+           mat_path = terrain_info[key].material_path
+           mat_name = mat_path.split("/")[-1]
+           mat_name = mat_name.replace(".usd","")
+           print("spawn and bind the terrain here")
+           print(mesh_path,scale,mat_path, mat_name)
+           #spawn prim
+           # self.create_material_and_bind(mat_name,mat_path,)
     async def generate_world_generator(self, obj_path, world_path):
         print('Starting world gen')
 
@@ -364,12 +374,16 @@ class SyntheticPerception(BaseSample):
             self._world = World.instance()
         print('checking if world is active')
         print(self._world)
-        obs_to_spawn, object_dict = AreaMaskGenerator.generate_world_from_file(
+        obs_to_spawn, object_dict, terrain_info = AreaMaskGenerator.generate_world_from_file(
             obj_path, world_path
         )
+
+        print(" ==================== TERRAIN INFO ", terrain_info)
         length = len(obs_to_spawn)
         counter = 1
         for key in obs_to_spawn:
+            if type(object_dict[key]) == None:
+                pass
 
             # check if assets are currently being spawned
             # load_bool = is_stage_loading()

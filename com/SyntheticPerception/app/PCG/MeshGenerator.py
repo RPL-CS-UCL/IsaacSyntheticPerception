@@ -19,11 +19,14 @@ class MeshGen:
         pass
         self._size = map_size
         self._scale = map_scale
+        l = self._size * self._scale
         self._map_shape = (self._size * self._scale, self._size * self._scale)
         self._points = np.zeros(shape=(l * l, 3))
         self._noise_map_xy = None
         self._faces = []
         self._mesh = None
+        print("materials")
+        print(np.unique(regions_map))
         self._regions_map = cv2.resize(
             regions_map,
             dsize=(self._size * self._scale, self._size * self._scale),
@@ -33,9 +36,13 @@ class MeshGen:
         self.meshes = []
         self._o = '[MeshGenerator] '
         self._files_to_clean = []
+        self.final_mesh_paths = []
+        self.final_mesh_paths_dict = {}
+        self.region_to_path = {}
 
     async def _convert_asset_to_usd(self, input_obj: str, output_usd: str):
         def progress_callback(progress, total_steps):
+            print(f"{self._o} current progress: ", progress, " / ", total_steps)
             pass
 
         converter_context = omni.kit.asset_converter.AssetConverterContext()
@@ -57,14 +64,15 @@ class MeshGen:
         success = await task.wait_until_finished()
         if not success:
             carb.log_error(task.get_status(), task.get_detailed_error())
-        print('converting done')
+        print(f'{self._o} Converting done')
 
     def _convert_all(self):
 
         print(f'{self._o} Converting .obj files to .usd')
         for file_path in self._files_to_clean:
             new_path = file_path.replace('.obj', '.usd')
-            self._files_to_clean.append(new_path)
+            self.final_mesh_paths.append(new_path)
+            print(f"{self._o} Trying to convert {file_path} to {new_path}")
 
             asyncio.ensure_future(
                 self._convert_asset_to_usd(file_path, new_path)
@@ -88,17 +96,30 @@ class MeshGen:
     def _save_meshes(self):
 
         print(f'{self._o} Saving meshes to folder {self._save_path}.')
-        for i, m in enumerate(self.meshes):
+        for i, key in enumerate(list(self.meshes_dict.keys())):
             self._files_to_clean.append(f'{self._save_path}/mesh_{i}.obj')
+            print("final mesh paths dict key type ", type(key))
+            self.final_mesh_paths_dict[key] = f'{self._save_path}/mesh_{i}.obj'
             o3d.io.write_triangle_mesh(
                 filename=f'{self._save_path}/mesh_{i}.obj',
-                mesh=m,
+                mesh=self.meshes_dict[int(key)],
                 compressed=False,
                 write_vertex_normals=True,
                 # write_vertex_colors=True,
                 # write_triangle_uvs=True,
                 print_progress=False,
             )
+        # for i, m in enumerate(self.meshes):
+        #     self._files_to_clean.append(f'{self._save_path}/mesh_{i}.obj')
+        #     o3d.io.write_triangle_mesh(
+        #         filename=f'{self._save_path}/mesh_{i}.obj',
+        #         mesh=m,
+        #         compressed=False,
+        #         write_vertex_normals=True,
+        #         # write_vertex_colors=True,
+        #         # write_triangle_uvs=True,
+        #         print_progress=False,
+        #     )
 
     def _create_noise_map(self):
         print(f'{self._o} Creating Noise Map for terrain heights.')
@@ -159,10 +180,18 @@ class MeshGen:
     def _create_mesh_by_region(self):
 
         print(f'{self._o} Creating each submesh by region.')
-        materials = np.unique(self._regions_map)
+        materials = list(np.unique(self._regions_map))
+        # for i,val in enumerate(materials):
+        #     if val > 100:
+        #         materials.remove(val)
+        # print(materials)
         self.meshes = [
             o3d.geometry.TriangleMesh() for i in range(len(materials))
         ]
+        self.meshes_dict = {}
+        for key in materials:
+            self.meshes_dict[int(key)] = o3d.geometry.TriangleMesh()
+
         index_to_try = 0
         other_id = 0
         while index_to_try < len(self._mesh.triangles):
@@ -171,8 +200,10 @@ class MeshGen:
             l = self._scale * self._size
             ind = np.unravel_index(other_id, (l, l))
             res_ind = self._regions_map[ind]
-            self.meshes[int(res_ind)].triangles.append(face)
-            self.meshes[int(res_ind)].triangles.append(face2)
+            # self.meshes[int(res_ind)].triangles.append(face)
+            # self.meshes[int(res_ind)].triangles.append(face2)
+            self.meshes_dict[int(res_ind)].triangles.append(face)
+            self.meshes_dict[int(res_ind)].triangles.append(face2)
             index_to_try += 2
             other_id += 1
 
@@ -180,16 +211,26 @@ class MeshGen:
         HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
         RGB_tuples = list(map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples))
 
-        for i, mesh2 in enumerate(self.meshes):
-            mesh2.vertices = self._mesh.vertices
+        for i, key in enumerate(list(self.meshes_dict.keys())):
+            self.meshes_dict[key].vertices = self._mesh.vertices
 
-            mesh2.vertex_normals = self._mesh.vertex_normals
+            self.meshes_dict[key].vertex_normals = self._mesh.vertex_normals
             # v_uv = np.random.rand(len(mesh.triangles) * 3, 2)
             # mesh2.triangle_uvs = v_uv
-            mesh2 = mesh2.remove_unreferenced_vertices()
-            mesh2.paint_uniform_color(RGB_tuples[i])
-            mesh2 = mesh2.compute_vertex_normals()
-            mesh2 = mesh2.compute_triangle_normals()
+            self.meshes_dict[key]= self.meshes_dict[key].remove_unreferenced_vertices()
+            self.meshes_dict[key].paint_uniform_color(RGB_tuples[i])
+            self.meshes_dict[key]= self.meshes_dict[key].compute_vertex_normals()
+            self.meshes_dict[key]= self.meshes_dict[key].compute_triangle_normals()
+        # for i, mesh2 in enumerate(self.meshes):
+        #     mesh2.vertices = self._mesh.vertices
+        #
+        #     mesh2.vertex_normals = self._mesh.vertex_normals
+        #     # v_uv = np.random.rand(len(mesh.triangles) * 3, 2)
+        #     # mesh2.triangle_uvs = v_uv
+        #     mesh2 = mesh2.remove_unreferenced_vertices()
+        #     mesh2.paint_uniform_color(RGB_tuples[i])
+        #     mesh2 = mesh2.compute_vertex_normals()
+        #     mesh2 = mesh2.compute_triangle_normals()
 
 
 # print('starting class')

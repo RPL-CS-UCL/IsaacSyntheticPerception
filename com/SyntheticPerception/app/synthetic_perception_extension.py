@@ -51,9 +51,7 @@ from sklearn.preprocessing import normalize
 from perlin_noise import PerlinNoise
 import matplotlib.pyplot as plt
 import cv2
-import py3d
 import colorsys
-import pymeshlab as ml
 import asyncio
 import omni.kit.asset_converter
 import carb
