@@ -359,7 +359,7 @@ class SyntheticPerception(BaseSample):
            scale = terrain_info[key].scale
            mat_path = terrain_info[key].material_path
            mat_name = mat_path.split("/")[-1]
-           mat_name = mat_name.replace(".usd","")
+           mat_name = mat_name.replace(".mdl","")
            print("spawn and bind the terrain here")
            print(mesh_path,scale,mat_path, mat_name)
            #spawn prim
@@ -379,6 +379,7 @@ class SyntheticPerception(BaseSample):
         )
 
         print(" ==================== TERRAIN INFO ", terrain_info)
+        self.create_terrains(terrain_info)
         length = len(obs_to_spawn)
         counter = 1
         for key in obs_to_spawn:
