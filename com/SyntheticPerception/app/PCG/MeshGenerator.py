@@ -6,53 +6,13 @@ from sklearn.preprocessing import normalize
 from perlin_noise import PerlinNoise
 import matplotlib.pyplot as plt
 import cv2
-import py3d
 import colorsys
-import pymeshlab as ml
+import asyncio
+import omni.kit.asset_converter
+import carb
 
 # 0.001
 # enable project uvw coordinates
-# Ste 1: Install Open3D if needed
-# !pip install open3d
-# shape = (256, 256)
-# threshold = 0.5
-# region_value = 1
-# # Convert to pymeshlab mesh
-# l = shape[0] * 10   # 2560
-# data = generate_perlin_noise_2d(shape, (8, 8))
-# data = (data - np.min(data)) / (np.max(data) - np.min(data))
-# data[data < threshold] = 0
-# data[data >= threshold] = region_value
-# res = cv2.resize(data, dsize=(l, l), interpolation=cv2.INTER_NEAREST)
-# print('the amount of materials to make should be', np.unique(res))
-# print(res)
-# shape = (l, l)
-# noise1 = PerlinNoise(octaves=3)
-# noise2 = PerlinNoise(octaves=6)
-# noise3 = PerlinNoise(octaves=12)
-# noise4 = PerlinNoise(octaves=24)
-# # _in = [(x,y) for x in range(l) for y in range(l)]
-# # print(_in)
-# # result = vectorize_calculate_value(_in)
-# # print(result)
-# xpix, ypix = l, l
-# pic = []
-# # for i in range(xpix):
-# #     row = []
-# #     for j in range(ypix):
-# #         noise_val = noise1([i / xpix, j / ypix])
-# #         # noise_val += 0.5 * noise2([i / xpix, j / ypix])
-# #         # noise_val += 0.25 * noise3([i / xpix, j / ypix])
-# #         # noise_val += 0.125 * noise4([i / xpix, j / ypix])
-# #
-# #         row.append(noise_val)
-# #     pic.append(row)
-# # a = np.array(pic)
-# # arr = abs(a)
-print('generating initial mesh noise')
-points = []
-all_verts = []
-
 
 class MeshGen:
     def __init__(self, map_size, map_scale, regions_map, save_path) -> None:
@@ -74,11 +34,48 @@ class MeshGen:
         self._o = '[MeshGenerator] '
         self._files_to_clean = []
 
+    async def _convert_asset_to_usd(self, input_obj: str, output_usd: str):
+        def progress_callback(progress, total_steps):
+            pass
+
+        converter_context = omni.kit.asset_converter.AssetConverterContext()
+        # setup converter and flags
+        # converter_context.ignore_material = False
+        # converter_context.ignore_animation = False
+        # converter_context.ignore_cameras = True
+        # converter_context.single_mesh = True
+        # converter_context.smooth_normals = True
+        # converter_context.preview_surface = False
+        # converter_context.support_point_instancer = False
+        # converter_context.embed_mdl_in_usd = False
+        # converter_context.use_meter_as_world_unit = True
+        # converter_context.create_world_as_default_root_prim = False
+        instance = omni.kit.asset_converter.get_instance()
+        task = instance.create_converter_task(
+            input_obj, output_usd, progress_callback, converter_context
+        )
+        success = await task.wait_until_finished()
+        if not success:
+            carb.log_error(task.get_status(), task.get_detailed_error())
+        print('converting done')
+
+    def _convert_all(self):
+
+        print(f'{self._o} Converting .obj files to .usd')
+        for file_path in self._files_to_clean:
+            new_path = file_path.replace('.obj', '.usd')
+            self._files_to_clean.append(new_path)
+
+            asyncio.ensure_future(
+                self._convert_asset_to_usd(file_path, new_path)
+            )
+
     def generate_terrain_mesh(self):
         self._create_noise_map()
         self._compute_base_mesh()
         self._create_mesh_by_region()
         self._save_meshes()
+        self._convert_all()
 
     def clean_up_files(self):
         def file_exists(file_path):
@@ -126,7 +123,7 @@ class MeshGen:
         X, Y = np.meshgrid(x, y)
 
         self._points = np.column_stack(
-            (X.ravel(), Y.ravel(), abs(noise_flat) * 300)
+            (X.ravel(), abs(noise_flat) * 300, Y.ravel())
         )
 
     def _compute_base_mesh(self):
@@ -195,24 +192,28 @@ class MeshGen:
             mesh2 = mesh2.compute_triangle_normals()
 
 
-print('starting class')
-
-shape = (256, 256)
-threshold = 0.5
-region_value = 1
-# Convert to pymeshlab mesh
-l = shape[0] * 10   # 2560
-data = generate_perlin_noise_2d(shape, (8, 8))
-data = (data - np.min(data)) / (np.max(data) - np.min(data))
-data[data < threshold] = 0
-data[data >= threshold] = region_value
-mGen = MeshGen(
-    256,
-    10,
-    data,
-    'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG',
-)
-mGen.generate_terrain_mesh()
+# print('starting class')
+#
+# print('generating initial mesh noise')
+# points = []
+# all_verts = []
+#
+# shape = (256, 256)
+# threshold = 0.5
+# region_value = 1
+# # Convert to pymeshlab mesh
+# l = shape[0] * 10   # 2560
+# data = generate_perlin_noise_2d(shape, (8, 8))
+# data = (data - np.min(data)) / (np.max(data) - np.min(data))
+# data[data < threshold] = 0
+# data[data >= threshold] = region_value
+# mGen = MeshGen(
+#     256,
+#     10,
+#     data,
+#     'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG',
+# )
+# mGen.generate_terrain_mesh()
 # asdasd
 #
 # # points_np = np.zeros(shape=(l * l, 3))

@@ -8,6 +8,7 @@
 # from guppy import hpy
 import os
 from pxr import Usd, Gf, Ar, Pcp, Sdf, UsdRi
+from pxr import UsdShade, Sdf
 from omni.isaac.examples.base_sample import BaseSampleExtension
 from omni.kit.window.popup_dialog import FormDialog
 import asyncio
@@ -34,12 +35,28 @@ import omni
 import json
 
 from omni.isaac.core.utils.stage import (
+    update_stage,
     add_reference_to_stage,
     is_stage_loading,
     update_stage_async,
 )
 import os
 
+from .PCG.MeshGenerator import MeshGen
+import open3d as o3d
+import numpy as np
+import os
+from perlin_numpy import generate_perlin_noise_2d, generate_fractal_noise_2d
+from sklearn.preprocessing import normalize
+from perlin_noise import PerlinNoise
+import matplotlib.pyplot as plt
+import cv2
+import py3d
+import colorsys
+import pymeshlab as ml
+import asyncio
+import omni.kit.asset_converter
+import carb
 
 class SelectedPrim:
     def __init__(self) -> None:
@@ -239,81 +256,180 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _empty_func(self):
         print('Area gen test, passing to sample')
         self.sample.test_areagen()
+    async def material_test(self):
 
-    def ui_init_world(self):
+        shape = (256, 256)
+        threshold = 0.5
+        region_value = 1
+# Convert to pymeshlab mesh
+        l = shape[0] * 10   # 2560
+        data = generate_perlin_noise_2d(shape, (8, 8))
+        data = (data - np.min(data)) / (np.max(data) - np.min(data))
+        data[data < threshold] = 0
+        data[data >= threshold] = region_value
+        mGen = MeshGen(
+            256,
+            10,
+            data,
+            'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG',
+        )
+        mGen.generate_terrain_mesh()
+        return
+        # asyncio.ensure_future(self.sample.init_world())
         print(' =========================== ')
         mat_path = 'http://omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Natural/Dirt.mdl'
         prim_path = '/World/mesh_1'
         mat = '/World/Looks/Dirt'
 
         stage = omni.usd.get_context().get_stage()
-        p = stage.GetPrimAtPath(mat)
-        material_attributes = p.GetAttributes()
+        obj_prim = stage.GetPrimAtPath(prim_path)
+        mat_name = 'Dirt'
+        # omni.kit.commands.execute(
+        #     'CreateMdlMaterialPrimCommand',
+        #     mtl_url=mat_path,
+        #     mtl_name=f'{mat_name}',
+        #     mtl_path=f'/World/Looks/{mat_name}',
+        # )
 
-        # Get the current UV tile size attribute value
+        # omni.kit.commands.execute(
+        #     'CreateMdlMaterialPrimCommand',
+        #     mtl_url=mat_path,
+        #     mtl_name=f'{mat_name}',
+        #     mtl_path=f'/World/Looks/{mat_name}',
+        # )
+        #
+        # # update_stage()
+        # _ = omni.kit.commands.execute(
+        #     'BindMaterialCommand',
+        #     prim_path=prim_path,
+        #     material_path=f'/World/Looks/{mat_name}',
+        # )
+        mtl_created_list = []
 
-        uv_tile_size_attr = material_attributes.GetAttribute(
-            'info:albedo:tiling:size'
+        omni.kit.commands.execute(
+            'CreateAndBindMdlMaterialFromLibrary',
+            mdl_name=mat_path,
+            mtl_name=mat_name,
+            mtl_created_list=mtl_created_list,
         )
+
+
+        mtl_prim = stage.GetPrimAtPath(mtl_created_list[0])
+
+        omni.usd.create_material_input(
+            mtl_prim,
+            'project_uvw',
+            True,
+            Sdf.ValueTypeNames.Bool,
+        )
+
+        omni.usd.create_material_input(
+            mtl_prim,
+            'texture_scale',
+            Gf.Vec2f(0.001, 0.001),
+            Sdf.ValueTypeNames.Float2,
+        )
+        cube_mat_shade = UsdShade.Material(mtl_prim)
+
+        UsdShade.MaterialBindingAPI(obj_prim).Bind(
+            cube_mat_shade, UsdShade.Tokens.strongerThanDescendants
+        )
+        return
+
+        # Set material inputs, these can be determined by looking at the .mdl file
+
+        # or by selecting the Shader attached to the Material in the stage window and looking at the details panel
+
+        print('wait')
+        await update_stage_async()
+        print('continue')
+        update_stage()
+        while is_stage_loading():
+            await update_stage_async()
+
+        stage = omni.usd.get_context().get_stage()
+        p = stage.GetPrimAtPath(f'{mat}/Shader')
+        not_set = False
+
+        omni.kit.commands.execute(
+            'SelectPrims',
+            old_selected_paths=['/World'],
+            new_selected_paths=['/World/Looks/Dirt'],
+            expand_in_stage=True,
+        )
+
+        omni.kit.commands.execute(
+            'SelectPrims',
+            old_selected_paths=['/World'],
+            new_selected_paths=['/World/Looks/Dirt'],
+            expand_in_stage=True,
+        )
+
+        print('wait')
+        await update_stage_async()
+        print('continue')
+        update_stage()
+        while is_stage_loading():
+            await update_stage_async()
+        # while not not_set:
+        #     try:
+        #         material_attributes = p.GetAttributes()
+        #         p.GetAttribute('inputs:project_uvw').Set(True)
+        #         not_set = True
+        #         print("success: ", _)
+        #     except:
+        #
+        #         print("failure: ", _)
+        #         await update_stage_async()
+        #
+
+        material_attributes = p.GetAttributes()
+        p.GetAttribute('inputs:project_uvw').Set(True)
+        p.GetAttribute('inputs:texture_scale').Set((0.001, 0.001))
+
+        omni.kit.commands.execute(
+            'SelectPrims',
+            old_selected_paths=['/World'],
+            new_selected_paths=['/World/Looks/Dirt'],
+            expand_in_stage=True,
+        )
+
+        omni.kit.commands.execute(
+            'SelectPrims',
+            old_selected_paths=['/World'],
+            new_selected_paths=['/World/Looks/Dirt'],
+            expand_in_stage=True,
+        )
+
+    def ui_init_world(self):
+        asyncio.ensure_future(self.material_test())
+        #
+        # # Get the current UV tile size attribute value
+        #
+        # uv_tile_size_attr = p.GetAttribute(
+        #     'info:albedo:TextureTiling:size'
+        # )
 
         # Print the current UV tile size
 
-        print('Current UV Tile Size:', uv_tile_size_attr.Get())
+        # print('Current UV Tile Size:', uv_tile_size_attr.Get())
 
         # Set the new UV tile size
 
         new_uv_tile_size = 2.8888
 
-        setattr(uv_tile_size_attr, 'value', new_uv_tile_size)
-        print(p.GetAttributes())
+        # setattr(uv_tile_size_attr, 'value', new_uv_tile_size)
+        # print(p.GetAttributes())
         mat_name = 'Dirt'
-        omni.kit.commands.execute(
-            'CreateMdlMaterialPrimCommand',
-            mtl_url=mat_path,
-            mtl_name=f'{mat_name}',
-            mtl_path=f'/World/Looks/{mat_name}',
-        )
 
-        omni.kit.commands.execute(
-            'BindMaterialCommand',
-            prim_path=prim_path,
-            material_path=f'/World/Looks/{mat_name}',
-        )
-
-        omni.kit.commands.execute(
-            'ChangeProperty',
-            prop_path=Sdf.Path(
-                f'/World/Looks/{mat_name}/Shader.inputs:project_uvw'
-            ),
-            value=True,
-            prev=None,
-        )
-
-        omni.kit.commands.execute(
-            'ChangeProperty',
-            prop_path=Sdf.Path(
-                f'/World/Looks/{mat_name}/Shader.inputs:project_uvw'
-            ),
-            value=True,
-            prev=None,
-        )
-        omni.kit.commands.execute(
-            'ChangeProperty',
-            prop_path=Sdf.Path(
-                f'/World/Looks/{mat_name}/Shader.inputs:texture_scale'
-            ),
-            prev=Gf.Vec2f(1.0, 1.0),
-            value=Gf.Vec2f(0.001, 0.001),
-        )
-
-        omni.kit.commands.execute(
-            'ChangeProperty',
-            prop_path=Sdf.Path(
-                f'/World/Looks/{mat_name}/Shader.inputs:texture_scale'
-            ),
-            prev=Gf.Vec2f(1.0, 1.0),
-            value=Gf.Vec2f(0.001, 0.001),
-        )
+        # omni.kit.commands.execute(
+        #     'ChangeProperty',
+        #     prop_path=Sdf.Path(
+        #         f'/World/Looks/{mat_name}/Shader.inputs:texture_scale'
+        #     ),
+        #     prev=Gf.Vec2f(1.0, 1.0),
+        #     value=Gf.Vec2f(0.001, 0.001),
+        # )
         # asyncio.ensure_future(self.sample.init_world())
 
     def ui_init_semantics(self):

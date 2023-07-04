@@ -43,6 +43,7 @@ from omni.isaac.core.utils.stage import (
     update_stage_async,
 )
 
+from pxr import UsdShade, Sdf
 
 class SyntheticPerception(BaseSample):
     """
@@ -413,6 +414,40 @@ class SyntheticPerception(BaseSample):
     ):
 
         add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
+
+    def create_material_and_bind(self, mat_name, mat_path, prim_path, scale,stage):
+
+        obj_prim = stage.GetPrimAtPath(prim_path)
+        mtl_created_list = []
+
+        omni.kit.commands.execute(
+            'CreateAndBindMdlMaterialFromLibrary',
+            mdl_name=mat_path,
+            mtl_name=mat_name,
+            mtl_created_list=mtl_created_list,
+        )
+
+
+        mtl_prim = stage.GetPrimAtPath(mtl_created_list[0])
+
+        omni.usd.create_material_input(
+            mtl_prim,
+            'project_uvw',
+            True,
+            Sdf.ValueTypeNames.Bool,
+        )
+
+        omni.usd.create_material_input(
+            mtl_prim,
+            'texture_scale',
+            Gf.Vec2f(scale, scale),
+            Sdf.ValueTypeNames.Float2,
+        )
+        cube_mat_shade = UsdShade.Material(mtl_prim)
+
+        UsdShade.MaterialBindingAPI(obj_prim).Bind(
+            cube_mat_shade, UsdShade.Tokens.strongerThanDescendants
+        )
 
     # def generate_world(self, obj_path, world_path):
     #     print('Starting world gen')
