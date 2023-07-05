@@ -41,6 +41,7 @@ from omni.isaac.core.utils.stage import (
     add_reference_to_stage,
     is_stage_loading,
     update_stage_async,
+    update_stage,
 )
 
 from pxr import UsdShade, Sdf
@@ -371,39 +372,43 @@ class SyntheticPerception(BaseSample):
             x, y, z = 0, 0, 0
             add_reference_to_stage(usd_path=mesh_path, prim_path=prim_p)
 
-            stage = self.usd_context.get_stage()
-            prim = stage.GetPrimAtPath('/World/t')
-            xformm = UsdGeom.Xformable(prim)
-            transform = xformm.AddTransformOp()
-
-            omni.kit.commands.execute(
-                'TransformPrimSRTCommand',
-                path=f'/World/t',
-                old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-                new_scale=Gf.Vec3f(scale, scale, scale),
-                old_translation=Gf.Vec3f(x, y, z),
-                new_translation=Gf.Vec3f(x, y, z),
-                old_rotation_euler=Gf.Vec3f(0, 0, 0),
-                old_rotation_order=Gf.Vec3i(0, 1, 2),
-                new_rotation_euler=Gf.Vec3f(90, 0, random_rotation),
-                new_rotation_order=Gf.Vec3i(0, 1, 2),
-                time_code=Usd.TimeCode(),
-                had_transform_at_key=False,
-            )
-            omni.kit.commands.execute(
-                'TransformPrimSRTCommand',
-                path=f'/World/t',
-                old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-                new_scale=Gf.Vec3f(scale, scale, scale),
-                old_translation=Gf.Vec3f(x, y, z),
-                new_translation=Gf.Vec3f(x, y, z),
-                old_rotation_euler=Gf.Vec3f(0, 0, 0),
-                old_rotation_order=Gf.Vec3i(0, 1, 2),
-                new_rotation_euler=Gf.Vec3f(90, 0, random_rotation),
-                new_rotation_order=Gf.Vec3i(0, 1, 2),
-                time_code=Usd.TimeCode(),
-                had_transform_at_key=False,
-            )
+        # scale = 1.0
+        # random_rotation = 0.0
+        # x, y, z = 0, 0, 0
+        # # stage = self.usd_context.get_stage()
+        # stage = omni.usd.get_context().get_stage()
+        # prim = stage.GetPrimAtPath('/World/t')
+        # xformm = UsdGeom.Xformable(prim)
+        # transform = xformm.AddTransformOp()
+        #
+        # omni.kit.commands.execute(
+        #     'TransformPrimSRTCommand',
+        #     path=f'/World/t',
+        #     old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+        #     new_scale=Gf.Vec3f(scale, scale, scale),
+        #     old_translation=Gf.Vec3f(x, y, z),
+        #     new_translation=Gf.Vec3f(x, y, z),
+        #     old_rotation_euler=Gf.Vec3f(0, 0, 0),
+        #     old_rotation_order=Gf.Vec3i(0, 1, 2),
+        #     new_rotation_euler=Gf.Vec3f(90, 0, random_rotation),
+        #     new_rotation_order=Gf.Vec3i(0, 1, 2),
+        #     time_code=Usd.TimeCode(),
+        #     had_transform_at_key=False,
+        # )
+        # omni.kit.commands.execute(
+        #     'TransformPrimSRTCommand',
+        #     path=f'/World/t',
+        #     old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+        #     new_scale=Gf.Vec3f(scale, scale, scale),
+        #     old_translation=Gf.Vec3f(x, y, z),
+        #     new_translation=Gf.Vec3f(x, y, z),
+        #     old_rotation_euler=Gf.Vec3f(0, 0, 0),
+        #     old_rotation_order=Gf.Vec3i(0, 1, 2),
+        #     new_rotation_euler=Gf.Vec3f(90, 0, random_rotation),
+        #     new_rotation_order=Gf.Vec3i(0, 1, 2),
+        #     time_code=Usd.TimeCode(),
+        #     had_transform_at_key=False,
+        # )
             # self.spawn_asset(
             #     mesh_path,
             #     'terrain',
@@ -462,6 +467,7 @@ class SyntheticPerception(BaseSample):
         length = len(obs_to_spawn)
         counter = 1
         print('area gen finished')
+        num_objs = 0
         for key in obs_to_spawn:
 
             # check if assets are currently being spawned
@@ -469,9 +475,13 @@ class SyntheticPerception(BaseSample):
             # print(" =================================== ", load_bool)
             obj = object_dict[key]
             path = object_dict[key].usd_path
-
+            num_objs += len(obs_to_spawn[key])
             # print("checking if world is activev")
             # print(self._world)
+
+            if num_objs > 5000:
+                update_stage()
+                return
             print(
                 'trying to spawn ',
                 path,
@@ -497,6 +507,10 @@ class SyntheticPerception(BaseSample):
                 allow_rot=obj.allow_y_rot,
             )
             print('we should now wait')
+            if num_objs > 5000:
+                update_stage()
+                return
+                num_objs = 0
             # await update_stage_async()
             # print("some time should have passed")
             # return

@@ -196,7 +196,7 @@ class MeshGen:
         print(f'{self._o} Saving meshes to folder {self._save_path}.')
         for i, key in enumerate(list(self.meshes_dict.keys())):
             self._files_to_clean.append(f'{self._save_path}/mesh_{i}.obj')
-            print('final mesh paths dict key type ', type(key))
+            # print('final mesh paths dict key type ', type(key))
             self.final_mesh_paths_dict[key] = f'{self._save_path}/mesh_{i}.obj'
             o3d.io.write_triangle_mesh(
                 filename=f'{self._save_path}/mesh_{i}.obj',
@@ -247,14 +247,28 @@ class MeshGen:
 
     def _compute_base_mesh(self):
 
+        subdivisions = (self._size * self._scale) - 1
+        total_size_needed = subdivisions*subdivisions*2
         materials = list(np.unique(self._regions_map))
 
         self.meshes_dict = {}
+        faces_holder = {}
+        faces_counter = {}
         for key in materials:
             self.meshes_dict[int(key)] = o3d.geometry.TriangleMesh()
+            faces_holder[int(key)] =np.zeros((total_size_needed,3)) 
+            faces_counter[int(key)] = 0
         print(f'{self._o} Computing the base mesh.')
         self._faces = []
-        subdivisions = (self._size * self._scale) - 1
+        # faces_holder = [np.zeros((total_size_needed,3)) for i in range(len(materials))]
+        # faces_counter = [0 for i in range(len(materials))]
+        # print("debug")
+        # print(len(faces_holder))
+        # print(len(faces_counter))
+        # print(len(materials))
+
+        mesh_face_holder = np.zeros((total_size_needed,3))
+        mesh_face_counter = 0
         for j in range(subdivisions):
             for i in range(subdivisions):
                 index = j * (subdivisions + 1) + i
@@ -264,12 +278,29 @@ class MeshGen:
                     index + subdivisions + 2,
                     index + subdivisions + 1,
                 ]
-                self._faces.append(face1)
-                self._faces.append(face2)
+                # self._faces.append(face1)
+                # self._faces.append(face2)
+                mesh_face_holder[mesh_face_counter] = face1
+                mesh_face_holder[mesh_face_counter+1] = face2
+                mesh_face_counter += 2
 
+                # print(faces_ctotal_size_needed)
                 res_ind = int(self._regions_map[j,i])
-                self.meshes_dict[res_ind].triangles.append(face1)
-                self.meshes_dict[res_ind].triangles.append(face2)
+                # print(faces_counter)
+                # print(res_ind)
+                # print(self._regions_map[j,i])
+                faces_holder[res_ind][faces_counter[res_ind]] = face1
+                faces_holder[res_ind][faces_counter[res_ind]+1] = face2
+                faces_counter[res_ind] += 2
+                # self.meshes_dict[res_ind].triangles.append(face1)
+                # self.meshes_dict[res_ind].triangles.append(face2)
+        
+        #clean faces
+        self._faces= mesh_face_holder[:mesh_face_counter]
+        for key in self.meshes_dict:
+            k = int(key)
+            faces_holder[k] = mesh_face_holder[k][:mesh_face_counter]
+
 
         self._mesh = o3d.geometry.TriangleMesh()
         self._mesh.vertices = o3d.utility.Vector3dVector(self._points)
