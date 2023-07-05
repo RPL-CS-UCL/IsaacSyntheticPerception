@@ -131,7 +131,7 @@ class WorldHandler:
     def _read_objects(self):
         with open(self._object_path, 'r+') as infile:
             data = json.load(infile)
-            print(data)
+            # print(data)
             for key in data:
                 scale = data[key]["object_scale"]
                 scale_delta =data[key]["object_scale_delta"]
@@ -165,7 +165,7 @@ class WorldHandler:
                 region_id = str(region_id)
 
                 terrain_info[region_id] = TerrainPrim("",regions[region_id]["material_path"], regions[region_id]["material_scale"])
-                print("terrrain info key type ", type(region_id))
+                # print("terrrain info key type ", type(region_id))
                 new_arr = PerlinNoise.generate_region2(
                         seed=int(region_id),
                     shape=(n, n),
@@ -216,8 +216,8 @@ class WorldHandler:
                     # unique, counts = np.unique(total_arr, return_counts=True)
                     # print(dict(zip(unique, counts)))
                     # print("for zone append inside area before we add to taotal")
-                    unique, counts = np.unique(new_arr, return_counts=True)
-                    print(dict(zip(unique, counts)))
+                    # unique, counts = np.unique(new_arr, return_counts=True)
+                    # print(dict(zip(unique, counts)))
                     if len(objs) > 0:
                         for obj_uid in objs:
                             # get corresponding object from objects
@@ -255,17 +255,22 @@ def generate_world_from_file(world_path, object_path):
         meshGen.generate_terrain_mesh()
 
         regs = list(np.unique(region_map))
+        print("iterating through terrain info")
+        print(regs)
+        print(terrain_info)
         for key in terrain_info: 
-            if key in regs:
-                print(key)
+            print(key)
+            if float(key) in regs:
+                print(f"{key} ")
                 print(terrain_info)
                 print(meshGen.final_mesh_paths_dict)
                 terrain_info[str(key)].mesh_path = meshGen.final_mesh_paths_dict[int(key)]
+                print("mesh path ", terrain_info[str(key)])
         print(f"[AreaMaskGenerator] All terrain infos updated. Passing data back to main sample to genereate objects and load the terrain in.")
 
 
-        return world.objects_to_spawn, world.objects_dict, terrain_info 
-    return world.objects_to_spawn, world.objects_dict, None
+        return world.objects_to_spawn, world.objects_dict, terrain_info, meshGen._noise_map_xy 
+    return world.objects_to_spawn, world.objects_dict, None, None
 
 
 

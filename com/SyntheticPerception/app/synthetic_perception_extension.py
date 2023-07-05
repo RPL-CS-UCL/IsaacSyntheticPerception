@@ -400,7 +400,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         )
 
     def ui_init_world(self):
-        asyncio.ensure_future(self.material_test())
+        # asyncio.ensure_future(self.sample.init_world())
+        self.sample.test_spawn1()
+        # asyncio.ensure_future(self.material_test())
         #
         # # Get the current UV tile size attribute value
         #
@@ -781,12 +783,16 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         print('callingworld gen')
         # self.sample.generate_world("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
         # self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save_new.json")
-        asyncio.ensure_future(
-            self.sample.generate_world_generator(
-                'C:\\Users\\jonem\\Desktop\\worlddata.json',
-                'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
-            )
+        self.sample.generate_world_generator(
+            'C:\\Users\\jonem\\Desktop\\worlddata.json',
+            'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
         )
+        # asyncio.run(
+        #     self.sample.generate_world_generator(
+        #         'C:\\Users\\jonem\\Desktop\\worlddata.json',
+        #         'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
+        #     )
+        # )
         print(' ========================= ', is_stage_loading())
         return
         errors = []

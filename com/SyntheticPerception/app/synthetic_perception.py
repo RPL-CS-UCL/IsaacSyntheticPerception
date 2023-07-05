@@ -45,6 +45,7 @@ from omni.isaac.core.utils.stage import (
 
 from pxr import UsdShade, Sdf
 
+
 class SyntheticPerception(BaseSample):
     """
 
@@ -231,7 +232,6 @@ class SyntheticPerception(BaseSample):
 
                     completed_classes.append(prim_class)
 
-
     def init_sensor_rig(self):
         """Initializes the sensor rig and adds individual sensors"""
         print(
@@ -245,8 +245,6 @@ class SyntheticPerception(BaseSample):
         self.sr.add_sensor_to_rig(DepthCamera(name='depthcam2'))
         self.sr.add_sensor_to_rig(Lidar(path='coolLidar'))
 
-
-
     async def final_fn(self):
         pos, rot = self.sr.get_pos_rot()
         print(pos, rot)
@@ -259,7 +257,6 @@ class SyntheticPerception(BaseSample):
         self.get_world().add_physics_callback('sim_step', callback_fn=srx.move)
 
     def spawn_asset(
-
         self,
         asset_path,
         class_name,
@@ -330,6 +327,7 @@ class SyntheticPerception(BaseSample):
         class_name,
         p_name,
         coll,
+        height_map,
         scale=1,
         object_scale_delta=0,
         allow_rot=True,
@@ -338,7 +336,7 @@ class SyntheticPerception(BaseSample):
             x, y = n
             x = float(x)
             y = float(y)
-            z = float(0)
+            z = float(height_map[int(y)][int(x)])
 
             _p_name = f'{p_name}_{i}'
             self.spawn_asset(
@@ -354,17 +352,90 @@ class SyntheticPerception(BaseSample):
             )
 
     def create_terrains(self, terrain_info):
+        print(' Trying to create terrains')
+        print('The terrain info should be ', terrain_info)
         for key in terrain_info:
-           mesh_path = terrain_info[key].mesh_path 
-           scale = terrain_info[key].scale
-           mat_path = terrain_info[key].material_path
-           mat_name = mat_path.split("/")[-1]
-           mat_name = mat_name.replace(".mdl","")
-           print("spawn and bind the terrain here")
-           print(mesh_path,scale,mat_path, mat_name)
-           #spawn prim
-           # self.create_material_and_bind(mat_name,mat_path,)
-    async def generate_world_generator(self, obj_path, world_path):
+            mesh_path = terrain_info[key].mesh_path
+            scale = terrain_info[key].scale
+            mat_path = terrain_info[key].material_path
+            mat_name = mat_path.split('/')[-1]
+            mat_name = mat_name.replace('.mdl', '')
+            mesh_path = mesh_path.replace('.obj', '.usd')
+            print('spawn and bind the terrain here')
+            print(mesh_path, scale, mat_path, mat_name)
+            # spawn prim
+
+            prim_p = f'/World/t/terrain{key}'
+            scale = 1.0
+            random_rotation = 0.0
+            x, y, z = 0, 0, 0
+            add_reference_to_stage(usd_path=mesh_path, prim_path=prim_p)
+
+            stage = self.usd_context.get_stage()
+            prim = stage.GetPrimAtPath('/World/t')
+            xformm = UsdGeom.Xformable(prim)
+            transform = xformm.AddTransformOp()
+
+            omni.kit.commands.execute(
+                'TransformPrimSRTCommand',
+                path=f'/World/t',
+                old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+                new_scale=Gf.Vec3f(scale, scale, scale),
+                old_translation=Gf.Vec3f(x, y, z),
+                new_translation=Gf.Vec3f(x, y, z),
+                old_rotation_euler=Gf.Vec3f(0, 0, 0),
+                old_rotation_order=Gf.Vec3i(0, 1, 2),
+                new_rotation_euler=Gf.Vec3f(90, 0, random_rotation),
+                new_rotation_order=Gf.Vec3i(0, 1, 2),
+                time_code=Usd.TimeCode(),
+                had_transform_at_key=False,
+            )
+            omni.kit.commands.execute(
+                'TransformPrimSRTCommand',
+                path=f'/World/t',
+                old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+                new_scale=Gf.Vec3f(scale, scale, scale),
+                old_translation=Gf.Vec3f(x, y, z),
+                new_translation=Gf.Vec3f(x, y, z),
+                old_rotation_euler=Gf.Vec3f(0, 0, 0),
+                old_rotation_order=Gf.Vec3i(0, 1, 2),
+                new_rotation_euler=Gf.Vec3f(90, 0, random_rotation),
+                new_rotation_order=Gf.Vec3i(0, 1, 2),
+                time_code=Usd.TimeCode(),
+                had_transform_at_key=False,
+            )
+            # self.spawn_asset(
+            #     mesh_path,
+            #     'terrain',
+            #     f'terrainmesh_{key}',
+            #     0,
+            #     0,
+            #     0,
+            #     1,
+            #     0,
+            #     False,
+            # )
+
+    # self.create_material_and_bind(mat_name,mat_path,)
+    def test_spawn1(self):
+
+        # asyncio.ensure_future(self.init_world())
+        mesh_path = 'C:\\Users\\jonem\\Documents\\Kit\\apps\\Isaac-Sim\\exts\\IsaacSyntheticPerception\\com\\SyntheticPerception\\app\\PCG\\mesh_0.usd'
+
+        add_reference_to_stage(usd_path=mesh_path, prim_path='/World/terrain')
+        # self.spawn_asset(
+        #     mesh_path,
+        #     'terrain',
+        #     f'terrainmesh',
+        #     0,
+        #     0,
+        #     0,
+        #     1,
+        #     0,
+        #     False,
+        # )
+
+    def generate_world_generator(self, obj_path, world_path):
         print('Starting world gen')
 
         if World.instance() is None:
@@ -374,17 +445,24 @@ class SyntheticPerception(BaseSample):
             self._world = World.instance()
         print('checking if world is active')
         print(self._world)
-        obs_to_spawn, object_dict, terrain_info = AreaMaskGenerator.generate_world_from_file(
-            obj_path, world_path
-        )
 
-        print(" ==================== TERRAIN INFO ", terrain_info)
+        (
+            obs_to_spawn,
+            object_dict,
+            terrain_info,
+            height_map,
+        ) = AreaMaskGenerator.generate_world_from_file(obj_path, world_path)
+
+        print(' ==================== TERRAIN INFO ', terrain_info)
+        # loop = asyncio.new_event_loop()
+
+        # asyncio.set_event_loop(loop)
+        # asyncio.ensure_future(self.create_terrains(terrain_info))
         self.create_terrains(terrain_info)
         length = len(obs_to_spawn)
         counter = 1
+        print('area gen finished')
         for key in obs_to_spawn:
-            if type(object_dict[key]) == None:
-                pass
 
             # check if assets are currently being spawned
             # load_bool = is_stage_loading()
@@ -413,6 +491,7 @@ class SyntheticPerception(BaseSample):
                 class_name,
                 f'{obj.unique_id}_',
                 obs_to_spawn[key],
+                height_map,
                 scale=obj.object_scale,
                 object_scale_delta=obj.object_scale_delta,
                 allow_rot=obj.allow_y_rot,
@@ -427,10 +506,13 @@ class SyntheticPerception(BaseSample):
     def add_asset_to_stage(
         self, asset_path, prim_name, prim_path, scene, **kwargs
     ):
+        # print('adding asset to stage ', asset_path, prim_path)
 
         add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
 
-    def create_material_and_bind(self, mat_name, mat_path, prim_path, scale,stage):
+    def create_material_and_bind(
+        self, mat_name, mat_path, prim_path, scale, stage
+    ):
 
         obj_prim = stage.GetPrimAtPath(prim_path)
         mtl_created_list = []
@@ -441,10 +523,7 @@ class SyntheticPerception(BaseSample):
             mtl_name=mat_name,
             mtl_created_list=mtl_created_list,
         )
-
-
         mtl_prim = stage.GetPrimAtPath(mtl_created_list[0])
-
         omni.usd.create_material_input(
             mtl_prim,
             'project_uvw',

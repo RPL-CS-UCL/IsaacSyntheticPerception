@@ -154,7 +154,7 @@ def create_regions():
             for i in listbx.curselection():
                 entry_info.objects_in_zone.append(listbx.get(i))
 
-            entry_info.identifier = len(entry_list) + 1
+            entry_info.identifier = len(entry_list) #+ 1
             id = entry_info.identifier
             entry_info.color = generate_random_color()
             if parent_zone != '':
