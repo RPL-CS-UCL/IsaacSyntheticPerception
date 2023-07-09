@@ -335,9 +335,19 @@ class SyntheticPerception(BaseSample):
     ):
         for i, n in enumerate(coll):
             x, y = n
-            x = float(x)
-            y = float(y)
-            z = float(height_map[int(y)][int(x)])
+            x = float(x) 
+            y = float(y) 
+            x_ind =x * 10 
+            y_ind = y * 10
+            if x_ind >= 2560:
+                print("x, overfilled", x_ind)
+                x_ind = 2559
+            if y_ind >= 2560:
+
+                print("y, overfilled", y_ind)
+                y_ind = 2559
+            z = float(height_map[int(y_ind)][int(x_ind)])/10.0 # was abs
+            # second one is iterated fasted
 
             _p_name = f'{p_name}_{i}'
             self.spawn_asset(
@@ -355,6 +365,15 @@ class SyntheticPerception(BaseSample):
     def create_terrains(self, terrain_info):
         print(' Trying to create terrains')
         print('The terrain info should be ', terrain_info)
+        
+        # create the parent
+
+        omni.kit.commands.execute('CreatePrimWithDefaultXform',
+            prim_type='Xform',
+            prim_path='/World/t',
+            attributes={},
+            select_new_prim=True)
+
         for key in terrain_info:
             mesh_path = terrain_info[key].mesh_path
             scale = terrain_info[key].scale
@@ -367,48 +386,62 @@ class SyntheticPerception(BaseSample):
             # spawn prim
 
             prim_p = f'/World/t/terrain{key}'
-            scale = 1.0
+
+            stage = omni.usd.get_context().get_stage()
+            scale = 0.01
+            # X SCALE SHOULD BE NEGATIVE TO FLIP IT CORRECTLY
             random_rotation = 0.0
             x, y, z = 0, 0, 0
             add_reference_to_stage(usd_path=mesh_path, prim_path=prim_p)
+            self.create_material_and_bind(mat_name,mat_path, prim_p,scale,stage )
 
-        # scale = 1.0
-        # random_rotation = 0.0
-        # x, y, z = 0, 0, 0
-        # # stage = self.usd_context.get_stage()
-        # stage = omni.usd.get_context().get_stage()
-        # prim = stage.GetPrimAtPath('/World/t')
-        # xformm = UsdGeom.Xformable(prim)
-        # transform = xformm.AddTransformOp()
+        scale = 0.1 
+        random_rotation = 0.0
+        x, y, z = 0, 0, 0
+        # stage = self.usd_context.get_stage()
+
+        
+        omni.kit.commands.execute(
+            'TransformPrimSRTCommand',
+            path=f'/World/t',
+            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            new_scale=Gf.Vec3f(scale, scale, scale),
+            old_translation=Gf.Vec3f(x, y, z),
+            new_translation=Gf.Vec3f(x, y, z),
+            # old_rotation_euler=Gf.Vec3f(-90, 0, 0),
+            # old_rotation_order=Gf.Vec3i(0, 1, 2),
+            # new_rotation_euler=Gf.Vec3f(-90, 0, -180),
+            # new_rotation_order=Gf.Vec3i(0, 1, 2),
+            time_code=Usd.TimeCode(),
+            had_transform_at_key=False,
+        )
+        omni.kit.commands.execute(
+            'TransformPrimSRTCommand',
+            path=f'/World/t',
+            old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
+            new_scale=Gf.Vec3f(scale, scale, scale),
+            old_translation=Gf.Vec3f(x, y, z),
+            new_translation=Gf.Vec3f(x, y, z),
+            # old_rotation_euler=Gf.Vec3f(-90, 0, 0),
+            # old_rotation_order=Gf.Vec3i(0, 1, 2),
+            # new_rotation_euler=Gf.Vec3f(-90, 0, -180),
+            # new_rotation_order=Gf.Vec3i(0, 1, 2),
+            time_code=Usd.TimeCode(),
+            had_transform_at_key=False,
+        )
+
+        # omni.kit.commands.execute('ChangeProperty',
+        #     prop_path=Sdf.Path('/World/t.xformOp:orient'),
+        #     value=Gf.Quatd(0.7071067811865476, Gf.Vec3d(-0.7071067811865476, 0.0, 0.0)),
+        #     prev=Gf.Quatd(1.0, Gf.Vec3d(0.0, 0.0, 0.0)),
+        #     )
         #
-        # omni.kit.commands.execute(
-        #     'TransformPrimSRTCommand',
-        #     path=f'/World/t',
-        #     old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-        #     new_scale=Gf.Vec3f(scale, scale, scale),
-        #     old_translation=Gf.Vec3f(x, y, z),
-        #     new_translation=Gf.Vec3f(x, y, z),
-        #     old_rotation_euler=Gf.Vec3f(0, 0, 0),
-        #     old_rotation_order=Gf.Vec3i(0, 1, 2),
-        #     new_rotation_euler=Gf.Vec3f(90, 0, random_rotation),
-        #     new_rotation_order=Gf.Vec3i(0, 1, 2),
-        #     time_code=Usd.TimeCode(),
-        #     had_transform_at_key=False,
-        # )
-        # omni.kit.commands.execute(
-        #     'TransformPrimSRTCommand',
-        #     path=f'/World/t',
-        #     old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-        #     new_scale=Gf.Vec3f(scale, scale, scale),
-        #     old_translation=Gf.Vec3f(x, y, z),
-        #     new_translation=Gf.Vec3f(x, y, z),
-        #     old_rotation_euler=Gf.Vec3f(0, 0, 0),
-        #     old_rotation_order=Gf.Vec3i(0, 1, 2),
-        #     new_rotation_euler=Gf.Vec3f(90, 0, random_rotation),
-        #     new_rotation_order=Gf.Vec3i(0, 1, 2),
-        #     time_code=Usd.TimeCode(),
-        #     had_transform_at_key=False,
-        # )
+        #
+        # omni.kit.commands.execute('ChangeProperty',
+        #     prop_path=Sdf.Path('/World/t.xformOp:orient'),
+        #     value=Gf.Quatd(6.123233995736766e-17, Gf.Vec3d(-4.329780281177467e-17, -0.7071067811865476, -0.7071067811865476)),
+        #     prev=Gf.Quatd(0.7071067811865476, Gf.Vec3d(-0.7071067811865476, 0.0, 0.0)),
+            # )
             # self.spawn_asset(
             #     mesh_path,
             #     'terrain',
@@ -440,34 +473,15 @@ class SyntheticPerception(BaseSample):
         #     False,
         # )
 
-    def generate_world_generator(self, obj_path, world_path):
-        print('Starting world gen')
-
-        if World.instance() is None:
-            self._world = World(**self._world_settings)
-            self.setup_scene()
-        else:
-            self._world = World.instance()
-        print('checking if world is active')
-        print(self._world)
-
-        (
-            obs_to_spawn,
-            object_dict,
-            terrain_info,
-            height_map,
-        ) = AreaMaskGenerator.generate_world_from_file(obj_path, world_path)
-
-        print(' ==================== TERRAIN INFO ', terrain_info)
-        # loop = asyncio.new_event_loop()
-
-        # asyncio.set_event_loop(loop)
-        # asyncio.ensure_future(self.create_terrains(terrain_info))
-        self.create_terrains(terrain_info)
+    async def spawn_all(self, obs_to_spawn, object_dict, height_map):
+        print("outtputting height map in syn percep")
+        print(height_map)
+        print(height_map.shape)
+        print("max min")
+        print(np.amax(height_map))
+        print(np.amin(height_map))
         length = len(obs_to_spawn)
         counter = 1
-        print('area gen finished')
-        num_objs = 0
         for key in obs_to_spawn:
 
             # check if assets are currently being spawned
@@ -475,13 +489,12 @@ class SyntheticPerception(BaseSample):
             # print(" =================================== ", load_bool)
             obj = object_dict[key]
             path = object_dict[key].usd_path
-            num_objs += len(obs_to_spawn[key])
+            # num_objs += len(obs_to_spawn[key])
             # print("checking if world is activev")
             # print(self._world)
 
-            if num_objs > 5000:
-                update_stage()
-                return
+            # if num_objs > 2000:
+            #     return
             print(
                 'trying to spawn ',
                 path,
@@ -506,16 +519,42 @@ class SyntheticPerception(BaseSample):
                 object_scale_delta=obj.object_scale_delta,
                 allow_rot=obj.allow_y_rot,
             )
-            print('we should now wait')
-            if num_objs > 5000:
-                update_stage()
-                return
-                num_objs = 0
-            # await update_stage_async()
+            # print('we should now wait')
+            # if num_objs > 5000:
+            #     update_stage()
+            #     return
+            #     num_objs = 0
+            await update_stage_async()
             # print("some time should have passed")
             # return
             counter += 1
         print('AREA GENERATION FINISHED')
+
+    def generate_world_generator(self, obj_path, world_path):
+        print('Starting world gen')
+
+        if World.instance() is None:
+            self._world = World(**self._world_settings)
+            self.setup_scene()
+        else:
+            self._world = World.instance()
+        print('checking if world is active')
+        print(self._world)
+
+        (
+            obs_to_spawn,
+            object_dict,
+            terrain_info,
+            height_map,
+        ) = AreaMaskGenerator.generate_world_from_file(obj_path, world_path)
+
+        # print(' ==================== TERRAIN INFO ', terrain_info)
+        # loop = asyncio.new_event_loop()
+
+        # asyncio.set_event_loop(loop)
+        # asyncio.ensure_future(self.create_terrains(terrain_info))
+        self.create_terrains(terrain_info)
+        return obs_to_spawn, object_dict, height_map
 
     def add_asset_to_stage(
         self, asset_path, prim_name, prim_path, scene, **kwargs

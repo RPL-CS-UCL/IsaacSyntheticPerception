@@ -53,6 +53,8 @@ class EntryInfo:
         self.in_region = None
         self.objects_in_zone = []
         self.is_region = True
+        self.material_path = None
+        self.material_scale = None
 
     def get_objs_as_str(self):
         return ''.join(self.objects_in_zone)
@@ -97,12 +99,13 @@ def create_regions():
         global n
         data = {}
         for entry in entry_list:
-            pass
             if entry.is_region:
                 data[entry.identifier] = {}
                 data[entry.identifier]['objects'] = entry.objects_in_zone
                 data[entry.identifier]['zones'] = {}
                 data[entry.identifier]['threshold'] = entry.threshold
+                data[entry.identifier]['material_path'] = entry.material_path
+                data[entry.identifier]['material_scale'] =entry.material_scale
             else:
                 # we are in a zone - get the region we are in
                 id = int(entry.in_zone)
@@ -120,13 +123,17 @@ def create_regions():
                 data[id]['zones'][entry.identifier][
                     'threshold'
                 ] = entry.threshold
+
+                data[id]['zones'][entry.identifier]['material_path'] = entry.material_path
+                data[id]['zones'][entry.identifier]['material_scale'] =entry.material_scale
+            
         # json.dump(data)
         full_data = {}
         full_data['seed'] = 0
         full_data['regions'] = data
         full_data['size'] = n
         folder_path = askdirectory()
-        with open(f'{folder_path}/worlddata.json', 'w') as f:
+        with open(f'{folder_path}/worlddata2.json', 'w') as f:
             json.dump(full_data, f)
         print(full_data)
 
@@ -145,11 +152,15 @@ def create_regions():
         name = input_entry1.get()
         threshold = input_entry2.get()
         parent_zone = input_entry3.get()
+        mat_path = input_entry_mat_path.get()
+        mat_scale = input_entry_mat_scale.get()
         if name and threshold:
             entry_frame = tk.Frame(entries_frame)
             entry_frame.pack(anchor='w')
 
             entry_info = EntryInfo(name, threshold)
+            entry_info.material_path = mat_path
+            entry_info.material_scale = mat_scale
 
             for i in listbx.curselection():
                 entry_info.objects_in_zone.append(listbx.get(i))
@@ -281,6 +292,17 @@ def create_regions():
 
     input_entry3 = tk.Entry(inputs_frame)
     input_entry3.pack()
+
+    input_label_mat_path = tk.Label(inputs_frame, text='Material Path')
+    input_label_mat_path.pack()
+
+    input_entry_mat_path = tk.Entry(inputs_frame)
+    input_entry_mat_path.pack()
+    input_label_mat_scale = tk.Label(inputs_frame, text='Material Scale')
+    input_label_mat_scale.pack()
+
+    input_entry_mat_scale = tk.Entry(inputs_frame)
+    input_entry_mat_scale.pack()
     # process_button = tk.Button(
     #     inputs_frame, text='Add Entry', command=add_entry
     # )

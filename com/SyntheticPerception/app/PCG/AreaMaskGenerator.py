@@ -113,20 +113,6 @@ class WorldHandler:
         self._world_path = world_path
         self.objects_to_spawn = {}
         self._WORLD_TO_POISSON_SCALE = 1.6
-    def create_and_add_material(self,mat_name, mat_path,prim_path):
-
-        omni.kit.commands.execute('CreateMdlMaterialPrimCommand',
-            mtl_url=mat_path,
-            mtl_name=f'{mat_name}',
-            mtl_path=f'/World/Looks/{mat_name}')
-
-        omni.kit.commands.execute('BindMaterialCommand',
-            prim_path=prim_path,
-            material_path=f'/World/Looks/{mat_name}')
-
-        omni.kit.commands.execute('ChangeProperty',
-            prop_path=Sdf.Path(f'/World/Looks/{mat_name}/Shader.inputs:texture_scale'),
-            value=Gf.Vec2f(5.800000190734863, 0.0010000000474974513))
 
     def _read_objects(self):
         with open(self._object_path, 'r+') as infile:
@@ -152,6 +138,7 @@ class WorldHandler:
         # print("here")
         self.objects_to_spawn = {}
         data = None
+        objs_per_region = {}
         with open(self._world_path, 'r+') as infile:
             data = json.load(infile)
         if data != None:
@@ -180,17 +167,12 @@ class WorldHandler:
                 total_arr = arr
                 # handle objects in the zone
                 objs = regions[region_id]["objects"]
-                # print("region == ", region_id, "   ", int(region_id))
-                #
-                # unique, counts = np.unique(total_arr, return_counts=True)
-                # print(dict(zip(unique, counts)))
+                objs_per_region[region_id] = []
                 if len(objs) > 0:
                     for obj_uid in objs:
                         # get corresponding object from objects
                         object_prim = self.objects_dict[str(obj_uid)]
-
-                        area, coords = fill_area(arr, object_prim.poisson_size / self._WORLD_TO_POISSON_SCALE , int(region_id), 999)#object_prim.unique_id
-                        self.objects_to_spawn[object_prim.unique_id] = coords 
+                        objs_per_region[region_id].append(object_prim)
 
                 # now we need to deal with sub zones
                 zones = regions[region_id]["zones"]
@@ -213,22 +195,22 @@ class WorldHandler:
                     total_arr = zone_to_save
                     objs = zones[zone_id]["objects"]
 
-                    # unique, counts = np.unique(total_arr, return_counts=True)
-                    # print(dict(zip(unique, counts)))
-                    # print("for zone append inside area before we add to taotal")
-                    # unique, counts = np.unique(new_arr, return_counts=True)
-                    # print(dict(zip(unique, counts)))
+
+                    objs_per_region[zone_id] = []
                     if len(objs) > 0:
                         for obj_uid in objs:
                             # get corresponding object from objects
                             object_prim = self.objects_dict[obj_uid]
 
-                            area, coords = fill_area(zone_to_save, object_prim.poisson_size / self._WORLD_TO_POISSON_SCALE  , int(zone_id), 999)
-                            # print(coords)
-                            self.objects_to_spawn[object_prim.unique_id] = coords 
-        # print(objects_to_spawn)
+                            objs_per_region[zone_id].append(object_prim)
 
                             
+            for key in objs_per_region:
+                obs = objs_per_region[key]
+                if len(obs) > 0:
+                    for obj in obs: 
+                        area, coords = fill_area(total_arr, obj.poisson_size / self._WORLD_TO_POISSON_SCALE  , int(key), 999)
+                        self.objects_to_spawn[obj.unique_id] = coords 
             return total_arr, n, terrain_info
 
 
@@ -269,75 +251,58 @@ def generate_world_from_file(world_path, object_path):
         print(f"[AreaMaskGenerator] All terrain infos updated. Passing data back to main sample to genereate objects and load the terrain in.")
 
 
-        return world.objects_to_spawn, world.objects_dict, terrain_info, meshGen._noise_map_xy 
+        return world.objects_to_spawn, world.objects_dict, terrain_info, meshGen._points2#_noise_map_xy 
     return world.objects_to_spawn, world.objects_dict, None, None
 
 
+#
+# def test_world():
+#
+#     n = 256
+#     forrest_region = PerlinNoise.generate_region(shape=(n,n), threshold=0.5, show_plot=False)
+#     treeone_region = PerlinNoise.generate_region(
+#         shape=(n,n), threshold=0.5, show_plot=False, region_value=2
+#     )
+#
+#     treeone_region2 = PerlinNoise.generate_region(
+#         shape=(n,n), threshold=0.5, show_plot=False, region_value=3
+#     )
+#     forrest_region_treeone = append_inside_area(np.array(forrest_region), np.array(treeone_region), 2.0)
+#
+#     area = append_inside_area(np.array(forrest_region_treeone), np.array(treeone_region2), 3.0)
+#
+#     sand_region = PerlinNoise.generate_region(shape=(n,n), threshold=0.3, show_plot=False, region_value=3)
+#     
+#     sand_region_two = PerlinNoise.generate_region(
+#         shape=(n,n), threshold=0.5, show_plot=False, region_value=4)
+#
+#     sand_region_zones = append_inside_area(np.array(sand_region), np.array(sand_region_two), 4.0)
+#     #fill trees
+#     area, trees1 = fill_area(area, 3, 1, 10)
+#
+#     area, trees2 = fill_area(area, 6, 2, 11)
+#     
+#     area, rocks = fill_area(area, 2,1, 12)
+#     area, rocks2 = fill_area(area, 2,2, 13)
+#
+#     return trees1, trees2, rocks, rocks2
+#
+#
+# def test_func():
+#     print("running now")
+#     n = 256
+#     reg1 = PerlinNoise.generate_region(shape=(n,n), threshold=0.5, show_plot=False)
+#     reg2 = PerlinNoise.generate_region(
+#         shape=(n,n), threshold=0.5, show_plot=False, region_value=2
+#     )
+#     # area = append_to_area(np.array(reg1), np.array(reg2), 1.0)
+#     area = append_inside_area(np.array(reg1), np.array(reg2), 2.0)
+#     # print(np.unique(area))
+#     # plt.imshow(area)
+#     # plt.colorbar()
+#     # plt.show()
+#     # fill_area(reg1)
+#     area, n1 = fill_area(area, 3, 1, 3)
+#     area, n2 = fill_area(area, 15, 2, 4)
+#     return n1, n2
 
-def test_world():
-
-    n = 256
-    forrest_region = PerlinNoise.generate_region(shape=(n,n), threshold=0.5, show_plot=False)
-    treeone_region = PerlinNoise.generate_region(
-        shape=(n,n), threshold=0.5, show_plot=False, region_value=2
-    )
-
-    treeone_region2 = PerlinNoise.generate_region(
-        shape=(n,n), threshold=0.5, show_plot=False, region_value=3
-    )
-    forrest_region_treeone = append_inside_area(np.array(forrest_region), np.array(treeone_region), 2.0)
-
-    area = append_inside_area(np.array(forrest_region_treeone), np.array(treeone_region2), 3.0)
-
-    sand_region = PerlinNoise.generate_region(shape=(n,n), threshold=0.3, show_plot=False, region_value=3)
-    
-    sand_region_two = PerlinNoise.generate_region(
-        shape=(n,n), threshold=0.5, show_plot=False, region_value=4)
-
-    sand_region_zones = append_inside_area(np.array(sand_region), np.array(sand_region_two), 4.0)
-    #fill trees
-    area, trees1 = fill_area(area, 3, 1, 10)
-
-    area, trees2 = fill_area(area, 6, 2, 11)
-    
-    area, rocks = fill_area(area, 2,1, 12)
-    area, rocks2 = fill_area(area, 2,2, 13)
-
-    return trees1, trees2, rocks, rocks2
-
-
-def test_func():
-    print("running now")
-    n = 256
-    reg1 = PerlinNoise.generate_region(shape=(n,n), threshold=0.5, show_plot=False)
-    reg2 = PerlinNoise.generate_region(
-        shape=(n,n), threshold=0.5, show_plot=False, region_value=2
-    )
-    # area = append_to_area(np.array(reg1), np.array(reg2), 1.0)
-    area = append_inside_area(np.array(reg1), np.array(reg2), 2.0)
-    # print(np.unique(area))
-    # plt.imshow(area)
-    # plt.colorbar()
-    # plt.show()
-    # fill_area(reg1)
-    area, n1 = fill_area(area, 3, 1, 3)
-    area, n2 = fill_area(area, 15, 2, 4)
-    return n1, n2
-
-
-# if __name__ == "__main__":
-    # reg1 = generate_region(shape=(2048, 2048), threshold=0.5, show_plot=False)
-    # # print(reg1)
-    # reg2 = generate_region(
-    #     shape=(2048, 2048), threshold=0.5, show_plot=False, region_value=2
-    # )
-    # # area = append_to_area(np.array(reg1), np.array(reg2), 1.0)
-    # area = append_inside_area(np.array(reg1), np.array(reg2), 2.0)
-    # # print(np.unique(area))
-    # # plt.imshow(area)
-    # # plt.colorbar()
-    # # plt.show()
-    # # fill_area(reg1)
-    # area = fill_area(area, 3, 1, 3)
-    # ara = fill_area(area, 15, 2, 4)
-    # show_plot(area)

@@ -99,6 +99,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.usd_context = omni.usd.get_context()
         self.selected_prim = SelectedPrim()
         self.selected_prim_dict = {}
+        self._object_selector = False
         self.prim = None
 
         self._object_path = ''
@@ -690,6 +691,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.position = [0, 0, 0]
 
     def _get_obj_details(self, event):
+        if not self._object_selector:
+            return
         prim_path = self.usd_context.get_selection().get_selected_prim_paths()
 
         self.world_gen_ui_elements['SavePath'] = self.object_data_save_path
@@ -783,10 +786,11 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         print('callingworld gen')
         # self.sample.generate_world("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
         # self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save_new.json")
-        self.sample.generate_world_generator(
-            'C:\\Users\\jonem\\Desktop\\worlddata.json',
+        obs_to_spawn, object_dict, height_map = self.sample.generate_world_generator(
+            'C:\\Users\\jonem\\Desktop\\worlddata2.json',
             'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
         )
+        asyncio.ensure_future(self.sample.spawn_all(obs_to_spawn,object_dict,height_map)) 
         # asyncio.run(
         #     self.sample.generate_world_generator(
         #         'C:\\Users\\jonem\\Desktop\\worlddata.json',
