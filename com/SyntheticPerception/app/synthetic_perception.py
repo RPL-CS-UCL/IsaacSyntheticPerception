@@ -234,6 +234,10 @@ class SyntheticPerception(BaseSample):
                     completed_classes.append(prim_class)
 
     def init_sensor_rig(self):
+
+        self.stage = (
+            omni.usd.get_context().get_stage()
+        )  # Used to access Geometry
         """Initializes the sensor rig and adds individual sensors"""
         print(
             ' ============================================================== '
@@ -253,7 +257,7 @@ class SyntheticPerception(BaseSample):
     def sample_sensors(self):
         self.sr.sample_sensors()
 
-    def temp_passthrough(self, srx):
+    def attach_sensor_waypoint_callback(self, srx):
         # un comment to enalbe wAYPOINT
         self.get_world().add_physics_callback('sim_step', callback_fn=srx.move)
 

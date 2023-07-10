@@ -79,6 +79,25 @@ class Lidar:
         # UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(origin_pos)
         # self.__lidar_path = parent + "/" + path
         # print(f"lidar path should be {self.__lidar_path}")
+    def read_from_json(self, data):
+        # We have been given data["LIDAR"]
+        for instance_ids in data:
+            lidar_settings = data[instance_ids]
+            self.__path = "/" + lidar_settings["name"]
+            self.__min_range = lidar_settings["min_range"]
+            self.__max_range = lidar_settings["max_range"]
+            self.__draw_points = lidar_settings["draw_points"]
+            self.__draw_lines = lidar_settings["draw_lines"]
+            self.__horizontal_fov = lidar_settings["horizontal_fov"]
+            self.__vertical_fov = lidar_settings["vertical_fov"]
+            self.__horizontal_resolution = lidar_settings["horizontal_resolution"]
+            self.__vertical_resolution = lidar_settings["vertical_resolution"]
+            self.__rotation_rate = lidar_settings["rotation_rate"]
+            self.__high_lod = lidar_settings["high_lod"]
+            self.__yaw_offset = lidar_settings["yaw_offset"]
+            self.__enable_semantics = lidar_settings["enable_semantics"]
+            self.__origin_pos = lidar_settings["origin_pos"]
+
 
     def init_sensor(self, parent):
         print(f"init the lidar {parent}")

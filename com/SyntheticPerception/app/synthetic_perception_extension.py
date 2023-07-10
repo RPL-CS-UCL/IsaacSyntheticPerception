@@ -255,6 +255,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     def _empty_func(self):
         print('Area gen test, passing to sample')
         self.sample.test_areagen()
+
+    async def init_world_sample(self):
+
+        asyncio.ensure_future(self.sample.init_world())
     async def material_test(self):
 
         shape = (256, 256)
@@ -401,37 +405,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         )
 
     def ui_init_world(self):
-        # asyncio.ensure_future(self.sample.init_world())
-        self.sample.test_spawn1()
-        # asyncio.ensure_future(self.material_test())
-        #
-        # # Get the current UV tile size attribute value
-        #
-        # uv_tile_size_attr = p.GetAttribute(
-        #     'info:albedo:TextureTiling:size'
-        # )
 
-        # Print the current UV tile size
-
-        # print('Current UV Tile Size:', uv_tile_size_attr.Get())
-
-        # Set the new UV tile size
-
-        new_uv_tile_size = 2.8888
-
-        # setattr(uv_tile_size_attr, 'value', new_uv_tile_size)
-        # print(p.GetAttributes())
-        mat_name = 'Dirt'
-
-        # omni.kit.commands.execute(
-        #     'ChangeProperty',
-        #     prop_path=Sdf.Path(
-        #         f'/World/Looks/{mat_name}/Shader.inputs:texture_scale'
-        #     ),
-        #     prev=Gf.Vec2f(1.0, 1.0),
-        #     value=Gf.Vec2f(0.001, 0.001),
-        # )
-        # asyncio.ensure_future(self.sample.init_world())
+        asyncio.ensure_future(self.sample.init_world())
 
     def ui_init_semantics(self):
         self.sample.init_semantics_in_scene()

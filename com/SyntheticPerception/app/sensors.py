@@ -1,4 +1,5 @@
 from omni.syntheticdata.scripts.sensors import enable_sensors
+import json
 from pxr import (
     UsdGeom,
     Gf,
@@ -228,3 +229,58 @@ class SensorRig:
         # Apply the required veloc
         self.apply_veloc(move_vec,rot_vec)
 
+
+    def load_sensors_from_file(self, file_path,stage):
+        with open(file_path, 'r+') as infile:
+            data = json.load(infile)
+            # print(data)
+            pos = data["POSITION"]
+            ori = data["ORIENTATION"]
+
+            self.create_rig(
+                np.array(pos), np.asarray(ori), stage
+            )
+            sensors = data["SENSORS"]
+            for key in sensors:
+                sensor_settings = sensors[key]
+                if key == "LIDAR":
+                    lidar = Lidar()
+                    lidar.read_from_json(sensor_settings,)
+                    self.add_sensor_to_rig(lidar)
+                elif key == "CAMERA":
+                    pass
+                elif key == "IMU":
+                    pass
+                else:
+                    print(" ERROR, tried adding sensor with type ", key)
+"""
+{"POSITION" : [0,0,0],
+  "ORIENTATION" : [0,0,0,0],
+  "SENSORS":{
+  
+  "IMU":{
+  "instances":
+    {"1" : 
+      {
+        "name" : 1
+     }
+    }
+},
+"CAMERA" :
+  {"instances" :
+    {"1" :
+    {
+      "name" : 1
+    }
+    }
+  },
+"LIDAR":
+  {"instances" : 
+    {"1" : 
+      {"name": 1
+      }
+    }
+  }
+}
+}
+"""
