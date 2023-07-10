@@ -29,8 +29,8 @@ from pxr import Sdf
 class Lidar:
     def __init__(
         self,
-        path="/Lidar1",
-        parent="/World",
+        path='/Lidar1',
+        parent='/World',
         min_range=0.4,
         max_range=100.0,
         draw_points=False,
@@ -45,7 +45,7 @@ class Lidar:
         enable_semantics=False,
         origin_pos=(2.0, 0.0, 4.0),
     ):
-        self.__path = "/" + path
+        self.__path = '/' + path
         self.__min_range = min_range
         self.__max_range = max_range
         self.__draw_points = draw_points
@@ -59,51 +59,36 @@ class Lidar:
         self.__yaw_offset = yaw_offset
         self.__enable_semantics = enable_semantics
         self.__origin_pos = origin_pos
-        # result, self.__lidar_prim = omni.kit.commands.execute(
-        #     "RangeSensorCreateLidar",
-        #     path=path,
-        #     parent=parent,
-        #     min_range=min_range,
-        #     max_range=max_range,
-        #     draw_points=draw_points,
-        #     draw_lines=draw_lines,
-        #     horizontal_fov=horizontal_fov,
-        #     vertical_fov=vertical_fov,
-        #     horizontal_resolution=horizontal_resolution,
-        #     vertical_resolution=vertical_resolution,
-        #     rotation_rate=rotation_rate,
-        #     high_lod=high_lod,
-        #     yaw_offset=yaw_offset,
-        #     enable_semantics=enable_semantics,
-        # )
-        # UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(origin_pos)
-        # self.__lidar_path = parent + "/" + path
-        # print(f"lidar path should be {self.__lidar_path}")
+        self.__rotation = [0.0,0.0,0.0]
+
     def read_from_json(self, data):
         # We have been given data["LIDAR"]
-        for instance_ids in data:
-            lidar_settings = data[instance_ids]
-            self.__path = "/" + lidar_settings["name"]
-            self.__min_range = lidar_settings["min_range"]
-            self.__max_range = lidar_settings["max_range"]
-            self.__draw_points = lidar_settings["draw_points"]
-            self.__draw_lines = lidar_settings["draw_lines"]
-            self.__horizontal_fov = lidar_settings["horizontal_fov"]
-            self.__vertical_fov = lidar_settings["vertical_fov"]
-            self.__horizontal_resolution = lidar_settings["horizontal_resolution"]
-            self.__vertical_resolution = lidar_settings["vertical_resolution"]
-            self.__rotation_rate = lidar_settings["rotation_rate"]
-            self.__high_lod = lidar_settings["high_lod"]
-            self.__yaw_offset = lidar_settings["yaw_offset"]
-            self.__enable_semantics = lidar_settings["enable_semantics"]
-            self.__origin_pos = lidar_settings["origin_pos"]
-
+        # for instance_ids in data:
+        lidar_settings = data
+        print(lidar_settings["name"])
+        self.__path = '/' + lidar_settings['name']
+        self.__min_range = lidar_settings['min_range']
+        self.__max_range = lidar_settings['max_range']
+        self.__draw_points = lidar_settings['draw_points']
+        self.__draw_lines = lidar_settings['draw_lines']
+        self.__horizontal_fov = lidar_settings['horizontal_fov']
+        self.__vertical_fov = lidar_settings['vertical_fov']
+        self.__horizontal_resolution = lidar_settings[
+            'horizontal_resolution'
+        ]
+        self.__vertical_resolution = lidar_settings['vertical_resolution']
+        self.__rotation_rate = lidar_settings['rotation_rate']
+        self.__high_lod = lidar_settings['high_lod']
+        self.__yaw_offset = lidar_settings['yaw_offset']
+        self.__enable_semantics = lidar_settings['enable_semantics']
+        self.__origin_pos = lidar_settings['origin_pos']
+        self.__rotation = lidar_settings['rotation']
 
     def init_sensor(self, parent):
-        print(f"init the lidar {parent}")
+        print(f'init the lidar {parent}')
         # self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
         _, self.__lidar_prim = omni.kit.commands.execute(
-            "RangeSensorCreateLidar",
+            'RangeSensorCreateLidar',
             path=self.__path,
             parent=parent,
             min_range=self.__min_range,
@@ -119,9 +104,11 @@ class Lidar:
             yaw_offset=self.__yaw_offset,
             enable_semantics=self.__enable_semantics,
         )
-        UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(self.__origin_pos)
-        self.__lidar_path = parent + "/" + self.__path
-        print(f"lidar path should be {self.__lidar_path}")
+        UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(
+            self.__origin_pos
+        )
+        self.__lidar_path = parent + '/' + self.__path
+        print(f'lidar path should be {self.__lidar_path}')
         self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
 
     # def sample_sensor(self):
@@ -129,8 +116,10 @@ class Lidar:
     async def sample_sensor(self):
         self.get_pc_and_semantic()
 
-    def get_pc_and_semantic(self, save_path="/home/jon/Documents/temp/a"):
-        pointcloud = self.__lidarInterface.get_point_cloud_data(self.__lidar_path)
+    def get_pc_and_semantic(self, save_path='/home/jon/Documents/temp/a'):
+        pointcloud = self.__lidarInterface.get_point_cloud_data(
+            self.__lidar_path
+        )
         semantics = self.__lidarInterface.get_semantic_data(self.__lidar_path)
         # lidar_position = self.__get_position()
         # pointcloud, semantics = self.__clear_max_lidar_points(
@@ -139,11 +128,11 @@ class Lidar:
 
         if save_path is not None:
             np.save(
-                f"{save_path}_pc.npy",
+                f'{save_path}_pc.npy',
                 np.array(pointcloud),
             )
             np.save(
-                f"{save_path}_sem.npy",
+                f'{save_path}_sem.npy',
                 np.array(semantics),
             )
         return pointcloud, semantics

@@ -231,6 +231,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         # print(h.heap())
         # self.sample.save_lidar_data()
         return
+    def test_load_sensors_from_file(self):
+        self.sample. init_sensor_rig_from_file()
 
     def _on_load_scene_button_event(self):
         self._add_to_scene_event()
@@ -435,6 +437,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.add_button('init_world', self.ui_init_world)
                 self.task_ui_elements['init_world'].enabled = True
 
+                self.add_button('load_sensors', self.test_load_sensors_from_file)
+                self.task_ui_elements['load_sensors'].enabled = True
                 # OTHER UI NEEDED
                 # load sensor rig
                 # ^ let the above handle waypoints and everything

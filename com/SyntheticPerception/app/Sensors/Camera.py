@@ -39,20 +39,22 @@ class DepthCamera:
         self.__horizontal_aperture_offset = 0.0
         self.__vertical_aperture_offset = 0.0
         self.__clipping_range = (1.0, 10000000.0)
-        self.__resolution = (512,512)
+        self.__resolution = (512, 512)
 
     def init_sensor(self, parent):
+        print(self.__clipping_range)
         self.__cam = rep.create.camera(
-            position=self.__pos, parent=parent, name=self.__name, rotation = self.__rot,
-            focal_length = self.__focal_length,
-            focus_distance = self.__focus_distance,
-            f_stop = self.__f_stop,
-            horizontal_aperture = self.__horizontal_aperture,
-            horizontal_aperture_offset = self.__horizontal_aperture_offset,
-            vertical_aperture_offset = self.__vertical_aperture_offset,
-            clipping_range = self.__clipping_range
-
-
+            position=self.__pos,
+            parent=parent,
+            name=self.__name,
+            rotation=self.__rot,
+            focal_length=self.__focal_length,
+            focus_distance=self.__focus_distance,
+            f_stop=self.__f_stop,
+            horizontal_aperture=self.__horizontal_aperture,
+            horizontal_aperture_offset=self.__horizontal_aperture_offset,
+            vertical_aperture_offset=self.__vertical_aperture_offset,
+            clipping_range=self.__clipping_range,
         )
         self.__rp: og.Node = rep.create.render_product(
             self.__cam, self.__resolution
@@ -60,6 +62,26 @@ class DepthCamera:
         if self.__attach:
             self.__init_annotators()
             self.__attach_annotoators()
+
+    def read_from_json(self, data):
+        # We have been given data["LIDAR"]
+        # for instance_ids in data:
+        camera_settings = data
+        self.__name = camera_settings['name']
+        self.__focal_length = camera_settings['focal_length']
+        self.__focus_distance = camera_settings['focus_distance']
+        self.__f_stop = camera_settings['f_stop']
+        self.__horizontal_aperture = camera_settings['horizontal_aperture']
+        self.__horizontal_aperture_offset = camera_settings[
+            'horizontal_aperture_offset'
+        ]
+        self.__vertical_aperture_offset = camera_settings[
+            'vertical_aperture_offset'
+        ]
+        self.__clipping_range = (camera_settings['clipping_range'][0],camera_settings["clipping_range"][1])
+        self.__resolution = camera_settings['resolution']
+        self.__pos = camera_settings["position"]
+        self.__rot = camera_settings["rotation"]
 
     def construct_pc(self, rgb_image, depth_image):
         pass
@@ -98,16 +120,3 @@ class DepthCamera:
         sem_data = self.sem_annot.get_data()
         np.save('/home/jon/Documents/temp/sem.npy', sem_data)
         return
-    def read_from_json(self,data):
-        # We have been given data["LIDAR"]
-        for instance_ids in data:
-            camera_settings = data[instance_ids]
-            self.__name = camera_settings["name"]
-            self.__focal_length = camera_settings["focal_length"] 
-            self.__focus_distance = camera_settings["focus_distance"]
-            self.__f_stop = camera_settings["f_stop"] 
-            self.__horizontal_aperture = camera_settings["horizontal_aperture"]
-            self.__horizontal_aperture_offset = camera_settings["horizontal_aperture_offset"]
-            self.__vertical_aperture_offset = camera_settings["vertical_aperture_offset"]
-            self.__clipping_range = camera_settings["clipping_range"]
-            self.__resolution = camera_settings["resolution"]

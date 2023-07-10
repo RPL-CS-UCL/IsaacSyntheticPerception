@@ -31,15 +31,23 @@ from omni.isaac.dynamic_control import _dynamic_control
 import carb
 from pxr import Sdf
 from .Sensors.LIDAR import Lidar
+from .Sensors.IMU import IMUSensor
 from .Sensors.Camera import DepthCamera
-from omni.isaac.core.utils.rotations import lookat_to_quatf, quat_to_euler_angles,  gf_quat_to_np_array
-#.
+from omni.isaac.core.utils.rotations import (
+    lookat_to_quatf,
+    quat_to_euler_angles,
+    gf_quat_to_np_array,
+)
+
+# .
 
 
 def get_world_translation(prim):
     transform = Gf.Transform()
     transform.SetMatrix(
-        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
+        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(
+            Usd.TimeCode.Default()
+        )
     )
     return transform.GetTranslation()
 
@@ -47,30 +55,73 @@ def get_world_translation(prim):
 def get_world_pose(prim):
     transform = Gf.Transform()
     transform.SetMatrix(
-        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
+        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(
+            Usd.TimeCode.Default()
+        )
     )
     return transform.GetRotation()
 
 
 class SensorRig:
     def __init__(self, name, path) -> None:
-        print("SensorRig Init function")
+        print('SensorRig Init function')
         self.__sensors = []
         self.__waypoints = []
         self.__curr_waypoint_id = 0
 
         self._prim_path = path
         self._prim_name = name
-        self._full_prim_path = f"{self._prim_path}/{self._prim_name}"
+        self._full_prim_path = f'{self._prim_path}/{self._prim_name}'
         self._prim = None
         self._dc = None
         self._rb = None
 
+    def create_rig_from_file(self, path, stage):
+        pos, ori = self.load_sensors_from_file(path, stage)
+        print(pos,ori)
+        position=np.array([pos[0],pos[1],pos[2]])
+        orientation=np.array([ori[0],ori[1],ori[2],ori[3]])
+        print("returned pos or")
+        print(position, orientation)
+        self._dc = _dynamic_control.acquire_dynamic_control_interface()
+        print(f'Dynamic control aquired: {self._dc}')
+        # spawn object
+        print('Creating rig')
+        # print(position)
+        # print(position / get_stage_units())
+        self._prim = XFormPrim(
+            name=self._prim_name,
+            prim_path=self._full_prim_path,
+            position=position / get_stage_units() ,
+            orientation=orientation,
+        )
+
+        # collisionAPI = PhysicsRigidBodyAPI.Apply(self._prim)
+        omni.kit.commands.execute(
+            'AddPhysicsComponent',
+            usd_prim=stage.GetPrimAtPath(self._full_prim_path),
+            component='PhysicsRigidBodyAPI',
+        )
+
+        omni.kit.commands.execute(
+            'ChangeProperty',
+            prop_path=Sdf.Path(
+                f'{self._full_prim_path}.physxRigidBody:disableGravity'
+            ),
+            value=True,
+            prev=None,
+        )
+        self._rb = self._dc.get_rigid_body(self._full_prim_path)
+        print(self._rb)
+        print(self.get_pos_rot())
+        print(self._dc)
+        print("Rig created")
+
     def create_rig(self, position, orientation, stage):
         self._dc = _dynamic_control.acquire_dynamic_control_interface()
-        print(f"Dynamic control aquired: {self._dc}")
+        print(f'Dynamic control aquired: {self._dc}')
         # spawn object
-        print("Creating rig")
+        print('Creating rig')
         print(position)
         print(position / get_stage_units())
         self._prim = XFormPrim(
@@ -82,14 +133,16 @@ class SensorRig:
 
         # collisionAPI = PhysicsRigidBodyAPI.Apply(self._prim)
         omni.kit.commands.execute(
-            "AddPhysicsComponent",
+            'AddPhysicsComponent',
             usd_prim=stage.GetPrimAtPath(self._full_prim_path),
-            component="PhysicsRigidBodyAPI",
+            component='PhysicsRigidBodyAPI',
         )
 
         omni.kit.commands.execute(
-            "ChangeProperty",
-            prop_path=Sdf.Path(f"{self._full_prim_path}.physxRigidBody:disableGravity"),
+            'ChangeProperty',
+            prop_path=Sdf.Path(
+                f'{self._full_prim_path}.physxRigidBody:disableGravity'
+            ),
             value=True,
             prev=None,
         )
@@ -99,7 +152,7 @@ class SensorRig:
         print(self._dc)
 
     def apply_veloc(self, veloc, ang_veloc):
-        print("applying ", veloc)
+        print('applying ', veloc)
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         self._dc.set_rigid_body_linear_velocity(self._rb, veloc)
 
@@ -143,17 +196,24 @@ class SensorRig:
         rotation=(0, 0, 0),
         image_size=(512, 512),
         attach=True,
-        name="/DepthCamera",
+        name='/DepthCamera',
     ):
         self.__sensors.append(
             DepthCamera(
-                position, rotation, image_size, attach, self._full_prim_path, name
+                position,
+                rotation,
+                image_size,
+                attach,
+                self._full_prim_path,
+                name,
             )
         )
 
     def add_lidar_to_rig(self, name, origin_pos):
         self.__sensors.append(
-            Lidar(path=name, parent=self._full_prim_path, origin_pos=origin_pos)
+            Lidar(
+                path=name, parent=self._full_prim_path, origin_pos=origin_pos
+            )
         )
 
     def add_sensor_to_rig(self, sensor):
@@ -180,26 +240,26 @@ class SensorRig:
 
         # iter over the stage and get all the waypoints
         # go through each child and save its tranform details to the waypoints list.
-        print("Waypoint initialization")
+        print('Waypoint initialization')
         for prim_ref in stage.Traverse():
             prim_ref_name = str(prim_ref.GetPrimPath())
-            if "_waypoints_" in prim_ref_name:
+            if '_waypoints_' in prim_ref_name:
                 for i in range(len(prim_ref.GetChildren())):
                     prim_child = prim_ref.GetChildren()[i]
                     self.__waypoints.append(get_world_translation(prim_child))
 
-        print("SensorRig waypoints initialization complete:")
+        print('SensorRig waypoints initialization complete:')
         print(self.__waypoints)
 
     def _waypoint_update(self, pos):
         # Get the goal position and convert it into the correct type
         goal_pos = self.__waypoints[self.__curr_waypoint_id]
         goal_pos = Gf.Vec3d(goal_pos)
-        ori_ = lookat_to_quatf(pos, goal_pos, Gf.Vec3d(0,0,1))
-        rot_vec=ori_
+        ori_ = lookat_to_quatf(pos, goal_pos, Gf.Vec3d(0, 0, 1))
+        rot_vec = ori_
         # ori_np = gf_quat_to_np_array(ori_)
         # rot_vec = quat_to_euler_angles(ori_np)
-        print( " =============== ", ori_)
+        print(' =============== ', ori_)
 
         # Calculate the diff vector
         move_vec = goal_pos - pos
@@ -220,39 +280,52 @@ class SensorRig:
         # Retrieve the current position and orientation of the sensor rig
         current_pos, current_rot = self.get_pos_rot()
         current_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])
-        print("The current orientation of the SR is ", current_rot)
+        print('The current orientation of the SR is ', current_rot)
 
         # Load the correct waypoint, check if we should change to next one ..
         # and then calculate the required move vector.
-        move_vec,rot_vec = self._waypoint_update(current_pos)
+        move_vec, rot_vec = self._waypoint_update(current_pos)
 
         # Apply the required veloc
-        self.apply_veloc(move_vec,rot_vec)
+        self.apply_veloc(move_vec, rot_vec)
 
-
-    def load_sensors_from_file(self, file_path,stage):
+    def load_sensors_from_file(self, file_path, stage):
         with open(file_path, 'r+') as infile:
             data = json.load(infile)
             # print(data)
-            pos = data["POSITION"]
-            ori = data["ORIENTATION"]
+            pos = data['POSITION']
+            ori = data['ORIENTATION']
 
-            self.create_rig(
-                np.array(pos), np.asarray(ori), stage
-            )
-            sensors = data["SENSORS"]
+            self.create_rig(np.array(pos), np.asarray(ori), stage)
+            sensors = data['SENSORS']
+            print(sensors)
             for key in sensors:
-                sensor_settings = sensors[key]
-                if key == "LIDAR":
-                    lidar = Lidar()
-                    lidar.read_from_json(sensor_settings,)
-                    self.add_sensor_to_rig(lidar)
-                elif key == "CAMERA":
-                    pass
-                elif key == "IMU":
-                    pass
+                print('Trying to add sensor of type ', key)
+                if key == 'LIDAR':
+                    for sensor_id in sensors[key]['instances']:
+                        sensor_settings =sensors[key]['instances'][sensor_id]
+                        lidar = Lidar()
+                        lidar.read_from_json(sensor_settings)
+                        self.add_sensor_to_rig(lidar)
+                elif key == 'CAMERA':
+
+                    for sensor_id in sensors[key]['instances']:
+                        sensor_settings = sensors[key]['instances'][sensor_id]
+                        cam = DepthCamera()
+                        cam.read_from_json(sensor_settings)
+                        self.add_sensor_to_rig(cam)
+                elif key == 'IMU':
+
+                    for sensor_id in sensors[key]['instances']:
+                        sensor_settings = sensors[key]['instances'][sensor_id]
+                        imu = IMUSensor()
+                        imu.read_from_json(sensor_settings)
+                        self.add_sensor_to_rig(imu)
                 else:
-                    print(" ERROR, tried adding sensor with type ", key)
+                    print(' ERROR, tried adding sensor with type ', key)
+            return pos, ori
+
+
 """
 {"POSITION" : [0,0,0],
   "ORIENTATION" : [0,0,0,0],
@@ -262,7 +335,9 @@ class SensorRig:
   "instances":
     {"1" : 
       {
-        "name" : 1
+        "name" : "imu",
+        "position": [0.0, 0.0, 0.0],
+        "rotation" : [0.0,0.0,0.0]
      }
     }
 },
@@ -270,14 +345,40 @@ class SensorRig:
   {"instances" :
     {"1" :
     {
-      "name" : 1
+      "name" : "camera",
+      "focal_length": 24.0,
+      "focus_distance" : 400.0,
+      "f_stop": 0.0,
+      "horizontal_aperture": 20.955,
+      "horizontal_aperture_offset": 0,
+      "vertical_aperture_offset": 0,
+      "clipping_range": [1.0, 1000000.0],
+      "resolution": [1024,1024],
+      "position" : [0.0,0.0,0.0],
+      "rotation" : [0.0,0.0,0.0]
+      
     }
     }
   },
 "LIDAR":
   {"instances" : 
     {"1" : 
-      {"name": 1
+      {"name": 1,
+        "min_range": 0.4,
+        "max_range": 100.0,
+        "draw_points": false,
+        "draw_lines" : false,
+        "horizontal_fov": 360,
+        "vertical_fov": 60.0,
+        "rotation_rate": 0.0,
+        "horizontal_resolution": 0.4,
+        "vertical_resolution" : 0.4,
+        "high_lod":true,
+        "yaw_offset": 0.0,
+        "enable_semantics":true,
+        "origin_pos": [0,0,0],
+        "rotation" : [0.0,0.0,0.0]
+        
       }
     }
   }

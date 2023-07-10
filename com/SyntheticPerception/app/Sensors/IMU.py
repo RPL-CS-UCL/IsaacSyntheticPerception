@@ -15,10 +15,11 @@ from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.dynamic_control import _dynamic_control
 
+from pxr import Usd, Gf, UsdGeom
 from omni.isaac.sensor import _sensor
 
 
-class IMU:
+class IMUSensor:
     def __init__(
         self,
         position=(0, 0, 0),
@@ -31,24 +32,30 @@ class IMU:
         self.__ori = orientation
         self.__rot = rotation
         self.__name = name
-        self.__imu_prim
+        # self.__imu_prim
         self._is = _sensor.acquire_imu_sensor_interface()
-        self.__path = ""
+        self.__path = ''
         #     self.__attach_annotoators()
 
     def init_sensor(self, parent):
+        x,y,z = self.__pos
+        qx,qw,qy,qz = self.__rot
         result, self.__imu_prim = omni.kit.commands.execute(
             'IsaacSensorCreateImuSensor',
             path='/' + self.__name,
             parent=parent,
             sensor_period=-1.0,
-            translation=Gf.Vec3d(self.__pos),
-            orientation=Gf.Quatd(self.__ori),
+            translation=Gf.Vec3d(x,y,z),
+            orientation=Gf.Quatd(qx,qw,qy,qz),
             visualize=True,
         )
 
-    def construct_pc(self, rgb_image, depth_image):
-        pass
+    def read_from_json(self, data):
+        print("Trying to read IMU settings")
+        # We have been given data["LIDAR"]
+        self.__name = data['name']
+        self.__pos = data['position']
+        self.__rot =data['rotation']
 
     async def sample_sensor(self):
 
