@@ -56,6 +56,7 @@ import asyncio
 import omni.kit.asset_converter
 import carb
 
+
 class SelectedPrim:
     def __init__(self) -> None:
         self.prim = None
@@ -107,6 +108,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.mm = False
         frame = self.get_frame(index=0)
         self.build_task_controls_ui(frame)
+
         frame = self.get_frame(index=1)
         self.build_sensor_ui(frame)
 
@@ -115,11 +117,15 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
         frame = self.get_frame(index=2)
         self.setup_worldgen_ui(frame)
+
         self._window.visible = True
         frame = self.get_frame(index=3)
         self.build_pcg_env_ui(frame)
+
         self._window.visible = True
 
+        frame = self.get_frame(index=4)
+        self.build_sensor_rig_ui(frame)
         self.events = self.usd_context.get_stage_event_stream()
 
         self.stage_event_delegate = self.events.create_subscription_to_pop(
@@ -231,8 +237,84 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         # print(h.heap())
         # self.sample.save_lidar_data()
         return
+
+    def build_sensor_rig_ui(self, frame):
+        def update_sensor_rig_path(val):
+            pass
+
+        def load_sensor_rig_from_path():
+            pass
+
+        def update_rig_movement_type(val):
+            pass
+
+        def update_waypoint_path():
+            pass
+        def load_waypoints():
+            pass
+
+        self._sensor_rig_ui_inputs = {}
+        with frame:
+            with ui.VStack(spacing=5):
+                # Update the Frame Title
+                frame.title = 'Sensor Rig'
+                frame.visible = True
+
+                self._sensor_rig_ui_inputs['RigPath'] = StringField(
+                    'Sensor Rig settings path',
+                    'None',
+                    read_only=False,
+                    use_folder_picker=True,
+                    item_filter_fn=self._true,
+                    on_value_changed_fn=update_sensor_rig_path,
+                )
+
+                self._sensor_rig_ui_inputs['LoadRig'] = Button(
+                    'Load sensor rig',
+                    'Load',
+                    on_click_fn=load_sensor_rig_from_path,
+                )
+
+                self._sensor_rig_ui_inputs['MovementType'] = DropDown(
+                    'Movement Type: ', on_selection_fn=update_rig_movement_type
+                )
+                self._sensor_rig_ui_inputs['MovementType'].set_items(
+                    ['WAYPOINT', 'KEYBOARD']
+                )
+
+                self._sensor_rig_ui_inputs['WaypointPath'] = StringField(
+                    'Waypoints path',
+                    'None',
+                    read_only=False,
+                    use_folder_picker=True,
+                    item_filter_fn=self._true,
+                    on_value_changed_fn=update_waypoint_path,
+                )
+
+                self._sensor_rig_ui_inputs['LoadWaypoints'] = Button(
+                    'Load & attach waypoints',
+                    'Load',
+                    on_click_fn=load_waypoints,
+                )
+
+    async def ini(self):
+        await asyncio.ensure_future(self.sample.init_world())
+        self.sample.init_sensor_rig_from_file()
+
+        stage = omni.usd.get_context().get_stage()
+        self.sample.sr.initialize_waypoints('', stage)
+        print('Attach move to callback')
+        self.sample.attach_sensor_waypoint_callback(self.sample.sr)
+
     def test_load_sensors_from_file(self):
-        self.sample. init_sensor_rig_from_file()
+        asyncio.ensure_future(self.ini())
+        # await asyncio.ensure_future(self.sample.init_world())
+        # self.sample.init_sensor_rig_from_file()
+        #
+        # stage = omni.usd.get_context().get_stage()
+        # self.sample.sr.initialize_waypoints('', stage)
+        # print('Attach move to callback')
+        # self.sample.attach_sensor_waypoint_callback(self.sample.sr)
 
     def _on_load_scene_button_event(self):
         self._add_to_scene_event()
@@ -261,12 +343,13 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
     async def init_world_sample(self):
 
         asyncio.ensure_future(self.sample.init_world())
+
     async def material_test(self):
 
         shape = (256, 256)
         threshold = 0.5
         region_value = 1
-# Convert to pymeshlab mesh
+        # Convert to pymeshlab mesh
         l = shape[0] * 10   # 2560
         data = generate_perlin_noise_2d(shape, (8, 8))
         data = (data - np.min(data)) / (np.max(data) - np.min(data))
@@ -317,7 +400,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             mtl_name=mat_name,
             mtl_created_list=mtl_created_list,
         )
-
 
         mtl_prim = stage.GetPrimAtPath(mtl_created_list[0])
 
@@ -437,7 +519,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.add_button('init_world', self.ui_init_world)
                 self.task_ui_elements['init_world'].enabled = True
 
-                self.add_button('load_sensors', self.test_load_sensors_from_file)
+                self.add_button(
+                    'load_sensors', self.test_load_sensors_from_file
+                )
                 self.task_ui_elements['load_sensors'].enabled = True
                 # OTHER UI NEEDED
                 # load sensor rig
@@ -765,11 +849,17 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         print('callingworld gen')
         # self.sample.generate_world("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
         # self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save_new.json")
-        obs_to_spawn, object_dict, height_map = self.sample.generate_world_generator(
+        (
+            obs_to_spawn,
+            object_dict,
+            height_map,
+        ) = self.sample.generate_world_generator(
             'C:\\Users\\jonem\\Desktop\\worlddata2.json',
             'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
         )
-        asyncio.ensure_future(self.sample.spawn_all(obs_to_spawn,object_dict,height_map)) 
+        asyncio.ensure_future(
+            self.sample.spawn_all(obs_to_spawn, object_dict, height_map)
+        )
         # asyncio.run(
         #     self.sample.generate_world_generator(
         #         'C:\\Users\\jonem\\Desktop\\worlddata.json',
@@ -810,12 +900,20 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.sample.generate_world(self._object_path, self._world_path)
 
     def build_pcg_env_ui(self, frame):
+        def open_world_creator():
+            pass
 
         with frame:
             with ui.VStack(spacing=5):
                 # Update the Frame Title
                 frame.title = 'World set up'
                 frame.visible = True
+
+                self.world_gen_ui_elements['RunCreateTool'] = Button(
+                    'Open the world creator tool',
+                    'Open',
+                    on_click_fn=open_world_creator,
+                )
 
                 self.world_gen_ui_elements['ObjectsPath'] = StringField(
                     'Objects Path',

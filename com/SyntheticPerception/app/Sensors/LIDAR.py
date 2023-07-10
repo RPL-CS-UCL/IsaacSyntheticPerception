@@ -1,3 +1,4 @@
+import pathlib
 from omni.syntheticdata.scripts.sensors import enable_sensors
 from pxr import (
     UsdGeom,
@@ -61,6 +62,11 @@ class Lidar:
         self.__origin_pos = origin_pos
         self.__rotation = [0.0,0.0,0.0]
 
+    def init_output_folder(self, path):
+
+        pathlib.Path(path +"/velodyne").mkdir(parents=True, exist_ok=True)
+        
+        pathlib.Path(path +"/velodyneLabels").mkdir(parents=True, exist_ok=True)
     def read_from_json(self, data):
         # We have been given data["LIDAR"]
         # for instance_ids in data:
@@ -107,13 +113,14 @@ class Lidar:
         UsdGeom.XformCommonAPI(self.__lidar_prim).SetTranslate(
             self.__origin_pos
         )
-        self.__lidar_path = parent + '/' + self.__path
+        self.__lidar_path = parent +  self.__path
         print(f'lidar path should be {self.__lidar_path}')
         self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
 
     # def sample_sensor(self):
     #     self.get_pc_and_semantic()
     async def sample_sensor(self):
+        # return
         self.get_pc_and_semantic()
 
     def get_pc_and_semantic(self, save_path='/home/jon/Documents/temp/a'):
@@ -126,15 +133,15 @@ class Lidar:
         #     pointcloud, semantics, lidar_position, self.__max_range
         # )
 
-        if save_path is not None:
-            np.save(
-                f'{save_path}_pc.npy',
-                np.array(pointcloud),
-            )
-            np.save(
-                f'{save_path}_sem.npy',
-                np.array(semantics),
-            )
+        # if save_path is not None:
+        #     np.save(
+        #         f'{save_path}_pc.npy',
+        #         np.array(pointcloud),
+        #     )
+        #     np.save(
+        #         f'{save_path}_sem.npy',
+        #         np.array(semantics),
+        #     )
         return pointcloud, semantics
 
     def __get_position(self):

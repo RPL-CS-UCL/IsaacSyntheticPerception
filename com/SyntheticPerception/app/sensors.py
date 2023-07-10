@@ -1,4 +1,7 @@
 from omni.syntheticdata.scripts.sensors import enable_sensors
+import os
+
+import pathlib
 import json
 from pxr import (
     UsdGeom,
@@ -75,13 +78,14 @@ class SensorRig:
         self._prim = None
         self._dc = None
         self._rb = None
+        self.start_time = 0 
 
     def create_rig_from_file(self, path, stage):
         pos, ori = self.load_sensors_from_file(path, stage)
-        print(pos,ori)
-        position=np.array([pos[0],pos[1],pos[2]])
-        orientation=np.array([ori[0],ori[1],ori[2],ori[3]])
-        print("returned pos or")
+        print(pos, ori)
+        position = np.array([pos[0], pos[1], pos[2]])
+        orientation = np.array([ori[0], ori[1], ori[2], ori[3]])
+        print('returned pos or')
         print(position, orientation)
         self._dc = _dynamic_control.acquire_dynamic_control_interface()
         print(f'Dynamic control aquired: {self._dc}')
@@ -92,7 +96,7 @@ class SensorRig:
         self._prim = XFormPrim(
             name=self._prim_name,
             prim_path=self._full_prim_path,
-            position=position / get_stage_units() ,
+            position=position / get_stage_units(),
             orientation=orientation,
         )
 
@@ -115,7 +119,7 @@ class SensorRig:
         print(self._rb)
         print(self.get_pos_rot())
         print(self._dc)
-        print("Rig created")
+        print('Rig created')
 
     def create_rig(self, position, orientation, stage):
         self._dc = _dynamic_control.acquire_dynamic_control_interface()
@@ -221,6 +225,8 @@ class SensorRig:
         self.__sensors[-1].init_sensor(self._full_prim_path)
 
     def sample_sensors(self):
+        print("sampling sensors")
+        # log timestep
         # Sample all sensors
         for sensor in self.__sensors:
             # sensor.sample_sensor()
@@ -252,6 +258,7 @@ class SensorRig:
         print(self.__waypoints)
 
     def _waypoint_update(self, pos):
+        
         # Get the goal position and convert it into the correct type
         goal_pos = self.__waypoints[self.__curr_waypoint_id]
         goal_pos = Gf.Vec3d(goal_pos)
@@ -277,6 +284,19 @@ class SensorRig:
         return move_vec, rot_vec
 
     def move(self, time_step):
+
+        timeline = omni.timeline.get_timeline_interface()
+
+        # timecode = (
+        #     timeline.get_current_time() * timeline.get_time_codes_per_seconds()
+        # )
+        self.start_time += time_step
+        # print(self.start_time)
+
+        self.sample_sensors()
+        # print(timeline.get_current_time())
+        if len(self.__waypoints) == 0:
+            return
         # Retrieve the current position and orientation of the sensor rig
         current_pos, current_rot = self.get_pos_rot()
         current_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])
@@ -303,7 +323,7 @@ class SensorRig:
                 print('Trying to add sensor of type ', key)
                 if key == 'LIDAR':
                     for sensor_id in sensors[key]['instances']:
-                        sensor_settings =sensors[key]['instances'][sensor_id]
+                        sensor_settings = sensors[key]['instances'][sensor_id]
                         lidar = Lidar()
                         lidar.read_from_json(sensor_settings)
                         self.add_sensor_to_rig(lidar)
@@ -324,6 +344,13 @@ class SensorRig:
                 else:
                     print(' ERROR, tried adding sensor with type ', key)
             return pos, ori
+
+    def init_output_folder(self, path):
+        # create any paths needed
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+        # create any needed directories for the sensors
+        for sensor in self.__sensors:
+            sensor.init_output_folder(path)
 
 
 """

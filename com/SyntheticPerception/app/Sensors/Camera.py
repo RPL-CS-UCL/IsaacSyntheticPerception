@@ -1,3 +1,4 @@
+import pathlib
 from pxr import (
     UsdGeom,
     Gf,
@@ -40,6 +41,12 @@ class DepthCamera:
         self.__vertical_aperture_offset = 0.0
         self.__clipping_range = (1.0, 10000000.0)
         self.__resolution = (512, 512)
+    def init_output_folder(self, path):
+
+        pathlib.Path(path +"/camera").mkdir(parents=True, exist_ok=True)
+        
+        pathlib.Path(path +"/cameraDepth").mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path +"/cameraLabels").mkdir(parents=True, exist_ok=True)
 
     def init_sensor(self, parent):
         print(self.__clipping_range)
@@ -109,14 +116,15 @@ class DepthCamera:
         # self.pc_annot.dettach(self.rp)
 
     async def sample_sensor(self):
+        # return
         await rep.orchestrator.step_async()
 
         rgb_data = self.rgb_annot.get_data()
-        np.save('/home/jon/Documents/temp/image.npy', rgb_data)
+        # np.save('/home/jon/Documents/temp/image.npy', rgb_data)
 
         depth_data = self.depth_annot.get_data()
-        np.save('/home/jon/Documents/temp/depth.npy', depth_data)
+        # np.save('/home/jon/Documents/temp/depth.npy', depth_data)
 
         sem_data = self.sem_annot.get_data()
-        np.save('/home/jon/Documents/temp/sem.npy', sem_data)
+        # np.save('/home/jon/Documents/temp/sem.npy', sem_data)
         return

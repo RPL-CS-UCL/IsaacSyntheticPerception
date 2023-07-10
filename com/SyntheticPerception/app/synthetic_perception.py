@@ -153,9 +153,9 @@ class SyntheticPerception(BaseSample):
         self._appwindow = omni.appwindow.get_default_app_window()
         self._input = carb.input.acquire_input_interface()
         self._keyboard = self._appwindow.get_keyboard()
-        self._sub_keyboard = self._input.subscribe_to_keyboard_events(
-            self._keyboard, self._sub_keyboard_event
-        )
+        # self._sub_keyboard = self._input.subscribe_to_keyboard_events(
+        #     self._keyboard, self._sub_keyboard_event
+        # )
 
     def remove_all_objects(self):
         for i in reversed(range(len(self.__created_objs))):
@@ -264,6 +264,7 @@ class SyntheticPerception(BaseSample):
         self.sr.sample_sensors()
 
     def attach_sensor_waypoint_callback(self, srx):
+
         # un comment to enalbe wAYPOINT
         self.get_world().add_physics_callback('sim_step', callback_fn=srx.move)
 
