@@ -256,6 +256,9 @@ class SensorRig:
 
         print('SensorRig waypoints initialization complete:')
         print(self.__waypoints)
+    def initialize_waypoints_preloaded(self, waypoints):
+        self.__waypoints = []
+        self.__waypoints = waypoints
 
     def _waypoint_update(self, pos):
         

@@ -7,7 +7,8 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # from guppy import hpy
 import os
-from pxr import Usd, Gf, Ar, Pcp, Sdf, UsdRi
+import csv
+from pxr import Usd, Gf, Ar, Pcp, Sdf, UsdRi, UsdGeom
 from pxr import UsdShade, Sdf
 from omni.isaac.examples.base_sample import BaseSampleExtension
 from omni.kit.window.popup_dialog import FormDialog
@@ -40,6 +41,7 @@ from omni.isaac.core.utils.stage import (
     is_stage_loading,
     update_stage_async,
 )
+from omni.isaac.core.utils.prims import define_prim
 import os
 
 from .PCG.MeshGenerator import MeshGen
@@ -55,6 +57,7 @@ import colorsys
 import asyncio
 import omni.kit.asset_converter
 import carb
+from omni.kit.window.popup_dialog.dialog import PopupDialog
 
 
 class SelectedPrim:
@@ -239,19 +242,85 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         return
 
     def build_sensor_rig_ui(self, frame):
-        def update_sensor_rig_path(val):
-            pass
+        self.build_sensor_rig_ui_values = {}
+        self.build_sensor_rig_ui_values['RigPath'] = None
+        self.build_sensor_rig_ui_values['WaypointPath'] = None
+        self.build_sensor_rig_ui_values['MovementType'] = None
+
+        async def init_rig_and_waypoints():
+            await asyncio.ensure_future(self.sample.init_world())
+            self.sample.init_sensor_rig_from_file(self.build_sensor_rig_ui_values["RigPath"])
+
 
         def load_sensor_rig_from_path():
-            pass
+            asyncio.ensure_future(init_rig_and_waypoints())
+
+            stage = omni.usd.get_context().get_stage()
+            parent = define_prim('/_WAYPOINTS_', 'Xform')
+            cube_prim = stage.DefinePrim('/_WAYPOINTS_/w_01', 'Cube')
+            UsdGeom.Xformable(cube_prim).AddTranslateOp().Set((0., 0., 0.))
+
+        def update_sensor_rig_path(val):
+
+            self.build_sensor_rig_ui_values['RigPath'] = val 
+
 
         def update_rig_movement_type(val):
-            pass
 
-        def update_waypoint_path():
-            pass
+            self.build_sensor_rig_ui_values['MovementType'] = val 
+
+        def update_waypoint_path(val):
+            self.build_sensor_rig_ui_values['WaypointPath'] = val
+
         def load_waypoints():
-            pass
+
+            if not self.build_sensor_rig_ui_values['WaypointPath']:
+                dialog = FormDialog(
+                    title='ERROR No path',
+                    message='No waypoint file was given. Not saving - please input a save path.',
+                )
+                return
+
+            with open(
+                self.build_sensor_rig_ui_values['WaypointPath'], 'r'
+            ) as fh:
+                json_data = json.load(fh)
+                self.sample.sr.initialize_waypoints_preloaded(json_data)
+
+            stage = omni.usd.get_context().get_stage()
+            self.sample.sr.initialize_waypoints('', stage)
+            print('Attach move to callback')
+            self.sample.attach_sensor_waypoint_callback(self.sample.sr)
+
+
+        def save_waypoints():
+            def __n():
+                print('')
+
+            if not self.build_sensor_rig_ui_values['WaypointPath']:
+                dialog = FormDialog(
+                    title='ERROR No path',
+                    message='No waypoint file was given. Not saving - please input a save path.',
+                )
+                return
+
+            stage = omni.usd.get_context().get_stage()
+            waypoints = []
+            for prim_ref in stage.Traverse():
+                prim_ref_name = str(prim_ref.GetPrimPath())
+                if '_WAYPOINTS_' in prim_ref_name:
+                    for i in range(len(prim_ref.GetChildren())):
+                        prim_child = prim_ref.GetChildren()[i]
+                        translate = prim_child.GetAttribute(
+                            'xformOp:translate'
+                        ).Get()
+                        waypoints.append(
+                            [translate[0], translate[1], translate[2]]
+                        )
+            with open(
+                self.build_sensor_rig_ui_values['WaypointPath'], 'w'
+            ) as fh:
+                json.dump(waypoints, fh, indent=1)
 
         self._sensor_rig_ui_inputs = {}
         with frame:
@@ -295,6 +364,11 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     'Load & attach waypoints',
                     'Load',
                     on_click_fn=load_waypoints,
+                )
+                self._sensor_rig_ui_inputs['SaveWaypoints'] = Button(
+                    'Save waypoints',
+                    'Save',
+                    on_click_fn=save_waypoints,
                 )
 
     async def ini(self):
