@@ -6,9 +6,11 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # from guppy import hpy
+
+
 import os
 import csv
-from pxr import Usd, Gf, Ar, Pcp, Sdf, UsdRi, UsdGeom
+from pxr import Usd, Gf, Ar, Pcp, Sdf, UsdRi, UsdGeom,  UsdPhysics
 from pxr import UsdShade, Sdf
 from omni.isaac.examples.base_sample import BaseSampleExtension
 from omni.kit.window.popup_dialog import FormDialog
@@ -41,7 +43,7 @@ from omni.isaac.core.utils.stage import (
     is_stage_loading,
     update_stage_async,
 )
-from omni.isaac.core.utils.prims import define_prim
+from omni.isaac.core.utils.prims import define_prim, delete_prim
 import os
 
 from .PCG.MeshGenerator import MeshGen
@@ -246,11 +248,13 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.build_sensor_rig_ui_values['RigPath'] = None
         self.build_sensor_rig_ui_values['WaypointPath'] = None
         self.build_sensor_rig_ui_values['MovementType'] = None
+        self.sample.setup_scene()
 
         async def init_rig_and_waypoints():
-            await asyncio.ensure_future(self.sample.init_world())
-            self.sample.init_sensor_rig_from_file(self.build_sensor_rig_ui_values["RigPath"])
-
+            # await asyncio.ensure_future(self.sample.init_world())
+            self.sample.init_sensor_rig_from_file(
+                self.build_sensor_rig_ui_values['RigPath']
+            )
 
         def load_sensor_rig_from_path():
             asyncio.ensure_future(init_rig_and_waypoints())
@@ -258,22 +262,36 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             stage = omni.usd.get_context().get_stage()
             parent = define_prim('/_WAYPOINTS_', 'Xform')
             cube_prim = stage.DefinePrim('/_WAYPOINTS_/w_01', 'Cube')
-            UsdGeom.Xformable(cube_prim).AddTranslateOp().Set((0., 0., 0.))
+            UsdGeom.Xformable(cube_prim).AddTranslateOp().Set((0.0, 0.0, 0.0))
 
         def update_sensor_rig_path(val):
 
-            self.build_sensor_rig_ui_values['RigPath'] = val 
-
+            self.build_sensor_rig_ui_values['RigPath'] = val
 
         def update_rig_movement_type(val):
 
-            self.build_sensor_rig_ui_values['MovementType'] = val 
+            self.build_sensor_rig_ui_values['MovementType'] = val
 
         def update_waypoint_path(val):
             self.build_sensor_rig_ui_values['WaypointPath'] = val
 
-        def load_waypoints():
+        def load_waypoints_intermediate():
+            asyncio.ensure_future(load_waypoints())
 
+        async def load_waypoints():
+            # self.sample.force_reload()
+            await asyncio.ensure_future(self.sample._on_load_world_async())
+            # await asyncio.ensure_future(self.sample.init_world())
+            # print(self.sample._world.GetAttributes())
+            print(self.sample._world.__dir__())
+            stage = omni.usd.get_context().get_stage()
+
+            # Add a physics scene prim to stage
+
+            scene = UsdPhysics.Scene.Define(
+                stage, Sdf.Path('/World/physicsScene')
+            )
+            stage = omni.usd.get_context().get_stage()
             if not self.build_sensor_rig_ui_values['WaypointPath']:
                 dialog = FormDialog(
                     title='ERROR No path',
@@ -285,13 +303,37 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.build_sensor_rig_ui_values['WaypointPath'], 'r'
             ) as fh:
                 json_data = json.load(fh)
+                print('Trying to load waypoints')
+                print(json_data)
+
+                initial_prim_path = '/_WAYPOINTS_'
+                prim_check = stage.GetPrimAtPath(initial_prim_path)
+                if not prim_check:
+                    parent = define_prim('/_WAYPOINTS_', 'Xform')
+
+                initial_prim_wp = '/_WAYPOINTS_/w_01'
+                prim_check = stage.GetPrimAtPath(initial_prim_wp)
+                if prim_check:
+                    delete_prim(initial_prim_path)
+
+                for i, c in enumerate(json_data):
+                    # parent = define_prim('/_WAYPOINTS_', 'Xform')
+                    cube_prim = stage.DefinePrim(
+                        '/_WAYPOINTS_/w_{:02d}'.format(i + 1), 'Cube'
+                    )
+                    UsdGeom.Xformable(cube_prim).AddTranslateOp().Set(
+                        Gf.Vec3d(c)
+                    )
                 self.sample.sr.initialize_waypoints_preloaded(json_data)
 
-            stage = omni.usd.get_context().get_stage()
-            self.sample.sr.initialize_waypoints('', stage)
+            # stage = omni.usd.get_context().get_stage()
+            # self.sample.sr.initialize_waypoints('', stage)
             print('Attach move to callback')
-            self.sample.attach_sensor_waypoint_callback(self.sample.sr)
+            # self.sample.attach_sensor_waypoint_callback(self.sample.sr)
 
+            self.sample._world.add_physics_callback('sim_step', callback_fn=self.sample.sr.move)
+
+            self.sample.attach_sensor_sample_callback()
 
         def save_waypoints():
             def __n():
@@ -363,7 +405,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self._sensor_rig_ui_inputs['LoadWaypoints'] = Button(
                     'Load & attach waypoints',
                     'Load',
-                    on_click_fn=load_waypoints,
+                    on_click_fn=load_waypoints_intermediate,
                 )
                 self._sensor_rig_ui_inputs['SaveWaypoints'] = Button(
                     'Save waypoints',

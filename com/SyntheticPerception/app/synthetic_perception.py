@@ -18,6 +18,7 @@ from pxr import (
     UsdPhysics,
     Semantics,
 )  # pxr usd imports used to create cube
+
 from pxr import Usd, Gf
 from .PCG import AreaMaskGenerator
 from omni.isaac.examples.base_sample import BaseSample
@@ -101,6 +102,24 @@ class SyntheticPerception(BaseSample):
             # print(self._input_keyboard_mapping[event.input.name])
         return True
 
+    def force_reload(self):
+
+
+        self._world.initialize_physics()
+        self.setup_scene()
+
+    async def _on_load_world_async(self):
+
+        await omni.kit.app.get_app().next_update_async()
+
+        print('[company.hello.world] company hello world startup')
+
+        self._world = World(**self._world_settings)
+
+        await self._world.initialize_simulation_context_async()
+        # await self._world.reset_async()
+        print("=== FINISHES RESETTING")
+
     async def load_sample(self) -> None:
         """Function called when clicking load buttton"""
         if World.instance() is None:
@@ -112,6 +131,7 @@ class SyntheticPerception(BaseSample):
         await self._world.reset_async()
         await self._world.pause_async()
         await self.setup_post_load()
+        print('loading finished')
 
     def setup_scene(self):
         self.world = self.get_world()
@@ -139,6 +159,7 @@ class SyntheticPerception(BaseSample):
         }
 
         self._appwindow = omni.appwindow.get_default_app_window()
+        print('The world is initialized.')
 
     async def setup_post_load(self):
         self._world_settings = {
@@ -150,9 +171,9 @@ class SyntheticPerception(BaseSample):
         # self.init_sensor_and_semantics()
         # self.init_sensor_rig()
         # print('Aquiring keyboard interface')
-        self._appwindow = omni.appwindow.get_default_app_window()
-        self._input = carb.input.acquire_input_interface()
-        self._keyboard = self._appwindow.get_keyboard()
+        # self._appwindow = omni.appwindow.get_default_app_window()
+        # self._input = carb.input.acquire_input_interface()
+        # self._keyboard = self._appwindow.get_keyboard()
         # self._sub_keyboard = self._input.subscribe_to_keyboard_events(
         #     self._keyboard, self._sub_keyboard_event
         # )
@@ -172,6 +193,7 @@ class SyntheticPerception(BaseSample):
         if world.physics_callback_exists('sim_timestep'):
             world.remove_physics_callback('sim_timestep')
         stage = omni.usd.get_context().get_stage()
+        print('Pre rest setup over')
         # self.sr.initialize_waypoints('', stage)
 
     def world_cleanup(self):
@@ -250,12 +272,13 @@ class SyntheticPerception(BaseSample):
         self.sr.add_sensor_to_rig(DepthCamera(name='depthcam2'))
         self.sr.add_sensor_to_rig(Lidar(path='coolLidar'))
 
-    def init_sensor_rig_from_file(self,path):
+    def init_sensor_rig_from_file(self, path):
 
         self.stage = (
             omni.usd.get_context().get_stage()
         )  # Used to access Geometry
-        self.sr.create_rig_from_file(path,self.stage)
+        self.sr.create_rig_from_file(path, self.stage)
+
     async def final_fn(self):
         pos, rot = self.sr.get_pos_rot()
         print(pos, rot)
@@ -264,9 +287,29 @@ class SyntheticPerception(BaseSample):
         self.sr.sample_sensors()
 
     def attach_sensor_waypoint_callback(self, srx):
-
+        # print(self.get_world())
+        # print(self._world)
+        #
+        # self._world = World.instance()
+        # self.get_world().initialize()
         # un comment to enalbe wAYPOINT
-        self.get_world().add_physics_callback('sim_step', callback_fn=srx.move)
+        # self.get_world().add_physics_callback('sim_step', callback_fn=srx.move)
+        self._world.add_physics_callback('sim_step', callback_fn=srx.move)
+
+    def attach_sensor_sample_callback(self):
+        # un comment to enalbe wAYPOINT
+        # self.get_world().add_physics_callback('sim_sample_step', callback_fn=self.sr.sample_sensors)
+        pass
+
+        # world = self.get_world()
+        # self._a1 = world.scene.add(
+        #     Unitree(
+        #         prim_path='/World/A1',
+        #         name='A1',
+        #         position=np.array([0, 0, 0.400]),
+        #     )
+        # )
+        # self.get_world().play()
 
     def spawn_asset(
         self,
@@ -346,18 +389,18 @@ class SyntheticPerception(BaseSample):
     ):
         for i, n in enumerate(coll):
             x, y = n
-            x = float(x) 
-            y = float(y) 
-            x_ind =x * 10 
+            x = float(x)
+            y = float(y)
+            x_ind = x * 10
             y_ind = y * 10
             if x_ind >= 2560:
-                print("x, overfilled", x_ind)
+                print('x, overfilled', x_ind)
                 x_ind = 2559
             if y_ind >= 2560:
 
-                print("y, overfilled", y_ind)
+                print('y, overfilled', y_ind)
                 y_ind = 2559
-            z = float(height_map[int(y_ind)][int(x_ind)])/10.0 # was abs
+            z = float(height_map[int(y_ind)][int(x_ind)]) / 10.0   # was abs
             # second one is iterated fasted
 
             _p_name = f'{p_name}_{i}'
@@ -376,14 +419,16 @@ class SyntheticPerception(BaseSample):
     def create_terrains(self, terrain_info):
         print(' Trying to create terrains')
         print('The terrain info should be ', terrain_info)
-        
+
         # create the parent
 
-        omni.kit.commands.execute('CreatePrimWithDefaultXform',
+        omni.kit.commands.execute(
+            'CreatePrimWithDefaultXform',
             prim_type='Xform',
             prim_path='/World/t',
             attributes={},
-            select_new_prim=True)
+            select_new_prim=True,
+        )
 
         for key in terrain_info:
             mesh_path = terrain_info[key].mesh_path
@@ -404,14 +449,15 @@ class SyntheticPerception(BaseSample):
             random_rotation = 0.0
             x, y, z = 0, 0, 0
             add_reference_to_stage(usd_path=mesh_path, prim_path=prim_p)
-            self.create_material_and_bind(mat_name,mat_path, prim_p,scale,stage )
+            self.create_material_and_bind(
+                mat_name, mat_path, prim_p, scale, stage
+            )
 
-        scale = 0.1 
+        scale = 0.1
         random_rotation = 0.0
         x, y, z = 0, 0, 0
         # stage = self.usd_context.get_stage()
 
-        
         omni.kit.commands.execute(
             'TransformPrimSRTCommand',
             path=f'/World/t',
@@ -440,55 +486,12 @@ class SyntheticPerception(BaseSample):
             time_code=Usd.TimeCode(),
             had_transform_at_key=False,
         )
-
-        # omni.kit.commands.execute('ChangeProperty',
-        #     prop_path=Sdf.Path('/World/t.xformOp:orient'),
-        #     value=Gf.Quatd(0.7071067811865476, Gf.Vec3d(-0.7071067811865476, 0.0, 0.0)),
-        #     prev=Gf.Quatd(1.0, Gf.Vec3d(0.0, 0.0, 0.0)),
-        #     )
-        #
-        #
-        # omni.kit.commands.execute('ChangeProperty',
-        #     prop_path=Sdf.Path('/World/t.xformOp:orient'),
-        #     value=Gf.Quatd(6.123233995736766e-17, Gf.Vec3d(-4.329780281177467e-17, -0.7071067811865476, -0.7071067811865476)),
-        #     prev=Gf.Quatd(0.7071067811865476, Gf.Vec3d(-0.7071067811865476, 0.0, 0.0)),
-            # )
-            # self.spawn_asset(
-            #     mesh_path,
-            #     'terrain',
-            #     f'terrainmesh_{key}',
-            #     0,
-            #     0,
-            #     0,
-            #     1,
-            #     0,
-            #     False,
-            # )
-
-    # self.create_material_and_bind(mat_name,mat_path,)
-    def test_spawn1(self):
-
-        # asyncio.ensure_future(self.init_world())
-        mesh_path = 'C:\\Users\\jonem\\Documents\\Kit\\apps\\Isaac-Sim\\exts\\IsaacSyntheticPerception\\com\\SyntheticPerception\\app\\PCG\\mesh_0.usd'
-
-        add_reference_to_stage(usd_path=mesh_path, prim_path='/World/terrain')
-        # self.spawn_asset(
-        #     mesh_path,
-        #     'terrain',
-        #     f'terrainmesh',
-        #     0,
-        #     0,
-        #     0,
-        #     1,
-        #     0,
-        #     False,
-        # )
 
     async def spawn_all(self, obs_to_spawn, object_dict, height_map):
-        print("outtputting height map in syn percep")
+        print('outtputting height map in syn percep')
         print(height_map)
         print(height_map.shape)
-        print("max min")
+        print('max min')
         print(np.amax(height_map))
         print(np.amin(height_map))
         length = len(obs_to_spawn)
@@ -544,13 +547,13 @@ class SyntheticPerception(BaseSample):
     def generate_world_generator(self, obj_path, world_path):
         print('Starting world gen')
 
-        if World.instance() is None:
-            self._world = World(**self._world_settings)
-            self.setup_scene()
-        else:
-            self._world = World.instance()
-        print('checking if world is active')
-        print(self._world)
+        # if World.instance() is None:
+        #     self._world = World(**self._world_settings)
+        #     self.setup_scene()
+        # else:
+        #     self._world = World.instance()
+        # print('checking if world is active')
+        # print(self._world)
 
         (
             obs_to_spawn,
@@ -643,3 +646,46 @@ class SyntheticPerception(BaseSample):
     #         )
     #         counter += 1
     #     print('AREA GENERATION FINISHED')
+
+    # omni.kit.commands.execute('ChangeProperty',
+    #     prop_path=Sdf.Path('/World/t.xformOp:orient'),
+    #     value=Gf.Quatd(0.7071067811865476, Gf.Vec3d(-0.7071067811865476, 0.0, 0.0)),
+    #     prev=Gf.Quatd(1.0, Gf.Vec3d(0.0, 0.0, 0.0)),
+    #     )
+    #
+    #
+    # omni.kit.commands.execute('ChangeProperty',
+    #     prop_path=Sdf.Path('/World/t.xformOp:orient'),
+    #     value=Gf.Quatd(6.123233995736766e-17, Gf.Vec3d(-4.329780281177467e-17, -0.7071067811865476, -0.7071067811865476)),
+    #     prev=Gf.Quatd(0.7071067811865476, Gf.Vec3d(-0.7071067811865476, 0.0, 0.0)),
+    # )
+    # self.spawn_asset(
+    #     mesh_path,
+    #     'terrain',
+    #     f'terrainmesh_{key}',
+    #     0,
+    #     0,
+    #     0,
+    #     1,
+    #     0,
+    #     False,
+    # )
+
+    # self.create_material_and_bind(mat_name,mat_path,)
+    # def test_spawn1(self):
+    #
+    #     # asyncio.ensure_future(self.init_world())
+    #     mesh_path = 'C:\\Users\\jonem\\Documents\\Kit\\apps\\Isaac-Sim\\exts\\IsaacSyntheticPerception\\com\\SyntheticPerception\\app\\PCG\\mesh_0.usd'
+    #
+    #     add_reference_to_stage(usd_path=mesh_path, prim_path='/World/terrain')
+    #     # self.spawn_asset(
+    #     #     mesh_path,
+    #     #     'terrain',
+    #     #     f'terrainmesh',
+    #     #     0,
+    #     #     0,
+    #     #     0,
+    #     #     1,
+    #     #     0,
+    #     #     False,
+    #     # )
