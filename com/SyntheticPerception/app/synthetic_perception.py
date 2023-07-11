@@ -112,7 +112,7 @@ class SyntheticPerception(BaseSample):
 
         await omni.kit.app.get_app().next_update_async()
 
-        print('[company.hello.world] company hello world startup')
+        # print('[company.hello.world] company hello world startup')
 
         self._world = World(**self._world_settings)
 
@@ -488,6 +488,9 @@ class SyntheticPerception(BaseSample):
         )
 
     async def spawn_all(self, obs_to_spawn, object_dict, height_map):
+        print("trying to output if world is valid`")
+        print(self._world)
+        print(self.world)
         print('outtputting height map in syn percep')
         print(height_map)
         print(height_map.shape)

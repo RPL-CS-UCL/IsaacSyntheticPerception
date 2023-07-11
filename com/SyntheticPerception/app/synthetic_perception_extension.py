@@ -973,6 +973,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             'C:\\Users\\jonem\\Desktop\\worlddata2.json',
             'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
         )
+
+        asyncio.ensure_future(self.sample._on_load_world_async())
         asyncio.ensure_future(
             self.sample.spawn_all(obs_to_spawn, object_dict, height_map)
         )
