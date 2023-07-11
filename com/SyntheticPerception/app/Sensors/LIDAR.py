@@ -119,7 +119,7 @@ class Lidar:
 
     # def sample_sensor(self):
     #     self.get_pc_and_semantic()
-    async def sample_sensor(self):
+    def sample_sensor(self):
         # return
         self.get_pc_and_semantic()
 

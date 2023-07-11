@@ -156,43 +156,14 @@ class SensorRig:
         print(self._dc)
 
     def apply_veloc(self, veloc, ang_veloc):
-        print('applying ', veloc)
+        # print('applying ', veloc)
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         self._dc.set_rigid_body_linear_velocity(self._rb, veloc)
 
-        object_pose = self._dc.get_rigid_body_pose(self._rb)
-        object_pose.r = ang_veloc
-        self._dc.set_rigid_body_pos(self._rb, ang_veloc)
+        # object_pose = self._dc.get_rigid_body_pose(self._rb)
+        # object_pose.r = ang_veloc
+        # self._dc.set_rigid_body_pos(self._rb, ang_veloc)
 
-        # omni.kit.commands.execute(
-        #     'TransformPrimSRTCommand',
-        #     path=prim_path,  # f"/World/{p_name}",
-        #     old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-        #     new_scale=Gf.Vec3f(scale, scale, scale),
-        #     old_translation=Gf.Vec3f(x, y, z),
-        #     new_translation=Gf.Vec3f(x, y, z),
-        #     old_rotation_euler=Gf.Vec3f(0, 0, 0),
-        #     old_rotation_order=Gf.Vec3i(0, 1, 2),
-        #     new_rotation_euler=Gf.Vec3f(0, 0, random_rotation),
-        #     new_rotation_order=Gf.Vec3i(0, 1, 2),
-        #     time_code=Usd.TimeCode(),
-        #     had_transform_at_key=False,
-        # )
-        # omni.kit.commands.execute(
-        #     'TransformPrimSRTCommand',
-        #     path=prim_path,  # f"/World/{p_name}",
-        #     old_scale=Gf.Vec3f(1.0, 1.0, 1.0),
-        #     new_scale=Gf.Vec3f(scale, scale, scale),
-        #     old_translation=Gf.Vec3f(x, y, z),
-        #     new_translation=Gf.Vec3f(x, y, z),
-        #     old_rotation_euler=Gf.Vec3f(0, 0, 0),
-        #     old_rotation_order=Gf.Vec3i(0, 1, 2),
-        #     new_rotation_euler=Gf.Vec3f(0, 0, random_rotation),
-        #     new_rotation_order=Gf.Vec3i(0, 1, 2),
-        #     time_code=Usd.TimeCode(),
-        #     had_transform_at_key=False,
-        # )
-        # self._dc.set_rigid_body_angular_velocity(self._rb, ang_veloc)
 
     def add_depth_camera_to_rig(
         self,
@@ -224,14 +195,14 @@ class SensorRig:
         self.__sensors.append(sensor)
         self.__sensors[-1].init_sensor(self._full_prim_path)
 
-    def sample_sensors(self):
-        print("sampling sensors")
+    def sample_sensors(self, n):
+        # print("sampling sensors")
+        print(n)
         # log timestep
         # Sample all sensors
         for sensor in self.__sensors:
-            # sensor.sample_sensor()
-            asyncio.ensure_future(sensor.sample_sensor())
-        return
+            sensor.sample_sensor()
+            # asyncio.ensure_future(sensor.sample_sensor())
 
     def get_pos_rot(self):
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
@@ -246,7 +217,7 @@ class SensorRig:
 
         # iter over the stage and get all the waypoints
         # go through each child and save its tranform details to the waypoints list.
-        print('Waypoint initialization')
+        print('Waypoint initialization from base ')
         for prim_ref in stage.Traverse():
             prim_ref_name = str(prim_ref.GetPrimPath())
             if '_waypoints_' in prim_ref_name:
@@ -259,6 +230,7 @@ class SensorRig:
     def initialize_waypoints_preloaded(self, waypoints):
         self.__waypoints = []
         self.__waypoints = waypoints
+        print("loaded waypoints from file ", self.__waypoints)
 
     def _waypoint_update(self, pos):
         
@@ -269,7 +241,7 @@ class SensorRig:
         rot_vec = ori_
         # ori_np = gf_quat_to_np_array(ori_)
         # rot_vec = quat_to_euler_angles(ori_np)
-        print(' =============== ', ori_)
+        # print(' =============== ', ori_)
 
         # Calculate the diff vector
         move_vec = goal_pos - pos
@@ -279,6 +251,7 @@ class SensorRig:
         # iter over the points till the next valid one found.
 
         if distance < 0.5:
+            print("Moving to next waypoint")
             self.__curr_waypoint_id += 1
             if self.__curr_waypoint_id >= len(self.__waypoints):
                 self.__curr_waypoint_id = 0
@@ -296,14 +269,15 @@ class SensorRig:
         self.start_time += time_step
         # print(self.start_time)
 
-        self.sample_sensors()
+        # self.sample_sensors()
         # print(timeline.get_current_time())
         if len(self.__waypoints) == 0:
+            print("There are no waypoints")
             return
         # Retrieve the current position and orientation of the sensor rig
         current_pos, current_rot = self.get_pos_rot()
         current_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])
-        print('The current orientation of the SR is ', current_rot)
+        # print('The current orientation of the SR is ', current_rot)
 
         # Load the correct waypoint, check if we should change to next one ..
         # and then calculate the required move vector.
@@ -331,6 +305,7 @@ class SensorRig:
                         lidar.read_from_json(sensor_settings)
                         self.add_sensor_to_rig(lidar)
                 elif key == 'CAMERA':
+                    print("creating camera")
 
                     for sensor_id in sensors[key]['instances']:
                         sensor_settings = sensors[key]['instances'][sensor_id]
@@ -339,6 +314,7 @@ class SensorRig:
                         self.add_sensor_to_rig(cam)
                 elif key == 'IMU':
 
+                    print("creating imu")
                     for sensor_id in sensors[key]['instances']:
                         sensor_settings = sensors[key]['instances'][sensor_id]
                         imu = IMUSensor()

@@ -67,12 +67,13 @@ class IMUSensor:
         self.__pos = data['position']
         self.__rot =data['rotation']
 
-    async def sample_sensor(self):
+    def sample_sensor(self):
         # print(self.__path)
         # return
 
-        await rep.orchestrator.step_async()
+        # await rep.orchestrator.step_async()
         reading = self._is.get_sensor_readings(self.__path)
+        print(reading)
         # print(reading)
         # self.sliders[0].model.set_value(float(reading[-1]["lin_acc_x"]) * self.meters_per_unit)  # readings
         #                 self.sliders[1].model.set_value(float(reading[-1]["lin_acc_y"]) * self.meters_per_unit)  # readings
@@ -85,4 +86,3 @@ class IMUSensor:
         #                 self.sliders[8].model.set_value(float(reading[-1]["orientation"][2]))  # readings
         #                 self.sliders[9].model.set_value(float(reading[-1]["orientation"][3]))  # readings
 
-        return
