@@ -41,8 +41,105 @@ from omni.isaac.core.utils.rotations import (
     quat_to_euler_angles,
     gf_quat_to_np_array,
 )
-
 # .
+
+import numpy as np
+from numpy.linalg import norm
+import copy
+import traceback
+from scipy.spatial.transform import Rotation
+
+
+def quat_to_euler_angles(q):
+    q_img = q.GetImaginary()
+    q_real = q.GetReal()
+    # roll (x-axis rotation)
+    sinr_cosp = 2 * (q_real * q_img[0] + q_img[1] * q_img[2])
+    cosr_cosp = 1 - 2 * (q_img[0] * q_img[0] + q_img[1] * q_img[1])
+    roll = math.atan2(sinr_cosp, cosr_cosp)
+
+    # pitch (y-axis rotation)
+    sinp = 2 * (q_real * q_img[1] - q_img[2] * q_img[0])
+    if abs(sinp) >= 1:
+        pitch = math.copysign(math.pi / 2, sinp)  # use 90 degrees if out of range
+    else:
+        pitch = math.asin(sinp)
+
+    # yaw (z-axis rotation)
+    siny_cosp = 2 * (q_real * q_img[2] + q_img[0] * q_img[1])
+    cosy_cosp = 1 - 2 * (q_img[1] * q_img[1] + q_img[2] * q_img[2])
+    yaw = math.atan2(siny_cosp, cosy_cosp)
+
+    return roll, pitch, yaw
+
+
+def normalize(v):
+    if norm(v) == 0:
+        traceback.print_stack()
+    v /= norm(v)
+    return v
+
+
+def normalized(v):
+    if v is None:
+        return None
+    return normalize(copy.deepcopy(v))
+
+
+def proj_orth(v1, v2, normalize_res=False, eps=1e-5):
+    v2_norm = norm(v2)
+    if v2_norm < eps:
+        return v1
+
+    v2n = v2 / v2_norm
+    v1 = v1 - np.dot(v1, v2n) * v2n
+    if normalize_res:
+        return normalized(v1)
+    else:
+        return v1
+
+
+def axes_to_mat(axis_x, axis_z, dominant_axis="z"):
+    if dominant_axis == "z":
+        axis_x = proj_orth(axis_x, axis_z)
+    elif dominant_axis == "x":
+        axis_z = proj_orth(axis_z, axis_x)
+    elif dominant_axis is None:
+        pass
+    else:
+        raise RuntimeError("Unrecognized dominant_axis: %s" % dominant_axis)
+
+    axis_x = axis_x / norm(axis_x)
+    axis_z = axis_z / norm(axis_z)
+    axis_y = np.cross(axis_z, axis_x)
+
+    R = np.zeros((3, 3))
+    R[0:3, 0] = axis_x
+    R[0:3, 1] = axis_y
+    R[0:3, 2] = axis_z
+
+    return R
+
+
+# Projects T to align with the provided direction vector v.
+def proj_to_align(R, v):
+    max_entry = max(enumerate([np.abs(np.dot(R[0:3, i], v)) for i in range(3)]), key=lambda entry: entry[1])
+    return axes_to_mat(R[0:3, (max_entry[0] + 1) % 3], v)
+
+
+def as_np_matrix_t(input):
+    """Get 4x4 homogeneous transform matrix for an object
+
+    Args:
+        name (string): name of object
+
+    Returns:
+        np.matrix: 4x4 homogeneous transform matrix
+    """
+    result = np.identity(4)
+    result[:3, 3] = Gf.Vec3f(input.p.x, input.p.y, input.p.z)
+    result[:3, :3] = Gf.Matrix3f(Gf.Quatf(input.r.w, Gf.Vec3f(input.r.x, input.r.y, input.r.z))).GetTranspose()
+    return result
 
 
 def get_world_translation(prim):
@@ -134,6 +231,7 @@ class SensorRig:
             position=position / get_stage_units(),
             orientation=orientation,
         )
+        self.actual_prim = stage.GetPrimAtPath(self._full_prim_path)
 
         # collisionAPI = PhysicsRigidBodyAPI.Apply(self._prim)
         omni.kit.commands.execute(
@@ -160,9 +258,25 @@ class SensorRig:
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         self._dc.set_rigid_body_linear_velocity(self._rb, veloc)
 
+        # print(veloc)
+        # a_velo = ang_veloc 
+        # print(a_velo)
+        # # print(a_velo)
+        # if a_velo > 10:
+        #     x = Gf.Vec3d(0,0,a_velo/57.3)
+        #     # x = a_velo
+        #     # x *= 57.3
+        #     # x[0]= 0
+        #     # x[1] = 0
+        #
+        # x = Gf.Vec3d(0,0,0)
+        x = ang_veloc
+        self._dc.set_rigid_body_angular_velocity(self._rb, x)
+
+
         # object_pose = self._dc.get_rigid_body_pose(self._rb)
-        # object_pose.r = ang_veloc
-        # self._dc.set_rigid_body_pos(self._rb, ang_veloc)
+
+        # x= proj_to_align(object_pose.r, veloc)
 
 
     def add_depth_camera_to_rig(
@@ -238,26 +352,91 @@ class SensorRig:
         goal_pos = self.__waypoints[self.__curr_waypoint_id]
         goal_pos = Gf.Vec3d(goal_pos)
         ori_ = lookat_to_quatf(pos, goal_pos, Gf.Vec3d(0, 0, 1))
+    
         rot_vec = ori_
-        # ori_np = gf_quat_to_np_array(ori_)
-        # rot_vec = quat_to_euler_angles(ori_np)
+        # print(rot_amount)
+        _, ori_now = self.get_pos_rot()
+        
+        ori_now = lookat_to_quatf(pos,pos , Gf.Vec3d(0, 0, 1))
+
+        # or_change = ori_ - ori_now
+        # print("change amount",or_change)
+        # # rot_amount = slerp(ori_now,ori_,0.5)
+        ori_np = gf_quat_to_np_array(ori_)
+        rot_vec = quat_to_euler_angles(ori_)
+        rot_float = 0.0
         # print(' =============== ', ori_)
 
         # Calculate the diff vector
         move_vec = goal_pos - pos
         distance = np.linalg.norm(goal_pos - pos)
         move_vec = (move_vec / distance) * 5
+        goal_pos_arr = np.array([[goal_pos[0],goal_pos[1],0]])
+        pos_arr = np.array([[pos[0],pos[1],0]])
+        x = ori_np[1] 
+        y = ori_np[2] 
+        z = ori_np[3] 
+        # b = np.linalg.norm(goal_pos_arr)
+        # print(b.shape)
+        # b.reshape((1,3))
+        # a = np.linalg.norm(pos_arr)
+        # a.reshape((1,3))
+        val = self.actual_prim.GetAttribute('xformOp:orient')
+        ori_now = val.Get()
+        rvg= rot_vec
+        rvc= quat_to_euler_angles(ori_now)
+        rot_ang = Gf.Vec3d(0,0, rvg[2]-rvc[2])
+        # print(rvg, rvc)
+        # print(self.actual_prim.GetAttributes())
+
+
+        rot, rot_float = Rotation.align_vectors(pos_arr,goal_pos_arr)
+        # rot_float = ori_ /= 57.2
+        calc =rvg[2]-rvc[2] 
+        calc *= 57.2
+        x_ = rvg[0] - rvc[0]
+        y_ = rvg[1] - rvc[1]
+        # print(jjlc)
+        # if calc < 0:
+        #     calc = 360-abs(calc)
+        # print(calc)
+
+
+        rot_float = Gf.Vec3d(0,0,calc/5.73)
+        # if calc > 10:
+        #     rot_float = Gf.Vec3d(0,0,calc/5.73)
+        # else:
+        #     rot_float=  Gf.Vec3d(0,0,0)
+# rot_float = rot_vec /57.2
+        # ori_euler = quat_to_euler_angles(ori_)
+        # if rot_float < 15.0:
+        #     print("reset veloc")
+        #     ori_euler = Gf.Vec3d(0,0,0)
+        # self._dc.set_rigid_body_angular_velocity(self._rb, ori_euler)
+        # print(self._prim.GetAttributes())
+        # self._prim.set_world_pose(orientation=ori_)
+
+
+        
         # convert it to a distance check
         # iter over the points till the next valid one found.
+
+        # m_z =  np.linalg.norm(goal_pos - pos)
 
         if distance < 0.5:
             print("Moving to next waypoint")
             self.__curr_waypoint_id += 1
+
             if self.__curr_waypoint_id >= len(self.__waypoints):
                 self.__curr_waypoint_id = 0
+
+            # self._rb = self._dc.get_rigid_body(self._full_prim_path)
+            #
+            # x = Gf.Vec3d(0,0,rot_float)
+            # self._dc.set_rigid_body_angular_velocity(self._rb, ori_euler)
             return self._waypoint_update(pos)
 
-        return move_vec, rot_vec
+        return move_vec, rot_vec, rot_float
 
     def move(self, time_step):
 
@@ -281,10 +460,10 @@ class SensorRig:
 
         # Load the correct waypoint, check if we should change to next one ..
         # and then calculate the required move vector.
-        move_vec, rot_vec = self._waypoint_update(current_pos)
+        move_vec, rot_vec,rot_float = self._waypoint_update(current_pos)
 
         # Apply the required veloc
-        self.apply_veloc(move_vec, rot_vec)
+        self.apply_veloc(move_vec, rot_float)
 
     def load_sensors_from_file(self, file_path, stage):
         with open(file_path, 'r+') as infile:

@@ -490,7 +490,6 @@ class SyntheticPerception(BaseSample):
     async def spawn_all(self, obs_to_spawn, object_dict, height_map):
         print("trying to output if world is valid`")
         print(self._world)
-        print(self.world)
         print('outtputting height map in syn percep')
         print(height_map)
         print(height_map.shape)
