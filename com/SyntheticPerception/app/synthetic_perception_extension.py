@@ -7,10 +7,10 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # from guppy import hpy
 
-
+from omni.physx import acquire_physx_interface
 import os
 import csv
-from pxr import Usd, Gf, Ar, Pcp, Sdf, UsdRi, UsdGeom,  UsdPhysics
+from pxr import Usd, Gf, Ar, Pcp, Sdf, UsdRi, UsdGeom, UsdPhysics
 from pxr import UsdShade, Sdf
 from omni.isaac.examples.base_sample import BaseSampleExtension
 from omni.kit.window.popup_dialog import FormDialog
@@ -33,6 +33,8 @@ from omni.isaac.ui import (
     StringField,
     Button,
 )
+from omni.isaac.core import SimulationContext
+
 from .synthetic_perception import SyntheticPerception
 import omni
 import json
@@ -331,9 +333,103 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             print('Attach move to callback')
             # self.sample.attach_sensor_waypoint_callback(self.sample.sr)
 
-            self.sample._world.add_physics_callback('sim_step', callback_fn=self.sample.sr.move)
+            self.sample._world.add_physics_callback(
+                'sim_step', callback_fn=self.sample.sr.move
+            )
 
             self.sample.attach_sensor_sample_callback()
+            # simulation_context = SimulationContext(stage_units_in_meters=1.0)
+            #
+            # physx = acquire_physx_interface()
+            #
+            # dt = 1 / 60.0
+            #
+            # physx.reset_simulation()
+            # simulation_context.initialize_physics()
+            # def step_callback(step_size):
+            #
+            #     print("simulate with step: ", step_size)
+            #
+            #     return
+            # def render_callback(event):
+            #
+            #     print("update app with step: ", event.payload["dt"])
+            #
+            # simulation_context.add_physics_callback("physics_callback", step_callback)
+            #
+            # simulation_context.add_render_callback("render_callback", render_callback)
+            #
+            # # simulation_context.stop()
+            # #
+            # # simulation_context.play()
+            #
+            #
+            #
+            # print("step physics once with a step size of 1/60 second, these are the default settings")
+            # for i in range(1000):
+            #     simulation_context.step(render=True)
+
+            # physx = acquire_physx_interface()
+            #
+            # dt = 1 / 60.0
+            #
+            # physx.reset_simulation()
+            #
+            # # physx.start_simulation()
+            #
+            # # Simulate 20 steps, increase start_time if the desired initial step time is not at zero
+            #
+            # start_time = 0.0
+            #
+            # for i in range(2000):
+            #
+            #     physx.update_simulation(dt, start_time + i * dt)
+            #
+            #     physx.update_transformations(True, True)
+            # # physx.reset_simulation()
+            #
+            # physx.update_transformations(False, True)
+
+        def run_inter():
+            asyncio.ensure_future(run())
+        def run():
+
+            # await asyncio.ensure_future(self.sample._on_load_world_async())
+            # simulation_context = SimulationContext(stage_units_in_meters=1.0,physics_prim_path="/Wold/physicsScene")
+            simulation_context = self.sample._world
+            simulation_context.play()
+            print("==== got to here === ")
+
+            # physx = acquire_physx_interface()
+
+            dt = 1 / 60.0
+
+            # physx.reset_simulation()
+            # simulation_context.initialize_physics()
+            print(" === passes physixs init")
+            def step_callback(step_size):
+
+                print("simulate with step: ", step_size)
+
+                return
+            def render_callback(event):
+
+                print("update app with step: ", event.payload["dt"])
+
+            # simulation_context.add_physics_callback("physics_callback", step_callback)
+            #
+            # simulation_context.add_render_callback("render_callback", render_callback)
+
+            simulation_context.stop()
+
+            # simulation_context.play()
+
+            for i in range(500):
+                simulation_context.step(render=True)
+
+            simulation_context.stop()
+
+            simulation_context.play()
 
         def save_waypoints():
             def __n():
@@ -411,6 +507,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     'Save waypoints',
                     'Save',
                     on_click_fn=save_waypoints,
+                )
+
+                self._sensor_rig_ui_inputs['run'] = Button(
+                    'run',
+                    'run',
+                    on_click_fn=run,
                 )
 
     async def ini(self):

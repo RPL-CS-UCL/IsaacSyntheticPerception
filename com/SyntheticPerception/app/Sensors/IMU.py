@@ -73,7 +73,7 @@ class IMUSensor:
 
         # await rep.orchestrator.step_async()
         reading = self._is.get_sensor_readings(self.__path)
-        print(reading)
+        # print(reading)
         # print(reading)
         # self.sliders[0].model.set_value(float(reading[-1]["lin_acc_x"]) * self.meters_per_unit)  # readings
         #                 self.sliders[1].model.set_value(float(reading[-1]["lin_acc_y"]) * self.meters_per_unit)  # readings

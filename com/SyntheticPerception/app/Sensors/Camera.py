@@ -14,7 +14,7 @@ from omni.replicator.core.scripts.annotators import Annotator
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.dynamic_control import _dynamic_control
-
+from PIL import Image
 
 class DepthCamera:
     def __init__(
@@ -67,8 +67,10 @@ class DepthCamera:
             self.__cam, self.__resolution
         )
         if self.__attach:
+            print("attaching annotaors ==================== ")
             self.__init_annotators()
             self.__attach_annotoators()
+        print("camera initialized ===== ")
 
     def read_from_json(self, data):
         # We have been given data["LIDAR"]
@@ -115,12 +117,16 @@ class DepthCamera:
         self.sem_annot.detach(self.__rp)
         # self.pc_annot.dettach(self.rp)
 
-    async def sample_sensor(self):
+    def sample_sensor(self):
         # return
-        await rep.orchestrator.step_async()
+        # await rep.orchestrator.step_async()
 
         rgb_data = self.rgb_annot.get_data()
-        # np.save('/home/jon/Documents/temp/image.npy', rgb_data)
+        print(rgb_data)
+        im = Image.fromarray(rgb_data,"RGBA")
+        path = "C:\\Users\\jonem\\Desktop"
+        im.save(f'{path}/image.png')
+        # im.save("your_file.jpeg")
 
         depth_data = self.depth_annot.get_data()
         # np.save('/home/jon/Documents/temp/depth.npy', depth_data)

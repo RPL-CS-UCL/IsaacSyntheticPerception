@@ -350,6 +350,7 @@ class SensorRig:
     def _waypoint_update(self, pos):
         
         # Get the goal position and convert it into the correct type
+        # print("moving")
         goal_pos = self.__waypoints[self.__curr_waypoint_id]
         goal_pos = Gf.Vec3d(goal_pos)
         ori_ = lookat_to_quatf(pos, goal_pos, Gf.Vec3d(0, 0, 1))
