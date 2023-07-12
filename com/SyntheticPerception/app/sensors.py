@@ -233,6 +233,7 @@ class SensorRig:
         )
         self.actual_prim = stage.GetPrimAtPath(self._full_prim_path)
 
+        self.orient_val = self.actual_prim.GetAttribute('xformOp:orient')
         # collisionAPI = PhysicsRigidBodyAPI.Apply(self._prim)
         omni.kit.commands.execute(
             'AddPhysicsComponent',
@@ -311,7 +312,7 @@ class SensorRig:
 
     def sample_sensors(self, n):
         # print("sampling sensors")
-        print(n)
+        # print(n)
         # log timestep
         # Sample all sensors
         for sensor in self.__sensors:
@@ -353,16 +354,6 @@ class SensorRig:
         goal_pos = Gf.Vec3d(goal_pos)
         ori_ = lookat_to_quatf(pos, goal_pos, Gf.Vec3d(0, 0, 1))
     
-        rot_vec = ori_
-        # print(rot_amount)
-        _, ori_now = self.get_pos_rot()
-        
-        ori_now = lookat_to_quatf(pos,pos , Gf.Vec3d(0, 0, 1))
-
-        # or_change = ori_ - ori_now
-        # print("change amount",or_change)
-        # # rot_amount = slerp(ori_now,ori_,0.5)
-        ori_np = gf_quat_to_np_array(ori_)
         rot_vec = quat_to_euler_angles(ori_)
         rot_float = 0.0
         # print(' =============== ', ori_)
@@ -373,16 +364,10 @@ class SensorRig:
         move_vec = (move_vec / distance) * 5
         goal_pos_arr = np.array([[goal_pos[0],goal_pos[1],0]])
         pos_arr = np.array([[pos[0],pos[1],0]])
-        x = ori_np[1] 
-        y = ori_np[2] 
-        z = ori_np[3] 
-        # b = np.linalg.norm(goal_pos_arr)
-        # print(b.shape)
-        # b.reshape((1,3))
-        # a = np.linalg.norm(pos_arr)
-        # a.reshape((1,3))
-        val = self.actual_prim.GetAttribute('xformOp:orient')
-        ori_now = val.Get()
+        # x = ori_np[1] 
+        # y = ori_np[2] 
+        # z = ori_np[3] 
+        ori_now = self.orient_val.Get()
         rvg= rot_vec
         rvc= quat_to_euler_angles(ori_now)
         rot_ang = Gf.Vec3d(0,0, rvg[2]-rvc[2])
@@ -390,16 +375,13 @@ class SensorRig:
         # print(self.actual_prim.GetAttributes())
 
 
-        rot, rot_float = Rotation.align_vectors(pos_arr,goal_pos_arr)
+        # rot, rot_float = Rotation.align_vectors(pos_arr,goal_pos_arr)
+        
         # rot_float = ori_ /= 57.2
         calc =rvg[2]-rvc[2] 
         calc *= 57.2
         x_ = rvg[0] - rvc[0]
         y_ = rvg[1] - rvc[1]
-        # print(jjlc)
-        # if calc < 0:
-        #     calc = 360-abs(calc)
-        # print(calc)
 
 
         rot_float = Gf.Vec3d(0,0,calc/5.73)
@@ -440,7 +422,7 @@ class SensorRig:
 
     def move(self, time_step):
 
-        timeline = omni.timeline.get_timeline_interface()
+        # timeline = omni.timeline.get_timeline_interface()
 
         # timecode = (
         #     timeline.get_current_time() * timeline.get_time_codes_per_seconds()

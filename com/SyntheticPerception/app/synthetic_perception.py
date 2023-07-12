@@ -298,8 +298,8 @@ class SyntheticPerception(BaseSample):
 
     def attach_sensor_sample_callback(self):
         # un comment to enalbe wAYPOINT
-        # self.get_world().add_physics_callback('sim_sample_step', callback_fn=self.sr.sample_sensors)
-        pass
+        self.get_world().add_physics_callback('sim_sample_step', callback_fn=self.sr.sample_sensors)
+        # pass
 
         # world = self.get_world()
         # self._a1 = world.scene.add(
