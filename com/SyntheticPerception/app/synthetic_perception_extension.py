@@ -32,6 +32,7 @@ from omni.isaac.ui import (
     DropDown,
     StringField,
     Button,
+    CheckBox
 )
 from omni.isaac.core import SimulationContext
 
@@ -113,6 +114,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self._object_path = ''
         self._world_path = ''
         self.mm = False
+        self.OBJECT_EDITING_ALLOWED = False
         # frame = self.get_frame(index=0)
         # self.build_task_controls_ui(frame)
 
@@ -532,12 +534,16 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             json.dump(data, outfile)
 
     def setup_worldgen_ui(self, frame):
+        def test_check(val ):
+            self.OBJECT_EDITING_ALLOWED = val
 
         with frame:
             with ui.VStack(spacing=5):
                 # Update the Frame Title
                 frame.title = 'Object set up'
                 frame.visible = True
+                self.world_gen_ui_elements["toggle"] = CheckBox("Object setup mode", on_click_fn=test_check)
+                print(self.world_gen_ui_elements["toggle"].__dir__())
 
                 self.world_gen_ui_elements['SavePath'] = StringField(
                     'SavePath',
@@ -602,7 +608,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.position = [0, 0, 0]
 
     def _get_obj_details(self, event):
-        if not self._object_selector:
+        # if not self._object_selector:
+        #     return
+        if not self.OBJECT_EDITING_ALLOWED:
             return
         prim_path = self.usd_context.get_selection().get_selected_prim_paths()
 
@@ -679,6 +687,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         )
 
     def _update_object_path(self, val):
+        print(val)
         if val != '':
             self._object_path = val
 
@@ -694,30 +703,20 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             return False
 
     def _run_world_creation(self):
-        print('callingworld gen')
-        # self.sample.generate_world("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save.json")
-        # self.sample.generate_world_generator("C:\\Users\\jonem\\Desktop\\worlddata.json", "C:\\Users\\jonem\\Desktop\\objects_save_new.json")
-        (
-            obs_to_spawn,
-            object_dict,
-            height_map,
-        ) = self.sample.generate_world_generator(
-            'C:\\Users\\jonem\\Desktop\\worlddata2.json',
-            'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
-        )
-
-        asyncio.ensure_future(self.sample._on_load_world_async())
-        asyncio.ensure_future(
-            self.sample.spawn_all(obs_to_spawn, object_dict, height_map)
-        )
-        # asyncio.run(
-        #     self.sample.generate_world_generator(
-        #         'C:\\Users\\jonem\\Desktop\\worlddata.json',
-        #         'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
-        #     )
+        # (
+        #     obs_to_spawn,
+        #     object_dict,
+        #     height_map,
+        # ) = self.sample.generate_world_generator(
+        #     'C:\\Users\\jonem\\Desktop\\worlddata2.json',
+        #     'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
         # )
-        print(' ========================= ', is_stage_loading())
-        return
+        #
+        # asyncio.ensure_future(self.sample._on_load_world_async())
+        # asyncio.ensure_future(
+        #     self.sample.spawn_all(obs_to_spawn, object_dict, height_map)
+        # )
+        # return
         errors = []
 
         if self._object_path == '':
@@ -746,8 +745,20 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 ),
             )
             return
-        # If we get to here all paths valid. Pass to sample and build the world
-        self.sample.generate_world(self._object_path, self._world_path)
+
+        (
+            obs_to_spawn,
+            object_dict,
+            height_map,
+        ) = self.sample.generate_world_generator(
+                self._world_path,
+                self._object_path
+        )
+
+        asyncio.ensure_future(self.sample._on_load_world_async())
+        asyncio.ensure_future(
+            self.sample.spawn_all(obs_to_spawn, object_dict, height_map)
+        )
 
     def build_pcg_env_ui(self, frame):
         def open_world_creator():
@@ -756,7 +767,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         with frame:
             with ui.VStack(spacing=5):
                 # Update the Frame Title
-                frame.title = 'World set up'
+                frame.title = 'Generate World Set up'
                 frame.visible = True
 
                 self.world_gen_ui_elements['RunCreateTool'] = Button(
@@ -773,6 +784,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     item_filter_fn=self._true,
                     on_value_changed_fn=self._update_object_path,
                 )
+
                 self.world_gen_ui_elements['WorldPath'] = StringField(
                     'World Path',
                     'None',
