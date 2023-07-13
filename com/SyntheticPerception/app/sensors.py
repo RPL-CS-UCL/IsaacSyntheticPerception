@@ -177,6 +177,9 @@ class SensorRig:
         self._rb = None
         self.start_time = 0 
 
+        self.velocity = 10
+        self.sample_rate = 10 
+
     def create_rig_from_file(self, path, stage):
         pos, ori = self.load_sensors_from_file(path, stage)
         print(pos, ori)
@@ -305,7 +308,10 @@ class SensorRig:
                 path=name, parent=self._full_prim_path, origin_pos=origin_pos
             )
         )
-
+    def setup_sensor_output_path(self, path):
+        print(path)
+        for sensor in self.__sensors:
+            sensor.init_output_folder(path)
     def add_sensor_to_rig(self, sensor):
         self.__sensors.append(sensor)
         self.__sensors[-1].init_sensor(self._full_prim_path)
@@ -454,6 +460,8 @@ class SensorRig:
             # print(data)
             pos = data['POSITION']
             ori = data['ORIENTATION']
+            self.velocity = data['VELOCITY']
+            self.sample_rate = data['SAMPLE_RATE']
 
             self.create_rig(np.array(pos), np.asarray(ori), stage)
             sensors = data['SENSORS']

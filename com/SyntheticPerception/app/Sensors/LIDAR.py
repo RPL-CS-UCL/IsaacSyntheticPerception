@@ -61,8 +61,11 @@ class Lidar:
         self.__enable_semantics = enable_semantics
         self.__origin_pos = origin_pos
         self.__rotation = [0.0,0.0,0.0]
+        self.sample_count = 0
+        self.save_path = None
 
     def init_output_folder(self, path):
+        self.save_path = path
 
         pathlib.Path(path +"/velodyne").mkdir(parents=True, exist_ok=True)
         
@@ -123,11 +126,16 @@ class Lidar:
         # return
         self.get_pc_and_semantic()
 
+        self.sample_count += 1
+
     def get_pc_and_semantic(self, save_path='/home/jon/Documents/temp/a'):
         pointcloud = self.__lidarInterface.get_point_cloud_data(
             self.__lidar_path
         )
         semantics = self.__lidarInterface.get_semantic_data(self.__lidar_path)
+
+        np.save(f"{self.save_path}velodyne/{self.sample_count}.npy",pointcloud)
+        np.save(f"{self.save_path}velodyneLabels/{self.sample_count}.npy",semantics)
         # lidar_position = self.__get_position()
         # pointcloud, semantics = self.__clear_max_lidar_points(
         #     pointcloud, semantics, lidar_position, self.__max_range

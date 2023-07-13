@@ -272,12 +272,13 @@ class SyntheticPerception(BaseSample):
         self.sr.add_sensor_to_rig(DepthCamera(name='depthcam2'))
         self.sr.add_sensor_to_rig(Lidar(path='coolLidar'))
 
-    def init_sensor_rig_from_file(self, path):
+    def init_sensor_rig_from_file(self, path,out_path):
 
         self.stage = (
             omni.usd.get_context().get_stage()
         )  # Used to access Geometry
         self.sr.create_rig_from_file(path, self.stage)
+        self.sr.setup_sensor_output_path(out_path)
 
     async def final_fn(self):
         pos, rot = self.sr.get_pos_rot()

@@ -41,8 +41,11 @@ class DepthCamera:
         self.__vertical_aperture_offset = 0.0
         self.__clipping_range = (1.0, 10000000.0)
         self.__resolution = (512, 512)
+        self.sample_count = 0
+        self.save_path = None
     def init_output_folder(self, path):
-
+        self.save_path = path
+        print("setting save path for camera to ", path)
         pathlib.Path(path +"/camera").mkdir(parents=True, exist_ok=True)
         
         pathlib.Path(path +"/cameraDepth").mkdir(parents=True, exist_ok=True)
@@ -118,19 +121,27 @@ class DepthCamera:
         # self.pc_annot.dettach(self.rp)
 
     def sample_sensor(self):
+
         # return
         # await rep.orchestrator.step_async()
 
         rgb_data = self.rgb_annot.get_data()
-        print(rgb_data)
-        im = Image.fromarray(rgb_data,"RGBA")
-        path = "C:\\Users\\jonem\\Desktop"
-        im.save(f'{path}/image.png')
+        np.save(f"{self.save_path}camera/{self.sample_count}.npy", rgb_data)
+        # print(rgb_data)
+        # im = Image.fromarray(rgb_data,"RGBA")
+        # path = f"{self.save_path}camera/{self.sample_count}.png"
+        # im.save(path)
         # im.save("your_file.jpeg")
 
         depth_data = self.depth_annot.get_data()
+
+        np.save(f"{self.save_path}cameraDepth/{self.sample_count}.npy",depth_data)
         # np.save('/home/jon/Documents/temp/depth.npy', depth_data)
 
         sem_data = self.sem_annot.get_data()
+
+        np.save(f"{self.save_path}cameraLabels/{self.sample_count}.npy",sem_data)
+
+        self.sample_count += 1
         # np.save('/home/jon/Documents/temp/sem.npy', sem_data)
         return

@@ -250,21 +250,31 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.build_sensor_rig_ui_values['RigPath'] = None
         self.build_sensor_rig_ui_values['WaypointPath'] = None
         self.build_sensor_rig_ui_values['MovementType'] = None
+
+        self.build_sensor_rig_ui_values['OutputSavePath'] = None
         self.sample.setup_scene()
 
         async def init_rig_and_waypoints():
             # await asyncio.ensure_future(self.sample.init_world())
             self.sample.init_sensor_rig_from_file(
-                self.build_sensor_rig_ui_values['RigPath']
+                self.build_sensor_rig_ui_values['RigPath'],
+                self.build_sensor_rig_ui_values["OutputSavePath"]
             )
 
         def load_sensor_rig_from_path():
             asyncio.ensure_future(init_rig_and_waypoints())
 
             stage = omni.usd.get_context().get_stage()
-            parent = define_prim('/_WAYPOINTS_', 'Xform')
-            cube_prim = stage.DefinePrim('/_WAYPOINTS_/w_01', 'Cube')
+            parent = stage.GetPrimAtPath("/_WAYPOINTS_") 
+            if not parent:
+                parent = define_prim('/_WAYPOINTS_', 'Xform')
+            cube_prim = stage.GetPrimAtPath("/_WAYPOINTS_/w_01")
+            if not cube_prim:
+                cube_prim = stage.DefinePrim('/_WAYPOINTS_/w_01', 'Cube')
             UsdGeom.Xformable(cube_prim).AddTranslateOp().Set((0.0, 0.0, 0.0))
+
+            # print(" ==== Trying to set up output path")
+            # self.sample.sr.setup_sensor_output_path(self.build_sensor_rig_ui_values["OutputSavePath"])
 
         def update_sensor_rig_path(val):
 
@@ -338,62 +348,11 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             )
 
             self.sample.attach_sensor_sample_callback()
-            # simulation_context = SimulationContext(stage_units_in_meters=1.0)
-            #
-            # physx = acquire_physx_interface()
-            #
-            # dt = 1 / 60.0
-            #
-            # physx.reset_simulation()
-            # simulation_context.initialize_physics()
-            # def step_callback(step_size):
-            #
-            #     print("simulate with step: ", step_size)
-            #
-            #     return
-            # def render_callback(event):
-            #
-            #     print("update app with step: ", event.payload["dt"])
-            #
-            # simulation_context.add_physics_callback("physics_callback", step_callback)
-            #
-            # simulation_context.add_render_callback("render_callback", render_callback)
-            #
-            # # simulation_context.stop()
-            # #
-            # # simulation_context.play()
-            #
-            #
-            #
-            # print("step physics once with a step size of 1/60 second, these are the default settings")
-            # for i in range(1000):
-            #     simulation_context.step(render=True)
-
-            # physx = acquire_physx_interface()
-            #
-            # dt = 1 / 60.0
-            #
-            # physx.reset_simulation()
-            #
-            # # physx.start_simulation()
-            #
-            # # Simulate 20 steps, increase start_time if the desired initial step time is not at zero
-            #
-            # start_time = 0.0
-            #
-            # for i in range(2000):
-            #
-            #     physx.update_simulation(dt, start_time + i * dt)
-            #
-            #     physx.update_transformations(True, True)
-            # # physx.reset_simulation()
-            #
-            # physx.update_transformations(False, True)
 
         def run_inter():
             asyncio.ensure_future(run())
         def run():
-
+            self.sample.sr.setup_sensor_output_path(self.build_sensor_rig_ui_values["OutputSavePath"])
             # await asyncio.ensure_future(self.sample._on_load_world_async())
             # simulation_context = SimulationContext(stage_units_in_meters=1.0,physics_prim_path="/Wold/physicsScene")
             simulation_context = self.sample._world
@@ -430,6 +389,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             simulation_context.stop()
 
             simulation_context.play()
+
+        def update_output_save_path(val):
+            # print("updating to ", val)
+
+            self.build_sensor_rig_ui_values['OutputSavePath'] = val
+
 
         def save_waypoints():
             def __n():
@@ -476,6 +441,14 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     on_value_changed_fn=update_sensor_rig_path,
                 )
 
+                self._sensor_rig_ui_inputs['OutputSavePath'] = StringField(
+                    'Output path',
+                    'None',
+                    read_only=False,
+                    use_folder_picker=True,
+                    item_filter_fn=self._true,
+                    on_value_changed_fn=update_output_save_path,
+                )
                 self._sensor_rig_ui_inputs['LoadRig'] = Button(
                     'Load sensor rig',
                     'Load',
@@ -508,6 +481,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     'Save',
                     on_click_fn=save_waypoints,
                 )
+
 
                 self._sensor_rig_ui_inputs['run'] = Button(
                     'run',

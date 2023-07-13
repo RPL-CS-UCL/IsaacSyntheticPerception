@@ -37,13 +37,14 @@ class IMUSensor:
         # self.__imu_prim
         self._is = _sensor.acquire_imu_sensor_interface()
         self.__path = ''
-        self._save_path = ""
+        self.save_path = ""
+        self.sample_count = 0
         #     self.__attach_annotoators()
 
     def init_output_folder(self, path):
-        self._save_path =path +"/posesIMU" 
+        self.save_path =path +"/posesIMU" 
 
-        pathlib.Path(self._save_path).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.save_path).mkdir(parents=True, exist_ok=True)
         
 
     def init_sensor(self, parent):
@@ -73,16 +74,7 @@ class IMUSensor:
 
         # await rep.orchestrator.step_async()
         reading = self._is.get_sensor_readings(self.__path)
-        # print(reading)
-        # print(reading)
-        # self.sliders[0].model.set_value(float(reading[-1]["lin_acc_x"]) * self.meters_per_unit)  # readings
-        #                 self.sliders[1].model.set_value(float(reading[-1]["lin_acc_y"]) * self.meters_per_unit)  # readings
-        #                 self.sliders[2].model.set_value(float(reading[-1]["lin_acc_z"]) * self.meters_per_unit)  # readings
-        #                 self.sliders[3].model.set_value(float(reading[-1]["ang_vel_x"]))  # readings
-        #                 self.sliders[4].model.set_value(float(reading[-1]["ang_vel_y"]))  # readings
-        #                 self.sliders[5].model.set_value(float(reading[-1]["ang_vel_z"]))  # readings
-        #                 self.sliders[6].model.set_value(float(reading[-1]["orientation"][0]))  # readings
-        #                 self.sliders[7].model.set_value(float(reading[-1]["orientation"][1]))  # readings
-        #                 self.sliders[8].model.set_value(float(reading[-1]["orientation"][2]))  # readings
-        #                 self.sliders[9].model.set_value(float(reading[-1]["orientation"][3]))  # readings
 
+        np.save(f"{self.save_path}/{self.sample_count}.npy",reading)
+
+        self.sample_count += 1
