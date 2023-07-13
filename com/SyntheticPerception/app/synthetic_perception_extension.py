@@ -662,7 +662,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         ):
             self.selected_prim_dict[
                 self.current_path
-            ].unique_id = self.current_path
+            ].unique_id = self.current_path.split("/")[-1]
         self.world_gen_ui_elements['PrimName'].set_value(
             self.selected_prim_dict[self.current_path].unique_id
         )
