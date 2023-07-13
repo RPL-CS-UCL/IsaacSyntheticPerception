@@ -197,6 +197,7 @@ class MeshGen:
         print(f'{self._o} Saving meshes to folder {self._save_path}.')
         for i, key in enumerate(list(self.meshes_dict.keys())):
             self._files_to_clean.append(f'{self._save_path}/mesh_{i}.obj')
+            self._files_to_clean.append(f'{self._save_path}/mesh_{i}.usd')
             # print('final mesh paths dict key type ', type(key))
             self.final_mesh_paths_dict[key] = f'{self._save_path}/mesh_{i}.obj'
             o3d.io.write_triangle_mesh(

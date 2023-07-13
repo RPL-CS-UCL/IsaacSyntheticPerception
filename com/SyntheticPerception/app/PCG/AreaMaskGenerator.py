@@ -237,21 +237,14 @@ def generate_world_from_file(world_path, object_path):
         meshGen.generate_terrain_mesh()
 
         regs = list(np.unique(region_map))
-        print("iterating through terrain info")
-        print(regs)
-        print(terrain_info)
         for key in terrain_info: 
             print(key)
             if float(key) in regs:
-                print(f"{key} ")
-                print(terrain_info)
-                print(meshGen.final_mesh_paths_dict)
                 terrain_info[str(key)].mesh_path = meshGen.final_mesh_paths_dict[int(key)]
-                print("mesh path ", terrain_info[str(key)])
         print(f"[AreaMaskGenerator] All terrain infos updated. Passing data back to main sample to genereate objects and load the terrain in.")
 
 
-        return world.objects_to_spawn, world.objects_dict, terrain_info, meshGen._points2#_noise_map_xy 
+        return world.objects_to_spawn, world.objects_dict, terrain_info, meshGen#._points2#_noise_map_xy 
     return world.objects_to_spawn, world.objects_dict, None, None
 
 

@@ -326,16 +326,18 @@ class SyntheticPerception(BaseSample):
     ):
         prim_path = '/World/' + 'class_' + class_name + '/' + prim_name
 
-        prim = self.add_asset_to_stage(
-            asset_path,
-            prim_name,
-            prim_path,
-            self._world.scene,
-            # Using the current stage units which is in meters by default.
-            position=np.array([x, y, 0]),
-            # most arguments accept mainly numpy arrays.
-            scale=np.array([0.5015, 0.5015, 0.5015]),
-        )
+        # prim = self.add_asset_to_stage(
+        #     asset_path,
+        #     prim_name,
+        #     prim_path,
+        #     self._world.scene,
+        #     # Using the current stage units which is in meters by default.
+        #     position=np.array([x, y, 0]),
+        #     # most arguments accept mainly numpy arrays.
+        #     scale=np.array([0.5015, 0.5015, 0.5015]),
+        # )
+
+        add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
 
         # here we want to modify the scale
         low_lim = scale - object_scale_delta
@@ -550,27 +552,17 @@ class SyntheticPerception(BaseSample):
     def generate_world_generator(self, obj_path, world_path):
         print('Starting world gen')
 
-        # if World.instance() is None:
-        #     self._world = World(**self._world_settings)
-        #     self.setup_scene()
-        # else:
-        #     self._world = World.instance()
-        # print('checking if world is active')
-        # print(self._world)
 
         (
             obs_to_spawn,
             object_dict,
             terrain_info,
-            height_map,
+            meshGen,
         ) = AreaMaskGenerator.generate_world_from_file(obj_path, world_path)
-
-        # print(' ==================== TERRAIN INFO ', terrain_info)
-        # loop = asyncio.new_event_loop()
-
-        # asyncio.set_event_loop(loop)
-        # asyncio.ensure_future(self.create_terrains(terrain_info))
+        height_map = meshGen._points2
         self.create_terrains(terrain_info)
+        # meshGen.clean_up_files()
+
         return obs_to_spawn, object_dict, height_map
 
     def add_asset_to_stage(
