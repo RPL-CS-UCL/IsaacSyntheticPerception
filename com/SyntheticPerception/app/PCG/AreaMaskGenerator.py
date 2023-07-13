@@ -130,7 +130,6 @@ class WorldHandler:
                 # self.objects.append(tmp)
                 self.objects_dict[u_id] = tmp
 
-        print("Loaded the following objects")
         # for i in self.objects:
         #     print(i)
 
@@ -215,12 +214,10 @@ class WorldHandler:
 
 
 def generate_world_from_file(world_path, object_path):
-    print("creating world obj")
     world = WorldHandler(world_path, object_path)
-    print("reading objs")
     world._read_objects()
-    print("reading world")
     res = world._read_world()
+    mesh_scale = 10
      
     terrain_mesh_paths = []
     if res:
@@ -233,12 +230,11 @@ def generate_world_from_file(world_path, object_path):
         # return None
 
         m_path = 'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG'
-        meshGen = MeshGen(map_size, 10, region_map, m_path)
+        meshGen = MeshGen(map_size, mesh_scale, region_map, m_path)
         meshGen.generate_terrain_mesh()
 
         regs = list(np.unique(region_map))
         for key in terrain_info: 
-            print(key)
             if float(key) in regs:
                 terrain_info[str(key)].mesh_path = meshGen.final_mesh_paths_dict[int(key)]
         print(f"[AreaMaskGenerator] All terrain infos updated. Passing data back to main sample to genereate objects and load the terrain in.")

@@ -394,16 +394,18 @@ class SyntheticPerception(BaseSample):
             x, y = n
             x = float(x)
             y = float(y)
-            x_ind = x * 10
-            y_ind = y * 10
-            if x_ind >= 2560:
-                print('x, overfilled', x_ind)
-                x_ind = 2559
-            if y_ind >= 2560:
-
-                print('y, overfilled', y_ind)
-                y_ind = 2559
-            z = float(height_map[int(y_ind)][int(x_ind)]) / 10.0   # was abs
+            mesh_scale = 10
+            x_ind = x * mesh_scale 
+            y_ind = y * mesh_scale
+            mesh_height_modifier = 10
+            # if x_ind >= 2560:
+            #     print('x, overfilled', x_ind)
+            #     x_ind = 2559
+            # if y_ind >= 2560:
+            #
+            #     print('y, overfilled', y_ind)
+            #     y_ind = 2559
+            z = float(height_map[int(y_ind)][int(x_ind)]) / mesh_height_modifier   # was abs
             # second one is iterated fasted
 
             _p_name = f'{p_name}_{i}'
@@ -420,8 +422,6 @@ class SyntheticPerception(BaseSample):
             )
 
     def create_terrains(self, terrain_info):
-        print(' Trying to create terrains')
-        print('The terrain info should be ', terrain_info)
 
         # create the parent
 
@@ -440,8 +440,6 @@ class SyntheticPerception(BaseSample):
             mat_name = mat_path.split('/')[-1]
             mat_name = mat_name.replace('.mdl', '')
             mesh_path = mesh_path.replace('.obj', '.usd')
-            print('spawn and bind the terrain here')
-            print(mesh_path, scale, mat_path, mat_name)
             # spawn prim
 
             prim_p = f'/World/t/terrain{key}'
@@ -491,29 +489,13 @@ class SyntheticPerception(BaseSample):
         )
 
     async def spawn_all(self, obs_to_spawn, object_dict, height_map):
-        print("trying to output if world is valid`")
-        print(self._world)
-        print('outtputting height map in syn percep')
-        print(height_map)
-        print(height_map.shape)
-        print('max min')
-        print(np.amax(height_map))
-        print(np.amin(height_map))
         length = len(obs_to_spawn)
         counter = 1
         for key in obs_to_spawn:
 
-            # check if assets are currently being spawned
-            # load_bool = is_stage_loading()
-            # print(" =================================== ", load_bool)
             obj = object_dict[key]
             path = object_dict[key].usd_path
-            # num_objs += len(obs_to_spawn[key])
-            # print("checking if world is activev")
-            # print(self._world)
 
-            # if num_objs > 2000:
-            #     return
             print(
                 'trying to spawn ',
                 path,
@@ -538,11 +520,6 @@ class SyntheticPerception(BaseSample):
                 object_scale_delta=obj.object_scale_delta,
                 allow_rot=obj.allow_y_rot,
             )
-            # print('we should now wait')
-            # if num_objs > 5000:
-            #     update_stage()
-            #     return
-            #     num_objs = 0
             await update_stage_async()
             # print("some time should have passed")
             # return
@@ -550,7 +527,6 @@ class SyntheticPerception(BaseSample):
         print('AREA GENERATION FINISHED')
 
     def generate_world_generator(self, obj_path, world_path):
-        print('Starting world gen')
 
 
         (
@@ -565,12 +541,6 @@ class SyntheticPerception(BaseSample):
 
         return obs_to_spawn, object_dict, height_map
 
-    def add_asset_to_stage(
-        self, asset_path, prim_name, prim_path, scene, **kwargs
-    ):
-        # print('adding asset to stage ', asset_path, prim_path)
-
-        add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
 
     def create_material_and_bind(
         self, mat_name, mat_path, prim_path, scale, stage
@@ -684,3 +654,10 @@ class SyntheticPerception(BaseSample):
     #     #     0,
     #     #     False,
     #     # )
+
+    # def add_asset_to_stage(
+    #     self, asset_path, prim_name, prim_path, scene, **kwargs
+    # ):
+    #     # print('adding asset to stage ', asset_path, prim_path)
+    #
+    #     add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
