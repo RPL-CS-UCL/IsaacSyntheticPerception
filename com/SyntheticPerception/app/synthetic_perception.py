@@ -197,6 +197,7 @@ class SyntheticPerception(BaseSample):
         # self.sr.initialize_waypoints('', stage)
 
     def world_cleanup(self):
+        print("clean up world:with")
         self.remove_all_objects()
 
     def init_semantics_in_scene(self):

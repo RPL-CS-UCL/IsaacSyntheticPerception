@@ -173,6 +173,11 @@ class SensorRig:
         self.velocity = 10
         self.sample_rate = 10
         self._waypoints_parent = None
+        self.time = 0
+    def reset(self):
+
+        self.time = 0
+
 
     def create_rig_from_file(self, path, stage):
         pos, ori = self.load_sensors_from_file(path, stage)
@@ -289,6 +294,10 @@ class SensorRig:
 
     def setup_sensor_output_path(self, path):
         print(path)
+
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path + "/timestamps.csv")
+        self._time_stamp_file = open(path +"/timestamps.csv", "a")
         for sensor in self.__sensors:
             sensor.init_output_folder(path)
 
@@ -298,12 +307,15 @@ class SensorRig:
 
     def sample_sensors(self, n):
         # print("sampling sensors")
-        # print(n)
+        self.time += n
+        # print(self.time)
         # log timestep
         # Sample all sensors
         for sensor in self.__sensors:
             sensor.sample_sensor()
             # asyncio.ensure_future(sensor.sample_sensor())
+        # print(self.time)
+        self._time_stamp_file.write(f"{str(self.time)}\n") 
 
     def get_pos_rot(self):
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
@@ -351,7 +363,7 @@ class SensorRig:
         # Calculate the diff vector
         move_vec = goal_pos - pos
         distance = np.linalg.norm(goal_pos - pos)
-        move_vec = (move_vec / distance) * 5
+        move_vec = (move_vec / distance) * self.velocity
         goal_pos_arr = np.array([[goal_pos[0], goal_pos[1], 0]])
         pos_arr = np.array([[pos[0], pos[1], 0]])
         # x = ori_np[1]
@@ -476,6 +488,8 @@ class SensorRig:
     def init_output_folder(self, path):
         # create any paths needed
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path + "/timestamps.csv")
+        self._time_stamp_file = open(path +"/timestamps.csv", "a")
         # create any needed directories for the sensors
         for sensor in self.__sensors:
             sensor.init_output_folder(path)
