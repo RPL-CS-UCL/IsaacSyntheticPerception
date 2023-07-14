@@ -280,9 +280,6 @@ class SyntheticPerception(BaseSample):
         self.sr.create_rig_from_file(path, self.stage)
         self.sr.setup_sensor_output_path(out_path)
 
-    async def final_fn(self):
-        pos, rot = self.sr.get_pos_rot()
-        print(pos, rot)
 
     def sample_sensors(self):
         self.sr.sample_sensors()
@@ -537,7 +534,7 @@ class SyntheticPerception(BaseSample):
         ) = AreaMaskGenerator.generate_world_from_file(obj_path, world_path)
         height_map = meshGen._points2
         self.create_terrains(terrain_info)
-        # meshGen.clean_up_files()
+        meshGen.clean_up_files()
 
         return obs_to_spawn, object_dict, height_map
 

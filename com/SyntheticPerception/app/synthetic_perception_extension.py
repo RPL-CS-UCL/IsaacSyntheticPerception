@@ -7,6 +7,7 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # from guppy import hpy
 
+from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.physx import acquire_physx_interface
 import os
 import csv
@@ -32,7 +33,7 @@ from omni.isaac.ui import (
     DropDown,
     StringField,
     Button,
-    CheckBox
+    CheckBox,
 )
 from omni.isaac.core import SimulationContext
 
@@ -230,7 +231,13 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
             stage = omni.usd.get_context().get_stage()
             parent = stage.GetPrimAtPath('/_WAYPOINTS_')
+
             if not parent:
+
+                # parent = XFormPrim(
+                #     name="_WAYPOINTS_",
+                #     prim_path = "/"
+                # )
                 parent = define_prim('/_WAYPOINTS_', 'Xform')
             cube_prim = stage.GetPrimAtPath('/_WAYPOINTS_/w_01')
             if not cube_prim:
@@ -258,7 +265,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             await asyncio.ensure_future(self.sample._on_load_world_async())
             # await asyncio.ensure_future(self.sample.init_world())
             # print(self.sample._world.GetAttributes())
-            print(self.sample._world.__dir__())
+            # print(self.sample._world.__dir__())
             stage = omni.usd.get_context().get_stage()
 
             # Add a physics scene prim to stage
@@ -278,11 +285,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.build_sensor_rig_ui_values['WaypointPath'], 'r'
             ) as fh:
                 json_data = json.load(fh)
-                print('Trying to load waypoints')
-                print(json_data)
+                # print('Trying to load waypoints')
+                # print(json_data)
 
                 initial_prim_path = '/_WAYPOINTS_'
-                prim_check = stage.GetPrimAtPath(initial_prim_path)
+                prim_check= stage.GetPrimAtPath(initial_prim_path)
+                parent = prim_check
                 if not prim_check:
                     parent = define_prim('/_WAYPOINTS_', 'Xform')
 
@@ -299,7 +307,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     UsdGeom.Xformable(cube_prim).AddTranslateOp().Set(
                         Gf.Vec3d(c)
                     )
-                self.sample.sr.initialize_waypoints_preloaded(json_data)
+                self.sample.sr.initialize_waypoints_preloaded(json_data,stage.GetPrimAtPath("/_WAYPOINTS_"))
 
             self.sample._world.add_physics_callback(
                 'sim_step', callback_fn=self.sample.sr.move
@@ -339,6 +347,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             ) as fh:
                 json.dump(waypoints, fh, indent=1)
 
+        def run_sim():
+            self.sample.sr.hide_waypoints_an_rig()
         self._sensor_rig_ui_inputs = {}
         with frame:
             with ui.VStack(spacing=5):
@@ -396,15 +406,17 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     on_click_fn=save_waypoints,
                 )
 
+                self._sensor_rig_ui_inputs['Run Simulation'] = Button(
+                    'Run Simulation',
+                    'Run',
+                    on_click_fn=run_sim,
+                )
+
                 # self._sensor_rig_ui_inputs['run'] = Button(
                 #     'run',
                 #     'run',
                 #     on_click_fn=run,
                 # )
-
-
-
-
 
     def init_semantics_in_scene(self):
         self.sample.init_semantics_in_scene()
@@ -418,7 +430,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
         print(self.mm)
         return e
-
 
     def update_scale(self, val):
         if self.prim and val > 0:
@@ -510,14 +521,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             return
 
         # Check if file exists at path
-        print('Attempting to edit or create the save obj file')
+        # print('Attempting to edit or create the save obj file')
         data = {}
         with open(self.object_data_save_path, 'r+') as infile:
             try:
                 data = json.load(infile)
-                print('old file loaded')
             except:
-                print('couldnt load the file')
                 pass
             selected = self.selected_prim_dict[self.current_path]
         with open(self.object_data_save_path, 'w+') as outfile:
@@ -534,7 +543,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             json.dump(data, outfile)
 
     def setup_worldgen_ui(self, frame):
-        def test_check(val ):
+        def test_check(val):
             self.OBJECT_EDITING_ALLOWED = val
 
         with frame:
@@ -542,8 +551,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 # Update the Frame Title
                 frame.title = 'Object set up'
                 frame.visible = True
-                self.world_gen_ui_elements["toggle"] = CheckBox("Object setup mode", on_click_fn=test_check)
-                print(self.world_gen_ui_elements["toggle"].__dir__())
+                self.world_gen_ui_elements['toggle'] = CheckBox(
+                    'Object setup mode', on_click_fn=test_check
+                )
+                # print(self.world_gen_ui_elements["toggle"].__dir__())
 
                 self.world_gen_ui_elements['SavePath'] = StringField(
                     'SavePath',
@@ -662,7 +673,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         ):
             self.selected_prim_dict[
                 self.current_path
-            ].unique_id = self.current_path.split("/")[-1]
+            ].unique_id = self.current_path.split('/')[-1]
         self.world_gen_ui_elements['PrimName'].set_value(
             self.selected_prim_dict[self.current_path].unique_id
         )
@@ -751,8 +762,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             object_dict,
             height_map,
         ) = self.sample.generate_world_generator(
-                self._world_path,
-                self._object_path
+            self._world_path, self._object_path
         )
 
         asyncio.ensure_future(self.sample._on_load_world_async())
