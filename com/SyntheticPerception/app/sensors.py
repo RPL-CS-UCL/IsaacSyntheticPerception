@@ -174,6 +174,7 @@ class SensorRig:
         self.sample_rate = 10
         self._waypoints_parent = None
         self.time = 0
+        self.sample_time_counter = 0
     def reset(self):
 
         self.time = 0
@@ -308,14 +309,16 @@ class SensorRig:
     def sample_sensors(self, n):
         # print("sampling sensors")
         self.time += n
+        self.sample_time_counter += n
         # print(self.time)
         # log timestep
         # Sample all sensors
-        for sensor in self.__sensors:
-            sensor.sample_sensor()
-            # asyncio.ensure_future(sensor.sample_sensor())
-        # print(self.time)
-        self._time_stamp_file.write(f"{str(self.time)}\n") 
+        if self.sample_time_counter >= (1/self.sample_rate):
+            # print("sampling at ", self.time)
+            for sensor in self.__sensors:
+                sensor.sample_sensor()
+            self._time_stamp_file.write(f"{str(self.time)}\n") 
+            self.sample_time_counter = 0
 
     def get_pos_rot(self):
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
