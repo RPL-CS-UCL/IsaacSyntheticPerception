@@ -297,17 +297,6 @@ class SyntheticPerception(BaseSample):
     def attach_sensor_sample_callback(self):
         # un comment to enalbe wAYPOINT
         self.get_world().add_physics_callback('sim_sample_step', callback_fn=self.sr.sample_sensors)
-        # pass
-
-        # world = self.get_world()
-        # self._a1 = world.scene.add(
-        #     Unitree(
-        #         prim_path='/World/A1',
-        #         name='A1',
-        #         position=np.array([0, 0, 0.400]),
-        #     )
-        # )
-        # self.get_world().play()
 
     def spawn_asset(
         self,
@@ -323,19 +312,7 @@ class SyntheticPerception(BaseSample):
     ):
         prim_path = '/World/' + 'class_' + class_name + '/' + prim_name
 
-        # prim = self.add_asset_to_stage(
-        #     asset_path,
-        #     prim_name,
-        #     prim_path,
-        #     self._world.scene,
-        #     # Using the current stage units which is in meters by default.
-        #     position=np.array([x, y, 0]),
-        #     # most arguments accept mainly numpy arrays.
-        #     scale=np.array([0.5015, 0.5015, 0.5015]),
-        # )
-
         add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
-
         # here we want to modify the scale
         low_lim = scale - object_scale_delta
         high_lim = scale + object_scale_delta

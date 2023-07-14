@@ -28,7 +28,7 @@ from matplotlib import colors
 
 import json
 import tkinter.ttk as ttk
-from tkinter.filedialog import askopenfilename, askdirectory
+from tkinter.filedialog import askopenfilename, askdirectory, asksaveasfile
 
 
 class EntryInfo:
@@ -51,7 +51,8 @@ class EntryInfo:
 class EnvTool:
     def __init__(self) -> None:
         self.worldHandler = WorldHandler(',', '')
-        self.size =0
+        self.size =256
+        self.seed = 0
 
         self.cbar = None
 
@@ -97,11 +98,15 @@ class EnvTool:
             
         # json.dump(data)
         full_data = {}
-        full_data['seed'] = 0
+        full_data['seed'] = self.seed
         full_data['regions'] = data
         full_data['size'] = self.size
-        folder_path = askdirectory()
-        with open(f'{folder_path}/worlddata3.json', 'w') as f:
+        # folder_path = askdirectory()
+        files = [('json', "*.json")]
+        folder_path = asksaveasfile(filetypes=files,defaultextension=files)
+        folder_path = folder_path.name
+
+        with open(f'{folder_path}', 'w') as f:
             json.dump(full_data, f)
         print(full_data)
 
@@ -326,9 +331,12 @@ class EnvTool:
         if not self.size or self.size < 0:
             self.size = 256
         print(self.size)
+    def set_seed(self):
+        self.seed = int(self.input_seed_entry.get())
 
     def main_page(self):
         self.main_window = tk.Tk()
+        self.main_window.geometry("500x500")
         self.main_window.title('Main Window')
 
         self.load_objects_button = tk.Button(
@@ -344,14 +352,27 @@ class EnvTool:
         self.input_sizeentry.pack()
 
 
+
         self.set_size_button = tk.Button(
             self.main_window, text='set size', command=self.set_size
         )
 
         self.set_size_button.pack()
 
+        self.input_seed_label= tk.Label(self.main_window, text='seed:')
+        self.input_seed_label.pack()
+
+        self.input_seed_entry = tk.Entry(self.main_window)
+        self.input_seed_entry.pack()
+
+        self.set_seed_button = tk.Button(
+            self.main_window, text='set seed', command=self.set_seed
+        )
+
+        self.set_seed_button.pack()
+
         self.create_regions_button = tk.Button(
-            self.main_window, text='Create Regions', command=self.create_regions
+            self.main_window, text='Open map creator', command=self.create_regions
         )
         self.create_regions_button.pack()
 
