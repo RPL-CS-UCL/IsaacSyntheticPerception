@@ -272,6 +272,7 @@ class SensorRig:
         if self.sample_time_counter >= (1/self.sample_rate):
             # print("sampling at ", self.time)
             for sensor in self.__sensors:
+                # print(sensor)
                 sensor.sample_sensor()
             self._time_stamp_file.write(f"{str(self.time)}\n") 
             self.sample_time_counter = 0
@@ -335,7 +336,6 @@ class SensorRig:
         rot_float = Gf.Vec3d(0, 0, calc / 5.73)
 
         if distance < 0.5:
-            print('Moving to next waypoint')
             self.__curr_waypoint_id += 1
 
             if self.__curr_waypoint_id >= len(self.__waypoints):

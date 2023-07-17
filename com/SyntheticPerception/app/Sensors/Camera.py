@@ -126,11 +126,11 @@ class DepthCamera:
         # await rep.orchestrator.step_async()
 
         rgb_data = self.rgb_annot.get_data()
-        # np.save(f"{self.save_path}camera/{self.sample_count}.npy", rgb_data)
+        np.save(f"{self.save_path}camera/{self.sample_count}.npy", rgb_data)
         # print(rgb_data)
-        im = Image.fromarray(rgb_data,"RGBA")
-        path = f"{self.save_path}camera/{self.sample_count}.png"
-        im.save(path)
+        # im = Image.fromarray(rgb_data,"RGBA")
+        # path = f"{self.save_path}camera/{self.sample_count}.png"
+        # im.save(path)
         # im.save("your_file.jpeg")
 
         depth_data = self.depth_annot.get_data()
