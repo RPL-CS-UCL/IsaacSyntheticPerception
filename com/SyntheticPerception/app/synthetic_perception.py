@@ -317,8 +317,6 @@ class SyntheticPerception(BaseSample):
         random_rotation = 0
         if allow_rot:
             random_rotation = random.uniform(0, 360)
-        # x = x *100
-        # y = y *100
 
         omni.kit.commands.execute(
             'TransformPrimSRTCommand',
