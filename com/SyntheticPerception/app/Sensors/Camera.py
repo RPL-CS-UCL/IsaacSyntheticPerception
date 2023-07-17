@@ -43,9 +43,10 @@ class DepthCamera:
         self.__resolution = (512, 512)
         self.sample_count = 0
         self.save_path = None
+        self._o = "[DepthCamera] "
     def init_output_folder(self, path):
         self.save_path = path
-        print("setting save path for camera to ", path)
+        print(f"{self._o} Initializing output folders")
         pathlib.Path(path +"/camera").mkdir(parents=True, exist_ok=True)
         
         pathlib.Path(path +"/cameraDepth").mkdir(parents=True, exist_ok=True)
@@ -69,11 +70,10 @@ class DepthCamera:
         self.__rp: og.Node = rep.create.render_product(
             self.__cam, self.__resolution
         )
+        print(f"{self._o} Attaching annotaors to camera.")
         if self.__attach:
-            print("attaching annotaors ==================== ")
             self.__init_annotators()
             self.__attach_annotoators()
-        print("camera initialized ===== ")
 
     def read_from_json(self, data):
         # We have been given data["LIDAR"]

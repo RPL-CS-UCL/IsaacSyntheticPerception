@@ -95,8 +95,8 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         super().start_extension(
             menu_name='ExtensionName',
             submenu_name='',
-            name='Synth perception',
-            title='ExtensionName Task',
+            name='Synthetic perception',
+            title='Synthetic Perception',
             doc_link='https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/overview.html',
             overview="This Example shows how to follow a target using Franka robot in Isaac Sim.\n\nPress the 'Open in IDE' button to view the source code.",
             sample=SyntheticPerception(),
@@ -699,7 +699,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         )
 
     def _update_object_path(self, val):
-        print(val)
         if val != '':
             self._object_path = val
 

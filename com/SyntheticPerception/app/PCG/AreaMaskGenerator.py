@@ -4,11 +4,9 @@ This module handles area and point generation.
 from .MeshGenerator import MeshGen
 import omni.kit.commands
 import json
-import os
 import numpy as np
 import numpy.typing as npt
 import tempfile
-# from . import PerlinNoise
 from . import PoissonDisk
 import matplotlib.colors
 from . import PerlinNoise
@@ -263,8 +261,6 @@ def generate_world_from_file(world_path, object_path):
         # unique, counts = np.unique(region_map, return_counts=True)
         # print(dict(zip(unique, counts)))
         # return None
-        print(" CURRENT WORKING DIRECTORY ======== ")
-        print(tempfile.gettempdir())
         m_path = tempfile.gettempdir()#'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG'
         meshGen = MeshGen(map_size, mesh_scale, region_map, m_path)
         meshGen.generate_terrain_mesh()
@@ -286,55 +282,3 @@ def generate_world_from_file(world_path, object_path):
             meshGen,
         )  # ._points2#_noise_map_xy
     return world.objects_to_spawn, world.objects_dict, None, None
-
-
-#
-# def test_world():
-#
-#     n = 256
-#     forrest_region = PerlinNoise.generate_region(shape=(n,n), threshold=0.5, show_plot=False)
-#     treeone_region = PerlinNoise.generate_region(
-#         shape=(n,n), threshold=0.5, show_plot=False, region_value=2
-#     )
-#
-#     treeone_region2 = PerlinNoise.generate_region(
-#         shape=(n,n), threshold=0.5, show_plot=False, region_value=3
-#     )
-#     forrest_region_treeone = append_inside_area(np.array(forrest_region), np.array(treeone_region), 2.0)
-#
-#     area = append_inside_area(np.array(forrest_region_treeone), np.array(treeone_region2), 3.0)
-#
-#     sand_region = PerlinNoise.generate_region(shape=(n,n), threshold=0.3, show_plot=False, region_value=3)
-#
-#     sand_region_two = PerlinNoise.generate_region(
-#         shape=(n,n), threshold=0.5, show_plot=False, region_value=4)
-#
-#     sand_region_zones = append_inside_area(np.array(sand_region), np.array(sand_region_two), 4.0)
-#     #fill trees
-#     area, trees1 = fill_area(area, 3, 1, 10)
-#
-#     area, trees2 = fill_area(area, 6, 2, 11)
-#
-#     area, rocks = fill_area(area, 2,1, 12)
-#     area, rocks2 = fill_area(area, 2,2, 13)
-#
-#     return trees1, trees2, rocks, rocks2
-#
-#
-# def test_func():
-#     print("running now")
-#     n = 256
-#     reg1 = PerlinNoise.generate_region(shape=(n,n), threshold=0.5, show_plot=False)
-#     reg2 = PerlinNoise.generate_region(
-#         shape=(n,n), threshold=0.5, show_plot=False, region_value=2
-#     )
-#     # area = append_to_area(np.array(reg1), np.array(reg2), 1.0)
-#     area = append_inside_area(np.array(reg1), np.array(reg2), 2.0)
-#     # print(np.unique(area))
-#     # plt.imshow(area)
-#     # plt.colorbar()
-#     # plt.show()
-#     # fill_area(reg1)
-#     area, n1 = fill_area(area, 3, 1, 3)
-#     area, n2 = fill_area(area, 15, 2, 4)
-#     return n1, n2

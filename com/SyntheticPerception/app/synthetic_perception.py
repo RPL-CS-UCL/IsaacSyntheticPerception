@@ -66,6 +66,7 @@ class SyntheticPerception(BaseSample):
         self.sr = SensorRig('SensorRig', '/World')
 
         self._event_flag = False
+        self._o = "[SyntheticPerception] "
 
         # bindings for keyboard to command
         self._input_keyboard_mapping = {
@@ -118,7 +119,6 @@ class SyntheticPerception(BaseSample):
 
         await self._world.initialize_simulation_context_async()
         # await self._world.reset_async()
-        print("=== FINISHES RESETTING")
 
     async def load_sample(self) -> None:
         """Function called when clicking load buttton"""
@@ -131,7 +131,6 @@ class SyntheticPerception(BaseSample):
         await self._world.reset_async()
         await self._world.pause_async()
         await self.setup_post_load()
-        print('loading finished')
 
     def setup_scene(self):
         self.world = self.get_world()
@@ -197,7 +196,6 @@ class SyntheticPerception(BaseSample):
         # self.sr.initialize_waypoints('', stage)
 
     def world_cleanup(self):
-        print("clean up world:with")
         self.remove_all_objects()
 
     def init_semantics_in_scene(self):
@@ -262,10 +260,6 @@ class SyntheticPerception(BaseSample):
             omni.usd.get_context().get_stage()
         )  # Used to access Geometry
         """Initializes the sensor rig and adds individual sensors"""
-        print(
-            ' ============================================================== '
-        )
-        print('trying to load sensor rig')
         self.sr.create_rig(
             np.array([0, 5, 0]), np.asarray([1, 1, 1, 1]), self.stage
         )
@@ -470,18 +464,7 @@ class SyntheticPerception(BaseSample):
 
             obj = object_dict[key]
             path = object_dict[key].usd_path
-
-            print(
-                'trying to spawn ',
-                path,
-                ' ',
-                counter,
-                ' / ',
-                length,
-                ' with ',
-                len(obs_to_spawn[key]),
-                ' objects',
-            )
+            print(f"{self._o} Spawning {len(obs_to_spawn[key])} of {path}. {counter} / {length}")
             class_name = obj.class_name
             if class_name == '':
                 class_name = obj.unique_id
@@ -499,7 +482,6 @@ class SyntheticPerception(BaseSample):
             # print("some time should have passed")
             # return
             counter += 1
-        print('AREA GENERATION FINISHED')
 
     def generate_world_generator(self, obj_path, world_path):
 

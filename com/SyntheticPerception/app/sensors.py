@@ -175,6 +175,7 @@ class SensorRig:
         self._waypoints_parent = None
         self.time = 0
         self.sample_time_counter = 0
+        self._o = "[SensorRig] "
     def reset(self):
 
         self.time = 0
@@ -190,9 +191,6 @@ class SensorRig:
             position=position / get_stage_units(),
             orientation=orientation,
         )
-        # self._prim =  define_prim(self._prim_name, 'Cube')
-
-        # collisionAPI = PhysicsRigidBodyAPI.Apply(self._prim)
         omni.kit.commands.execute(
             'AddPhysicsComponent',
             usd_prim=stage.GetPrimAtPath(self._full_prim_path),
@@ -239,59 +237,16 @@ class SensorRig:
             prev=None,
         )
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
-        print(self._rb)
-        print(self.get_pos_rot())
-        print(self._dc)
 
     def apply_veloc(self, veloc, ang_veloc):
         # print('applying ', veloc)
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         self._dc.set_rigid_body_linear_velocity(self._rb, veloc)
 
-        # print(veloc)
-        # a_velo = ang_veloc
-        # print(a_velo)
-        # # print(a_velo)
-        # if a_velo > 10:
-        #     x = Gf.Vec3d(0,0,a_velo/57.3)
-        #     # x = a_velo
-        #     # x *= 57.3
-        #     # x[0]= 0
-        #     # x[1] = 0
-        #
-        # x = Gf.Vec3d(0,0,0)
         x = ang_veloc
         self._dc.set_rigid_body_angular_velocity(self._rb, x)
 
-        # object_pose = self._dc.get_rigid_body_pose(self._rb)
 
-        # x= proj_to_align(object_pose.r, veloc)
-
-    def add_depth_camera_to_rig(
-        self,
-        position=(0, 0, 0),
-        rotation=(0, 0, 0),
-        image_size=(512, 512),
-        attach=True,
-        name='/DepthCamera',
-    ):
-        self.__sensors.append(
-            DepthCamera(
-                position,
-                rotation,
-                image_size,
-                attach,
-                self._full_prim_path,
-                name,
-            )
-        )
-
-    def add_lidar_to_rig(self, name, origin_pos):
-        self.__sensors.append(
-            Lidar(
-                path=name, parent=self._full_prim_path, origin_pos=origin_pos
-            )
-        )
 
     def setup_sensor_output_path(self, path):
         print(path)
@@ -333,7 +288,6 @@ class SensorRig:
 
         # iter over the stage and get all the waypoints
         # go through each child and save its tranform details to the waypoints list.
-        print('Waypoint initialization from base ')
         for prim_ref in stage.Traverse():
             prim_ref_name = str(prim_ref.GetPrimPath())
             if '_waypoints_' in prim_ref_name:
@@ -342,14 +296,14 @@ class SensorRig:
                     prim_child = prim_ref.GetChildren()[i]
                     self.__waypoints.append(get_world_translation(prim_child))
 
-        print('SensorRig waypoints initialization complete:')
+        print(f'{self._o} SensorRig waypoints initialization complete:')
         print(self.__waypoints)
 
     def initialize_waypoints_preloaded(self, waypoints, parent_prim):
         self.__waypoints = []
         self.__waypoints = waypoints
         self._waypoints_parent = parent_prim
-        print('loaded waypoints from file ', self.__waypoints)
+        print(f'{self._o} loaded waypoints from file ', self.__waypoints)
 
     def _waypoint_update(self, pos):
 
@@ -361,7 +315,6 @@ class SensorRig:
 
         rot_vec = quat_to_euler_angles(ori_)
         rot_float = 0.0
-        # print(' =============== ', ori_)
 
         # Calculate the diff vector
         move_vec = goal_pos - pos
@@ -369,42 +322,16 @@ class SensorRig:
         move_vec = (move_vec / distance) * self.velocity
         goal_pos_arr = np.array([[goal_pos[0], goal_pos[1], 0]])
         pos_arr = np.array([[pos[0], pos[1], 0]])
-        # x = ori_np[1]
-        # y = ori_np[2]
-        # z = ori_np[3]
         ori_now = self.orient_val.Get()
         rvg = rot_vec
         rvc = quat_to_euler_angles(ori_now)
         rot_ang = Gf.Vec3d(0, 0, rvg[2] - rvc[2])
-        # print(rvg, rvc)
-        # print(self.actual_prim.GetAttributes())
-
-        # rot, rot_float = Rotation.align_vectors(pos_arr,goal_pos_arr)
-
-        # rot_float = ori_ /= 57.2
         calc = rvg[2] - rvc[2]
         calc *= 57.2
         x_ = rvg[0] - rvc[0]
         y_ = rvg[1] - rvc[1]
 
         rot_float = Gf.Vec3d(0, 0, calc / 5.73)
-        # if calc > 10:
-        #     rot_float = Gf.Vec3d(0,0,calc/5.73)
-        # else:
-        #     rot_float=  Gf.Vec3d(0,0,0)
-        # rot_float = rot_vec /57.2
-        # ori_euler = quat_to_euler_angles(ori_)
-        # if rot_float < 15.0:
-        #     print("reset veloc")
-        #     ori_euler = Gf.Vec3d(0,0,0)
-        # self._dc.set_rigid_body_angular_velocity(self._rb, ori_euler)
-        # print(self._prim.GetAttributes())
-        # self._prim.set_world_pose(orientation=ori_)
-
-        # convert it to a distance check
-        # iter over the points till the next valid one found.
-
-        # m_z =  np.linalg.norm(goal_pos - pos)
 
         if distance < 0.5:
             print('Moving to next waypoint')
@@ -413,10 +340,6 @@ class SensorRig:
             if self.__curr_waypoint_id >= len(self.__waypoints):
                 self.__curr_waypoint_id = 0
 
-            # self._rb = self._dc.get_rigid_body(self._full_prim_path)
-            #
-            # x = Gf.Vec3d(0,0,rot_float)
-            # self._dc.set_rigid_body_angular_velocity(self._rb, ori_euler)
             return self._waypoint_update(pos)
 
         return move_vec, rot_vec, rot_float
@@ -429,17 +352,11 @@ class SensorRig:
         #     timeline.get_current_time() * timeline.get_time_codes_per_seconds()
         # )
         self.start_time += time_step
-        # print(self.start_time)
-
-        # self.sample_sensors()
-        # print(timeline.get_current_time())
         if len(self.__waypoints) == 0:
-            print('There are no waypoints')
             return
         # Retrieve the current position and orientation of the sensor rig
         current_pos, current_rot = self.get_pos_rot()
         current_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])
-        # print('The current orientation of the SR is ', current_rot)
 
         # Load the correct waypoint, check if we should change to next one ..
         # and then calculate the required move vector.
@@ -450,6 +367,7 @@ class SensorRig:
 
     def load_sensors_from_file(self, file_path, stage):
         with open(file_path, 'r+') as infile:
+            print(f"{self._O} Loading sensor rig from file at {file_path}.")
             data = json.load(infile)
             # print(data)
             pos = data['POSITION']
@@ -461,7 +379,6 @@ class SensorRig:
             sensors = data['SENSORS']
             print(sensors)
             for key in sensors:
-                print('Trying to add sensor of type ', key)
                 if key == 'LIDAR':
                     for sensor_id in sensors[key]['instances']:
                         sensor_settings = sensors[key]['instances'][sensor_id]
@@ -478,7 +395,6 @@ class SensorRig:
                         self.add_sensor_to_rig(cam)
                 elif key == 'IMU':
 
-                    print('creating imu')
                     for sensor_id in sensors[key]['instances']:
                         sensor_settings = sensors[key]['instances'][sensor_id]
                         imu = IMUSensor()
@@ -556,4 +472,30 @@ class SensorRig:
   }
 }
 }
+
+    def add_depth_camera_to_rig(
+        self,
+        position=(0, 0, 0),
+        rotation=(0, 0, 0),
+        image_size=(512, 512),
+        attach=True,
+        name='/DepthCamera',
+    ):
+        self.__sensors.append(
+            DepthCamera(
+                position,
+                rotation,
+                image_size,
+                attach,
+                self._full_prim_path,
+                name,
+            )
+        )
+
+    def add_lidar_to_rig(self, name, origin_pos):
+        self.__sensors.append(
+            Lidar(
+                path=name, parent=self._full_prim_path, origin_pos=origin_pos
+            )
+        )
 """

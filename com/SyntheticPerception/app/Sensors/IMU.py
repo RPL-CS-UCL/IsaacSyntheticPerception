@@ -40,8 +40,11 @@ class IMUSensor:
         self.save_path = ""
         self.sample_count = 0
         #     self.__attach_annotoators()
+        self._o = "[IMUSensor] "
 
     def init_output_folder(self, path):
+
+        print(f"{self._o} Initializing output folders")
         self.save_path =path +"/posesIMU" 
 
         pathlib.Path(self.save_path).mkdir(parents=True, exist_ok=True)
@@ -62,7 +65,6 @@ class IMUSensor:
         )
 
     def read_from_json(self, data):
-        print("Trying to read IMU settings")
         # We have been given data["LIDAR"]
         self.__name = data['name']
         self.__pos = data['position']

@@ -63,8 +63,11 @@ class Lidar:
         self.__rotation = [0.0,0.0,0.0]
         self.sample_count = 0
         self.save_path = None
+        self._o = "[LiDAR] "
 
     def init_output_folder(self, path):
+
+        print(f"{self._o} Initializing output folders")
         self.save_path = path
 
         pathlib.Path(path +"/velodyne").mkdir(parents=True, exist_ok=True)
@@ -136,20 +139,6 @@ class Lidar:
 
         np.save(f"{self.save_path}velodyne/{self.sample_count}.npy",pointcloud)
         np.save(f"{self.save_path}velodyneLabels/{self.sample_count}.npy",semantics)
-        # lidar_position = self.__get_position()
-        # pointcloud, semantics = self.__clear_max_lidar_points(
-        #     pointcloud, semantics, lidar_position, self.__max_range
-        # )
-
-        # if save_path is not None:
-        #     np.save(
-        #         f'{save_path}_pc.npy',
-        #         np.array(pointcloud),
-        #     )
-        #     np.save(
-        #         f'{save_path}_sem.npy',
-        #         np.array(semantics),
-        #     )
         return pointcloud, semantics
 
     def __get_position(self):
