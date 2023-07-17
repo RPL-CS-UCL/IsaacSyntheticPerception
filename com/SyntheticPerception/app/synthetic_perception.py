@@ -410,7 +410,8 @@ class SyntheticPerception(BaseSample):
             mesh_path = mesh_path.replace('.obj', '.usd')
             # spawn prim
 
-            prim_p = f'/World/t/terrain{key}'
+            prim_p = f'/World/t/class_{mat_name}'
+            # prim_p = f'/World/t/terrain{key}'
 
             stage = omni.usd.get_context().get_stage()
             scale = 0.01

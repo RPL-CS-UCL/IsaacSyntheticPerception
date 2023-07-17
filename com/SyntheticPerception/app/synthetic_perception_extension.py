@@ -99,7 +99,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             name='Synthetic perception',
             title='Synthetic Perception',
             doc_link='https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/overview.html',
-            overview="This Example shows how to follow a target using Franka robot in Isaac Sim.\n\nPress the 'Open in IDE' button to view the source code.",
+            overview="This extension provides tools to both generate procedural environments within Isaac as well as capturing and saving sensor data. This also includes waypoint movement and other such movement types.",
             sample=SyntheticPerception(),
             file_path=os.path.abspath(__file__),
             number_of_extra_frames=12,
