@@ -183,6 +183,7 @@ class SensorRig:
 
     def create_rig_from_file(self, path, stage):
         pos, ori = self.load_sensors_from_file(path, stage)
+        print(f"{self._o} Creating sensor righ with initial position of: {pos}")
         position = np.array([pos[0], pos[1], pos[2]])
         orientation = np.array([ori[0], ori[1], ori[2], ori[3]])
         self._prim = XFormPrim(
@@ -303,7 +304,7 @@ class SensorRig:
         self.__waypoints = []
         self.__waypoints = waypoints
         self._waypoints_parent = parent_prim
-        print(f'{self._o} loaded waypoints from file ', self.__waypoints)
+        print(f'{self._o} loaded waypoints from file ')
 
     def _waypoint_update(self, pos):
 
@@ -367,7 +368,7 @@ class SensorRig:
 
     def load_sensors_from_file(self, file_path, stage):
         with open(file_path, 'r+') as infile:
-            print(f"{self._O} Loading sensor rig from file at {file_path}.")
+            print(f"{self._o} Loading sensor rig from file at {file_path}.")
             data = json.load(infile)
             # print(data)
             pos = data['POSITION']

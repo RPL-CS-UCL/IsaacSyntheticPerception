@@ -6,7 +6,8 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 # from guppy import hpy
-
+import time
+import random
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.physx import acquire_physx_interface
 import os
@@ -348,8 +349,26 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             ) as fh:
                 json.dump(waypoints, fh, indent=1)
 
-        def run_sim():
-            self.sample.sr.hide_waypoints_an_rig()
+        def run():
+            def run_step_temp(n):
+                curr_time = time.time() - self.minhan_timer_start
+                # print(curr_time)
+                if curr_time > 2:
+                    self.minhan_timer_start = time.time()
+                    scale = random.uniform(1.0,10.0)
+                    self.plane_prim.GetAttribute('xformOp:scale').Set(Gf.Vec3d(scale,scale,scale))
+
+            # self.sample.sr.hide_waypoints_an_rig()
+            self.minhan_timer_start = 0
+            stage = omni.usd.get_context().get_stage()
+            self.plane_prim = stage.GetPrimAtPath("/World/Plane")
+            # print(plane_prim)
+            # print(plane_prim.GetAttributes())
+            self.plane_prim.GetAttribute('physics:angularVelocity').Set(Gf.Vec3d(5.0,5.0,5.0))
+
+            self.sample._world.add_physics_callback(
+                'demo_step', callback_fn=run_step_temp
+            )
         self._sensor_rig_ui_inputs = {}
         with frame:
             with ui.VStack(spacing=5):
@@ -407,17 +426,17 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     on_click_fn=save_waypoints,
                 )
 
-                self._sensor_rig_ui_inputs['Run Simulation'] = Button(
-                    'Run Simulation',
-                    'Run',
-                    on_click_fn=run_sim,
-                )
-
-                # self._sensor_rig_ui_inputs['run'] = Button(
-                #     'run',
-                #     'run',
-                #     on_click_fn=run,
+                # self._sensor_rig_ui_inputs['Run Simulation'] = Button(
+                #     'Run Simulation',
+                #     'Run',
+                #     on_click_fn=run_sim,
                 # )
+
+                self._sensor_rig_ui_inputs['run'] = Button(
+                    'Minghan run',
+                    'run',
+                    on_click_fn=run,
+                )
 
     def init_semantics_in_scene(self):
         self.sample.init_semantics_in_scene()
