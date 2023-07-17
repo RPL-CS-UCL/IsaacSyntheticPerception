@@ -199,6 +199,7 @@ class SyntheticPerception(BaseSample):
         self.remove_all_objects()
 
     def init_semantics_in_scene(self):
+        self.stage = omni.usd.get_context().get_stage()
         self.__add_semantics_to_all2(self.stage)
 
     def init_sensor_and_semantics(self):
@@ -217,12 +218,12 @@ class SyntheticPerception(BaseSample):
         sem_dict = get_semantics(p)
         collisionAPI = UsdPhysics.CollisionAPI.Apply(p)
         if 'Semantics' not in sem_dict:
-            print(
-                'adding semantics and collider to ',
-                p.GetPrimPath(),
-                ' of class ',
-                prim_class,
-            )
+            # print(
+            #     'adding semantics and collider to ',
+            #     p.GetPrimPath(),
+            #     ' of class ',
+            #     prim_class,
+            # )
             sem = Semantics.SemanticsAPI.Apply(p, 'Semantics')
             sem.CreateSemanticTypeAttr()
             sem.CreateSemanticDataAttr()
@@ -247,9 +248,9 @@ class SyntheticPerception(BaseSample):
                         len_of_child = len(
                             str(prim_child.GetPrimPath()).split('/')
                         )
-                        print(len_of_prim, ' : ', len_of_child)
+                        # print(len_of_prim, ' : ', len_of_child)
                         if abs(len_of_prim - len_of_child) == 1:
-                            print(prim_child)
+                            # print(prim_child)
                             self.add_semantic(prim_child, prim_class)
 
                     completed_classes.append(prim_class)
