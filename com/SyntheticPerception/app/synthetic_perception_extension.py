@@ -1,11 +1,11 @@
-# Copyright (c) 2020-2021, NVIDIA CORPORATION.  All rights reserved.
-#
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto.  Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
-# from guppy import hpy
+"""
+This class and functions handles the UI/UX side of the extension. 
+All UX is collected and managed here and call their respective functions in the main 
+SyntheticPerception sample.
+
+
+
+"""
 import time
 import random
 from omni.isaac.core.prims import XFormPrim, RigidPrim

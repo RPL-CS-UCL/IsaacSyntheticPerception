@@ -1,3 +1,16 @@
+"""
+This class represents the SensorRig and supporting functions. 
+The goal of this class is to provide an easy control method to sample an array of sensors 
+and control its movement within and environment. 
+
+The SensorRig primarily has a collection of sensors that is read in from a json file. 
+These sensors are created and stored depending on the parameters and are contructed within 
+their own classes. See the Sensors folder for all available implemented sensors. 
+The rig also handles sampling rates and timestamps. 
+
+
+
+"""
 from omni.syntheticdata.scripts.sensors import enable_sensors
 import os
 
