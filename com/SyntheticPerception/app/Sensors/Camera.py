@@ -51,6 +51,7 @@ class DepthCamera:
         
         pathlib.Path(path +"/cameraDepth").mkdir(parents=True, exist_ok=True)
         pathlib.Path(path +"/cameraLabels").mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path +"/cameraPC").mkdir(parents=True, exist_ok=True)
 
     def init_sensor(self, parent):
         print(self.__clipping_range)
@@ -103,7 +104,7 @@ class DepthCamera:
         self.depth_annot = rep.AnnotatorRegistry.get_annotator(
             'distance_to_camera'
         )
-        # self.pc_annot = rep.AnnotatorRegistry.get_annotator("pointcloud")
+        self.pc_annot = rep.AnnotatorRegistry.get_annotator("pointcloud")
         self.sem_annot = rep.AnnotatorRegistry.get_annotator(
             'semantic_segmentation'
         )
@@ -112,13 +113,13 @@ class DepthCamera:
         self.depth_annot.attach(self.__rp)
         self.rgb_annot.attach(self.__rp)
         self.sem_annot.attach(self.__rp)
-        # self.pc_annot.attach(self.rp)
+        self.pc_annot.attach(self.__rp)
 
     def __detatch_annototators(self):
         self.depth_annot.detach(self.__rp)
         self.rgb_annot.detach(self.__rp)
         self.sem_annot.detach(self.__rp)
-        # self.pc_annot.dettach(self.rp)
+        self.pc_annot.dettach(self.__rp)
 
     def sample_sensor(self):
 
@@ -142,6 +143,9 @@ class DepthCamera:
 
         np.save(f"{self.save_path}cameraLabels/{self.sample_count}.npy",sem_data)
 
+        pc_data = self.pc_annot.get_data()
+
+        np.save(f"{self.save_path}cameraPC/{self.sample_count}.npy",pc_data)
         self.sample_count += 1
         # np.save('/home/jon/Documents/temp/sem.npy', sem_data)
         return
