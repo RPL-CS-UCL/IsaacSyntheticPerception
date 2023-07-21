@@ -2,7 +2,7 @@
 This module handles area and point generation.
 """
 from .MeshGenerator import MeshGen
-import omni.kit.commands
+# import omni.kit.commands
 import json
 import numpy as np
 import numpy.typing as npt

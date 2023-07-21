@@ -8,7 +8,8 @@ for k in L:
     print (k)
     importlib.reload(sys.modules[k])
 
-from .AreaMaskGenerator import *
-from .PerlinNoise import *
-from .PoissonDisk import *
-from .world import *
+#from .AreaMaskGenerator import *
+#from .PerlinNoise import *
+#from .PoissonDisk import *
+#from .world import *
+#from .worldUtils import *

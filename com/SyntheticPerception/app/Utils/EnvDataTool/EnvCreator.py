@@ -5,16 +5,24 @@ from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg,
     NavigationToolbar2Tk,
 )
+
+from PCG import PoissonDisk
+import matplotlib.colors
+from PCG import PerlinNoise
+import matplotlib.pyplot as plt
+from typing import Tuple
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import os
 import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
-from PCG import AreaMaskGenerator
+# from PCG import AreaMaskGenerator
 from PCG import PerlinNoise
-from PCG.AreaMaskGenerator import ObjectPrim, WorldHandler
+# from PCG.AreaMaskGenerator import ObjectPrim, WorldHandler
+from PCG.worldUtils import WorldHandler,ObjectPrim
 
+import numpy.typing as npt
 # def load_objects():
 #     # Code for the "Load Objects" page
 #     print('Load Objects page')
@@ -48,6 +56,70 @@ class EntryInfo:
 
 
 
+def append_inside_area(
+    area: npt.NDArray[np.float64],
+    area_to_add: npt.NDArray[np.float64],
+    area_value: float,
+) -> npt.NDArray[np.float64]:
+    """
+    Function returns a new mask that is only within the first mask
+
+    """
+    mask_indices = np.where((area_to_add >= area_value) & (area != 0))
+    area2 = np.copy(area)
+    area2[mask_indices] = area_value  # area_value
+
+    return area2
+
+
+def append_to_area(
+    area: npt.NDArray[np.float64],
+    area_to_add: npt.NDArray[np.float64],
+    area_value: float,
+) -> npt.NDArray[np.float64]:
+    """
+    Function returns a mask appended to another one
+
+
+    """
+    mask_indices = np.where(area_to_add >= area_value)
+
+    area[mask_indices] = area_value
+
+    return area
+
+
+def show_plot(area):
+    cvals = [0, 1, 2, 3, 4]
+    colors = ['lightgreen', 'green', 'yellow', 'brown', 'red']
+
+    norm = plt.Normalize(min(cvals), max(cvals))
+    tuples = list(zip(map(norm, cvals), colors))
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list('', tuples)
+    plt.imshow(area, cmap=cmap, norm=norm)
+    plt.colorbar()
+    plt.show()
+
+
+def fill_area(
+    area: npt.NDArray[np.float64],
+    size: int,
+    region_value: int,
+    object_value: int,
+) -> Tuple[npt.NDArray[np.float64], list]:
+    # Generate points and fill the area with objects using Poisson
+    points = PoissonDisk.Bridson_sampling(
+        width=area.shape[0], height=area.shape[1], radius=size, k=30
+    )
+    new_points = []
+    for p in points:
+        x_int = int(p[0])
+        y_int = int(p[1])
+        if area[y_int][x_int] == region_value:
+            # area[y_int][x_int] = object_value
+            new_points.append(p)
+
+    return area, new_points
 class EnvTool:
     def __init__(self) -> None:
         self.worldHandler = WorldHandler(',', '')
@@ -201,13 +273,13 @@ class EnvTool:
             )
             # This zone will be saved and used later
             if entry.in_zone != 0:
-                self.zone_to_save = AreaMaskGenerator.append_inside_area(
+                self.zone_to_save = append_inside_area(
                     self.arr, self.new_arr, int(entry.identifier)
                 )
                 self.arr = self.zone_to_save
             else:
                 print('Adding region to general area')
-                self.arr = AreaMaskGenerator.append_to_area(
+                self.arr =append_to_area(
                     self.arr, self.new_arr, int(entry.identifier)
                 )
 

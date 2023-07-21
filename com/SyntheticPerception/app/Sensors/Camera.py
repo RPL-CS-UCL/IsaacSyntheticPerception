@@ -68,6 +68,7 @@ class DepthCamera:
             vertical_aperture_offset=self.__vertical_aperture_offset,
             clipping_range=self.__clipping_range,
         )
+        print("resolution ", self.__resolution)
         self.__rp: og.Node = rep.create.render_product(
             self.__cam, self.__resolution
         )
@@ -102,7 +103,7 @@ class DepthCamera:
     def __init_annotators(self):
         self.rgb_annot = rep.AnnotatorRegistry.get_annotator('rgb')
         self.depth_annot = rep.AnnotatorRegistry.get_annotator(
-            'distance_to_camera'
+            'distance_to_image_plane'#distance_to_camera'
         )
         self.pc_annot = rep.AnnotatorRegistry.get_annotator("pointcloud")
         self.sem_annot = rep.AnnotatorRegistry.get_annotator(
@@ -129,10 +130,9 @@ class DepthCamera:
         rgb_data = self.rgb_annot.get_data()
         np.save(f"{self.save_path}camera/{self.sample_count}.npy", rgb_data)
         # print(rgb_data)
-        # im = Image.fromarray(rgb_data,"RGBA")
-        # path = f"{self.save_path}camera/{self.sample_count}.png"
-        # im.save(path)
-        # im.save("your_file.jpeg")
+        im = Image.fromarray(rgb_data,"RGBA")
+        path = f"{self.save_path}camera/{self.sample_count}_img.png"
+        im.save(path)
 
         depth_data = self.depth_annot.get_data()
 
