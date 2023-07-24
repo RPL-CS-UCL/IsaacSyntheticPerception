@@ -176,6 +176,7 @@ class EnvTool:
         # folder_path = askdirectory()
         files = [('json', "*.json")]
         folder_path = asksaveasfile(filetypes=files,defaultextension=files)
+        print(folder_path)
         folder_path = folder_path.name
 
         with open(f'{folder_path}', 'w') as f:
@@ -364,8 +365,8 @@ class EnvTool:
 
         self.listbx.pack(padx=10, pady=10, expand=YES, fill='both')
         x = []
-        for item in self.worldHandler.objects:
-            x.append(item.unique_id)
+        for key in self.worldHandler.objects_dict:
+            x.append(key)
 
         for each_item in range(len(x)):
 

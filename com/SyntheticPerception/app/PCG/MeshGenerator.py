@@ -158,7 +158,7 @@ class MeshGen:
             self.meshes_dict[int(key)] = o3d.geometry.TriangleMesh()
         print(f'{self._o} Computing the base mesh.')
         self._faces = []
-
+        
         for j in range(subdivisions):
             for i in range(subdivisions):
                 index = j * (subdivisions + 1) + i
@@ -173,8 +173,6 @@ class MeshGen:
                 res_ind = int(self._regions_map[j,i])
                 self.meshes_dict[res_ind].triangles.append(face1)
                 self.meshes_dict[res_ind].triangles.append(face2)
-        
-
 
         self._mesh = o3d.geometry.TriangleMesh()
         self._mesh.vertices = o3d.utility.Vector3dVector(self._points)
