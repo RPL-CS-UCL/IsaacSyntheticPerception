@@ -120,7 +120,7 @@ class MeshGen:
 
     def _create_noise_map(self):
 
-        scale = 250.0
+        scale = 5#250.0
         print(f'{self._o} Creating Noise Map for terrain heights.')
         self._noise_map_xy = generate_fractal_noise_2d(
             self._map_shape, (8, 8), 5
