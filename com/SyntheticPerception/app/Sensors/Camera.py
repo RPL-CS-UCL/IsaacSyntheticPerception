@@ -103,9 +103,9 @@ class DepthCamera:
     def __init_annotators(self):
         self.rgb_annot = rep.AnnotatorRegistry.get_annotator('rgb')
         self.depth_annot = rep.AnnotatorRegistry.get_annotator(
-            'distance_to_image_plane'#distance_to_camera'
+            'distance_to_camera'
         )
-        self.pc_annot = rep.AnnotatorRegistry.get_annotator("pointcloud")
+        # self.pc_annot = rep.AnnotatorRegistry.get_annotator("pointcloud")
         self.sem_annot = rep.AnnotatorRegistry.get_annotator(
             'semantic_segmentation'
         )
@@ -114,13 +114,13 @@ class DepthCamera:
         self.depth_annot.attach(self.__rp)
         self.rgb_annot.attach(self.__rp)
         self.sem_annot.attach(self.__rp)
-        self.pc_annot.attach(self.__rp)
+        # self.pc_annot.attach(self.__rp)
 
     def __detatch_annototators(self):
         self.depth_annot.detach(self.__rp)
         self.rgb_annot.detach(self.__rp)
         self.sem_annot.detach(self.__rp)
-        self.pc_annot.dettach(self.__rp)
+        # self.pc_annot.dettach(self.__rp)
 
     def sample_sensor(self):
 
@@ -130,9 +130,9 @@ class DepthCamera:
         rgb_data = self.rgb_annot.get_data()
         np.save(f"{self.save_path}camera/{self.sample_count}.npy", rgb_data)
         # print(rgb_data)
-        im = Image.fromarray(rgb_data,"RGBA")
-        path = f"{self.save_path}camera/{self.sample_count}_img.png"
-        im.save(path)
+        # im = Image.fromarray(rgb_data,"RGBA")
+        # path = f"{self.save_path}camera/{self.sample_count}_img.png"
+        # im.save(path)
 
         depth_data = self.depth_annot.get_data()
 

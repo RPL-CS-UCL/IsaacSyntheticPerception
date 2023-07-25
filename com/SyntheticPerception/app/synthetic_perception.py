@@ -373,7 +373,7 @@ class SyntheticPerception(BaseSample):
             #
             #     print('y, overfilled', y_ind)
             #     y_ind = 2559
-            z = float(height_map[int(y_ind)][int(x_ind)]) / mesh_height_modifier   # was abs
+            z = float(height_map[int(y_ind/10)][int(x_ind/10)]) / mesh_height_modifier   # was abs
             # second one is iterated fasted
 
             _p_name = f'{p_name}_{i}'

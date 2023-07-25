@@ -290,6 +290,10 @@ class SensorRig:
             self._time_stamp_file.write(f"{str(self.time)}\n") 
             self.sample_time_counter = 0
 
+    def sample_all_sensors(self):
+        for sensor in self.__sensors:
+            sensor.sample_sensor()
+
     def get_pos_rot(self):
         self._rb = self._dc.get_rigid_body(self._full_prim_path)
         object_pose = self._dc.get_rigid_body_pose(self._rb)

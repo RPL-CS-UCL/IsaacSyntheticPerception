@@ -20,6 +20,8 @@ class MeshGen:
         pass
         self._size = map_size
         self._scale = map_scale
+        self._scale = 1
+        # REMOVE THIS NEXT LINE``
         l = self._size * self._scale
         self._map_shape = (self._size * self._scale, self._size * self._scale)
         self._points = np.zeros(shape=(l * l, 3))
@@ -118,7 +120,7 @@ class MeshGen:
 
     def _create_noise_map(self):
 
-        scale = 25.0
+        scale = 250.0
         print(f'{self._o} Creating Noise Map for terrain heights.')
         self._noise_map_xy = generate_fractal_noise_2d(
             self._map_shape, (8, 8), 5

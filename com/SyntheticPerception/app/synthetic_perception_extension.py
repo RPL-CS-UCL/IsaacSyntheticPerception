@@ -369,6 +369,9 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             self.sample._world.add_physics_callback(
                 'demo_step', callback_fn=run_step_temp
             )
+        def sample():
+            print("trying to sample")
+            self.sample.sr.sample_all_sensors()
         self._sensor_rig_ui_inputs = {}
         with frame:
             with ui.VStack(spacing=5):
@@ -436,6 +439,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     'Minghan run',
                     'run',
                     on_click_fn=run,
+                )
+
+                self._sensor_rig_ui_inputs['sample'] = Button(
+                    'Sample sensors',
+                    'sampe',
+                    on_click_fn=sample,
                 )
 
     def init_semantics_in_scene(self):
