@@ -1,7 +1,23 @@
+import sys
+import os
+
+# sys.argv.insert(1, f'{os.environ["EXP_PATH"]}/omni.isaac.sim.python.kit')
+#
+# # Add paths to extensions
+# sys.argv.append(f'--ext-folder')
+# sys.argv.append(f'{os.path.abspath(os.environ["ISAAC_PATH"])}/exts')
+# # Run headless
+# sys.argv.append('--no-window')
+#
+# # Set some settings
+# sys.argv.append('--/app/asyncRendering=False')
 from omni.isaac.kit import SimulationApp
 
 simulation_app = SimulationApp({'headless': False})
+from omni.isaac.core.utils.extensions import enable_extension
 
+enable_extension('omni.kit.asset_converter')
+simulation_app.update()
 from omni.isaac.core import World
 from omni.isaac.quadruped.robots import Anymal
 from omni.isaac.core.utils.prims import define_prim, get_prim_at_path
@@ -13,6 +29,8 @@ import numpy as np
 import carb
 
 from sensors import SensorRig
+import PCG.WorldGenerator as WG
+
 
 class Anymal_runner(object):
     def __init__(self, physics_dt, render_dt) -> None:
@@ -55,11 +73,10 @@ class Anymal_runner(object):
                 + '/Isaac/Robots/ANYbotics/anymal_c.usd',
                 position=np.array([0, 0, 0.70]),
             )
-
         )
-        self.sensor_rig = SensorRig("SensorRig","/World/Anymal")
-        self.path = "C:/Users/jonem/Desktop/sensors2.json"
-        self.out_path = "C:/Users/jonem/Desktop/OutputTest/"
+        self.sensor_rig = SensorRig('SensorRig', '/World/Anymal')
+        self.path = 'C:/Users/jonem/Desktop/sensors2.json'
+        self.out_path = 'C:/Users/jonem/Desktop/OutputTest/'
 
         self._world.reset()
         self._enter_toggled = 0
@@ -108,8 +125,8 @@ class Anymal_runner(object):
         self.stage = (
             omni.usd.get_context().get_stage()
         )  # Used to access Geometry
-        self.sensor_rig.create_rig_from_file(self.path, self.stage)
-        self.sensor_rig.setup_sensor_output_path(self.out_path)
+        # self.sensor_rig.create_rig_from_file(self.path, self.stage)
+        # self.sensor_rig.setup_sensor_output_path(self.out_path)
 
     def on_physics_step(self, step_size) -> None:
         """
@@ -123,7 +140,7 @@ class Anymal_runner(object):
             self._world.reset(True)
             self.needs_reset = False
         self._anymal.advance(step_size, self._base_command)
-        self.sensor_rig.sample_sensors(step_size)
+        # self.sensor_rig.sample_sensors(step_size)
 
     def run(self) -> None:
         """
@@ -154,9 +171,7 @@ class Anymal_runner(object):
         # reset event
         self._event_flag = False
 
-        self._base_command[0:3] += np.array(
-            self._input_keyboard_mapping["UP"]
-        )
+        self._base_command[0:3] += np.array(self._input_keyboard_mapping['UP'])
         # when a key is pressed for released  the command is adjusted w.r.t the key-mapping
         if event.type == carb.input.KeyboardEventType.KEY_PRESS:
             # on pressing, the command is incremented
@@ -191,6 +206,12 @@ def main():
     # an extra reset is needed to register
     runner._world.reset()
     runner._world.reset()
+
+    # simulation_app.pause()
+    objpath = "C:/Users/jonem/Desktop/new_objects_save.json"
+    wrldpath = "C:/Users/jonem/Desktop/worlddata3.json"
+    WG.create_world(objpath,wrldpath)
+    # simulation_app.pause()
     runner.run()
     simulation_app.close()
 

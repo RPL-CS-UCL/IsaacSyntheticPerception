@@ -2,7 +2,7 @@ import asyncio
 import random
 import omni
 import numpy as np
-from .PCG import AreaMaskGenerator
+from PCG import AreaMaskGenerator
 
 from pxr import (
     UsdGeom,
@@ -24,6 +24,11 @@ from pxr import UsdShade, Sdf
 def create_material_and_bind(
      mat_name, mat_path, prim_path, scale, stage
 ):
+
+    print("Trying to use scale ", type(scale))
+    scale = float(scale)
+
+    print("converted to scale ", type(scale))
 
     obj_prim = stage.GetPrimAtPath(prim_path)
     mtl_created_list = []
@@ -65,7 +70,8 @@ def create_terrains(terrain_info):
         select_new_prim=True,
     )
 
-    scale = 1#0.01
+    scale = 1
+    #0.01
     for key in terrain_info:
         mesh_path = terrain_info[key].mesh_path
         scale = terrain_info[key].scale
@@ -79,6 +85,7 @@ def create_terrains(terrain_info):
         # prim_p = f'/World/t/terrain{key}'
 
         stage = omni.usd.get_context().get_stage()
+        print("setting mat scale of ", prim_p, " to ", scale)
         # X SCALE SHOULD BE NEGATIVE TO FLIP IT CORRECTLY
         x, y, z = 0, 0, 0
         add_reference_to_stage(usd_path=mesh_path, prim_path=prim_p)
@@ -89,6 +96,9 @@ def create_terrains(terrain_info):
     random_rotation = 0.0
     x, y, z = 0, 0, 0
     # stage = self.usd_context.get_stage()
+    scale = 1
+    scale = float(scale)
+    print("Setting scale to ", scale)
 
     omni.kit.commands.execute(
         'TransformPrimSRTCommand',
@@ -193,6 +203,31 @@ def spawn_loop(
             object_scale_delta,
             allow_rot,
         )
+def spawn_all_non(obs_to_spawn, object_dict, height_map):
+    length = len(obs_to_spawn)
+    counter = 1
+    for key in obs_to_spawn:
+        print("spawning ", key)
+        obj = object_dict[key]
+        path = object_dict[key].usd_path
+        class_name = obj.class_name
+        if class_name == '':
+            class_name = obj.unique_id
+        spawn_loop(
+            path,
+            class_name,
+            f'{obj.unique_id}_',
+            obs_to_spawn[key],
+            height_map,
+            scale=obj.object_scale,
+            object_scale_delta=obj.object_scale_delta,
+            allow_rot=obj.allow_y_rot,
+        )
+        update_stage()
+        # print("some time should have passed")
+        # return
+        counter += 1
+    print("finished spawning all")
 async def spawn_all(obs_to_spawn, object_dict, height_map):
     length = len(obs_to_spawn)
     counter = 1
@@ -217,6 +252,7 @@ async def spawn_all(obs_to_spawn, object_dict, height_map):
         # print("some time should have passed")
         # return
         counter += 1
+    print("finished spawning all")
 def generate_world_generator( obj_path, world_path):
 
 
@@ -243,7 +279,9 @@ def create_world(obj_path, world_path):
         )
 
         # asyncio.ensure_future(self.sample._on_load_world_async())
-        asyncio.ensure_future(
-            spawn_all(obs_to_spawn, object_dict, height_map)
-        )
+        # asyncio.ensure_future(
+        #     spawn_all(obs_to_spawn, object_dict, height_map)
+        # )
+
+        spawn_all_non(obs_to_spawn, object_dict, height_map)
 
