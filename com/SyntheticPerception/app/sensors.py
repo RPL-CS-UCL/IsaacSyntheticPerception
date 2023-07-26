@@ -47,9 +47,9 @@ from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.dynamic_control import _dynamic_control
 import carb
 from pxr import Sdf
-from .Sensors.LIDAR import Lidar
-from .Sensors.IMU import IMUSensor
-from .Sensors.Camera import DepthCamera
+from Sensors.LIDAR import Lidar
+from Sensors.IMU import IMUSensor
+from Sensors.Camera import DepthCamera
 from omni.isaac.core.utils.rotations import (
     lookat_to_quatf,
     quat_to_euler_angles,
