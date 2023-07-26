@@ -144,7 +144,6 @@ class DepthCamera:
         np.save(f"{self.save_path}cameraLabels/{self.sample_count}.npy",sem_data)
 
         # pc_data = self.pc_annot.get_data()
-        #
         # np.save(f"{self.save_path}cameraPC/{self.sample_count}.npy",pc_data)
         self.sample_count += 1
         # np.save('/home/jon/Documents/temp/sem.npy', sem_data)

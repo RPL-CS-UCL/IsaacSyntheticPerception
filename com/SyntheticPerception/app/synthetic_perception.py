@@ -373,7 +373,7 @@ class SyntheticPerception(BaseSample):
             #
             #     print('y, overfilled', y_ind)
             #     y_ind = 2559
-            z = float(height_map[int(y_ind/10)][int(x_ind/10)]) / mesh_height_modifier   # was abs
+            z = float(height_map[int(y_ind/10)][int(x_ind/10)])# / mesh_height_modifier   # was abs
             # second one is iterated fasted
 
             _p_name = f'{p_name}_{i}'
@@ -414,7 +414,7 @@ class SyntheticPerception(BaseSample):
             # prim_p = f'/World/t/terrain{key}'
 
             stage = omni.usd.get_context().get_stage()
-            scale = 0.01
+            scale = 1#0.01
             # X SCALE SHOULD BE NEGATIVE TO FLIP IT CORRECTLY
             random_rotation = 0.0
             x, y, z = 0, 0, 0
@@ -423,7 +423,7 @@ class SyntheticPerception(BaseSample):
                 mat_name, mat_path, prim_p, scale, stage
             )
 
-        scale = 0.1
+        scale = 1#0.1
         random_rotation = 0.0
         x, y, z = 0, 0, 0
         # stage = self.usd_context.get_stage()
