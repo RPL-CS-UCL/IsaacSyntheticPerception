@@ -75,8 +75,8 @@ class Anymal_runner(object):
             )
         )
         self.sensor_rig = SensorRig('SensorRig', '/World/Anymal')
-        self.path = 'C:/Users/jonem/Desktop/sensors2.json'
-        self.out_path = 'C:/Users/jonem/Desktop/OutputTest/'
+        self.path = '/home/jon/Downloads/sensors.json'
+        self.out_path = '/home/jon/Downloads/out/'
 
         self._world.reset()
         self._enter_toggled = 0
@@ -125,8 +125,8 @@ class Anymal_runner(object):
         self.stage = (
             omni.usd.get_context().get_stage()
         )  # Used to access Geometry
-        # self.sensor_rig.create_rig_from_file(self.path, self.stage)
-        # self.sensor_rig.setup_sensor_output_path(self.out_path)
+        self.sensor_rig.create_rig_from_file(self.path, self.stage)
+        self.sensor_rig.setup_sensor_output_path(self.out_path)
 
     def on_physics_step(self, step_size) -> None:
         """
@@ -140,7 +140,7 @@ class Anymal_runner(object):
             self._world.reset(True)
             self.needs_reset = False
         self._anymal.advance(step_size, self._base_command)
-        # self.sensor_rig.sample_sensors(step_size)
+        self.sensor_rig.sample_sensors(step_size)
 
     def run(self) -> None:
         """
@@ -208,8 +208,8 @@ def main():
     runner._world.reset()
 
     # simulation_app.pause()
-    objpath = "C:/Users/jonem/Desktop/new_objects_save.json"
-    wrldpath = "C:/Users/jonem/Desktop/worlddata3.json"
+    objpath = "/home/jon/Downloads/new_objects_save.json"
+    wrldpath = "/home/jon/Downloads/worlddata3.json"
     WG.create_world(objpath,wrldpath)
     # simulation_app.pause()
     runner.run()

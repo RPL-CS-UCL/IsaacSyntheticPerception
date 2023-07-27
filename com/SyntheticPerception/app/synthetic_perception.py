@@ -47,6 +47,9 @@ from omni.isaac.core.utils.stage import (
 
 from pxr import UsdShade, Sdf
 
+import omni.kit.commands
+# from omni import usd._usd
+from pxr import Sdf
 
 class SyntheticPerception(BaseSample):
     """
@@ -318,6 +321,12 @@ class SyntheticPerception(BaseSample):
         if allow_rot:
             random_rotation = random.uniform(0, 360)
 
+
+        omni.kit.commands.execute('CreatePayloadCommand',
+            usd_context=omni.usd.get_context(),
+            path_to=Sdf.Path(prim_path),
+            asset_path=asset_path,
+            instanceable=True)
         omni.kit.commands.execute(
             'TransformPrimSRTCommand',
             path=prim_path,  # f"/World/{p_name}",
@@ -478,6 +487,7 @@ class SyntheticPerception(BaseSample):
                 object_scale_delta=obj.object_scale_delta,
                 allow_rot=obj.allow_y_rot,
             )
+            print("spawned, now we wait till stage loads")
             await update_stage_async()
             # print("some time should have passed")
             # return
@@ -486,6 +496,7 @@ class SyntheticPerception(BaseSample):
     def generate_world_generator(self, obj_path, world_path):
 
 
+        print("Tring to generator worldf rom file")
         (
             obs_to_spawn,
             object_dict,

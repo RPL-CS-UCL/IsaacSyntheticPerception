@@ -236,6 +236,7 @@ class WorldHandler:
                 obs = objs_per_region[key]
                 if len(obs) > 0:
                     for obj in obs:
+                        print(f"{key} has poisson of size {obj.poisson_size} which ends up being {obj.poisson_size / self._WORLD_TO_POISSON_SCALE}")
                         area, coords = fill_area(
                             total_arr,
                             obj.poisson_size / self._WORLD_TO_POISSON_SCALE,
@@ -247,8 +248,11 @@ class WorldHandler:
 
 
 def generate_world_from_file(world_path, object_path):
+    print("creating world handler")
     world = WorldHandler(world_path, object_path)
+    print("reading objects")
     world._read_objects()
+    print("reading world")
     res = world._read_world()
     mesh_scale = 10
 

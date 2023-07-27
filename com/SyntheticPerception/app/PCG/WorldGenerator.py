@@ -1,9 +1,11 @@
 import asyncio
 import random
+
 import omni
 import numpy as np
 from PCG import AreaMaskGenerator
 
+from omni.isaac.core.utils.semantics import get_semantics
 from pxr import (
     UsdGeom,
     Gf,
@@ -20,6 +22,7 @@ from omni.isaac.core.utils.stage import (
 )
 
 from pxr import UsdShade, Sdf
+
 
 def create_material_and_bind(
      mat_name, mat_path, prim_path, scale, stage
@@ -253,6 +256,7 @@ async def spawn_all(obs_to_spawn, object_dict, height_map):
         # return
         counter += 1
     print("finished spawning all")
+
 def generate_world_generator( obj_path, world_path):
 
 
@@ -268,20 +272,65 @@ def generate_world_generator( obj_path, world_path):
 
     return obs_to_spawn, object_dict, height_map
 
+def add_semantic(p, prim_class):
+    """Adds semantic to prim"""
+    sem_dict = get_semantics(p)
+    collisionAPI = UsdPhysics.CollisionAPI.Apply(p)
+    if 'Semantics' not in sem_dict:
+        # print(
+        #     'adding semantics and collider to ',
+        #     p.GetPrimPath(),
+        #     ' of class ',
+        #     prim_class,
+        # )
+        sem = Semantics.SemanticsAPI.Apply(p, 'Semantics')
+        sem.CreateSemanticTypeAttr()
+        sem.CreateSemanticDataAttr()
+        sem.GetSemanticTypeAttr().Set('class')
+        sem.GetSemanticDataAttr().Set(prim_class)
+
+def __add_semantics_to_all2(stage):
+    """Add semantic information to all prims on stage based on parent xform"""
+    prim_class = "__UNDEF__"
+    completed_classes = []
+    for prim_ref in stage.Traverse():
+        prim_ref_name = str(prim_ref.GetPrimPath())
+        len_of_prim = len(prim_ref_name.split('/'))
+        for word in prim_ref_name.split('/'):
+
+            if 'class' in word and word not in completed_classes:
+
+                prim_class = word
+
+                for i in range(len(prim_ref.GetChildren())):
+                    prim_child = prim_ref.GetChildren()[i]
+                    len_of_child = len(
+                        str(prim_child.GetPrimPath()).split('/')
+                    )
+                    # print(len_of_prim, ' : ', len_of_child)
+                    if abs(len_of_prim - len_of_child) == 1:
+                        # print(prim_child)
+                        add_semantic(prim_child, prim_class)
+
+                completed_classes.append(prim_class)
+
 def create_world(obj_path, world_path):
 
-        (
-            obs_to_spawn,
-            object_dict,
-            height_map,
-        ) =generate_world_generator(
-            world_path, obj_path
-        )
+    (
+        obs_to_spawn,
+        object_dict,
+        height_map,
+    ) =generate_world_generator(
+        world_path, obj_path
+    )
 
-        # asyncio.ensure_future(self.sample._on_load_world_async())
-        # asyncio.ensure_future(
-        #     spawn_all(obs_to_spawn, object_dict, height_map)
-        # )
+    # asyncio.ensure_future(self.sample._on_load_world_async())
+    # asyncio.ensure_future(
+    #     spawn_all(obs_to_spawn, object_dict, height_map)
+    # )
 
-        spawn_all_non(obs_to_spawn, object_dict, height_map)
+    spawn_all_non(obs_to_spawn, object_dict, height_map)
+    update_stage()
+    stage = omni.usd.get_context().get_stage()
+    __add_semantics_to_all2(stage)
 
