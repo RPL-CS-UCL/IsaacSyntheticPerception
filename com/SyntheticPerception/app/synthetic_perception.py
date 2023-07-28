@@ -315,6 +315,11 @@ class SyntheticPerception(BaseSample):
 
         # if not override:
         add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
+        
+        stage = omni.usd.get_context().get_stage()
+        prim = stage.GetPrimAtPath(prim_path)
+        # prim.GetReferences().AddReference(assetPath=asset_path, primPath=prim_path)
+        prim.SetInstanceable(True)
 
 
         # omni.kit.commands.execute('CopyPrim',
