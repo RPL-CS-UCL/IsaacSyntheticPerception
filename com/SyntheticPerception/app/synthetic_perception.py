@@ -313,18 +313,18 @@ class SyntheticPerception(BaseSample):
     ):
         prim_path = '/World/' + 'class_' + class_name + '/' + prim_name
 
-        if not override:
-            add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
+        # if not override:
+        add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
 
 
-        omni.kit.commands.execute('CopyPrim',
-            path_from=orign_p_name,
-            path_to=prim_path,
-            duplicate_layers=False,
-            combine_layers=False,
-            exclusive_select=False,
-            flatten_references=False,
-            copy_to_introducing_layer=False)
+        # omni.kit.commands.execute('CopyPrim',
+        #     path_from=orign_p_name,
+        #     path_to=prim_path,
+        #     duplicate_layers=False,
+        #     combine_layers=False,
+        #     exclusive_select=False,
+        #     flatten_references=False,
+        #     copy_to_introducing_layer=False)
         # here we want to modify the scale
         low_lim = scale - object_scale_delta
         high_lim = scale + object_scale_delta
@@ -383,13 +383,13 @@ class SyntheticPerception(BaseSample):
 
         for i, n in enumerate(coll):
             override=False
-            if i == 1:
-
-                prim_path = '/World/' + 'class_' + class_name + '/' + p_name 
-
-                add_reference_to_stage(usd_path=path, prim_path=prim_path)
-
-                override=True
+            # if i == 1:
+            #
+            #     prim_path = '/World/' + 'class_' + class_name + '/' + p_name 
+            #
+            #     add_reference_to_stage(usd_path=path, prim_path=prim_path)
+            #
+            #     override=True
         
             x, y = n
             x = float(x)
