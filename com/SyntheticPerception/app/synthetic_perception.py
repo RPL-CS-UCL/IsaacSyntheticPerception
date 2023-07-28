@@ -308,10 +308,23 @@ class SyntheticPerception(BaseSample):
         scale,
         object_scale_delta,
         allow_rot,
+        orign_p_name = "",
+        override=False
     ):
         prim_path = '/World/' + 'class_' + class_name + '/' + prim_name
 
-        add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
+        if not override:
+            add_reference_to_stage(usd_path=asset_path, prim_path=prim_path)
+
+
+        omni.kit.commands.execute('CopyPrim',
+            path_from=orign_p_name,
+            path_to=prim_path,
+            duplicate_layers=False,
+            combine_layers=False,
+            exclusive_select=False,
+            flatten_references=False,
+            copy_to_introducing_layer=False)
         # here we want to modify the scale
         low_lim = scale - object_scale_delta
         high_lim = scale + object_scale_delta
@@ -322,11 +335,11 @@ class SyntheticPerception(BaseSample):
             random_rotation = random.uniform(0, 360)
 
 
-        omni.kit.commands.execute('CreatePayloadCommand',
-            usd_context=omni.usd.get_context(),
-            path_to=Sdf.Path(prim_path),
-            asset_path=asset_path,
-            instanceable=True)
+        # omni.kit.commands.execute('CreatePayloadCommand',
+        #     usd_context=omni.usd.get_context(),
+        #     path_to=Sdf.Path(prim_path),
+        #     asset_path=asset_path,
+        #     instanceable=True)
         omni.kit.commands.execute(
             'TransformPrimSRTCommand',
             path=prim_path,  # f"/World/{p_name}",
@@ -367,7 +380,17 @@ class SyntheticPerception(BaseSample):
         object_scale_delta=0,
         allow_rot=True,
     ):
+
         for i, n in enumerate(coll):
+            override=False
+            if i == 1:
+
+                prim_path = '/World/' + 'class_' + class_name + '/' + p_name 
+
+                add_reference_to_stage(usd_path=path, prim_path=prim_path)
+
+                override=True
+        
             x, y = n
             x = float(x)
             y = float(y)
@@ -396,6 +419,8 @@ class SyntheticPerception(BaseSample):
                 scale,
                 object_scale_delta,
                 allow_rot,
+                override = override,
+                orign_p_name = p_name,
             )
 
     def create_terrains(self, terrain_info):
