@@ -328,11 +328,11 @@ class SyntheticPerception(BaseSample):
         prim.SetInstanceable(True)
 
         collisionAPI = UsdPhysics.CollisionAPI.Apply(prim)
-        sem = Semantics.SemanticsAPI.Apply(prim, 'Semantics')
-        sem.CreateSemanticTypeAttr()
-        sem.CreateSemanticDataAttr()
-        sem.GetSemanticTypeAttr().Set('class')
-        sem.GetSemanticDataAttr().Set(class_name)
+        # sem = Semantics.SemanticsAPI.Apply(prim, 'Semantics')
+        # sem.CreateSemanticTypeAttr()
+        # sem.CreateSemanticDataAttr()
+        # sem.GetSemanticTypeAttr().Set('class')
+        # sem.GetSemanticDataAttr().Set(class_name)
 
 
         # omni.kit.commands.execute('CopyPrim',
@@ -486,13 +486,13 @@ class SyntheticPerception(BaseSample):
             self.create_material_and_bind(
                 mat_name, mat_path, prim_p, scale, stage
             )
-            prim=stage.GetPrimAtPath(prim_p)
-            collisionAPI = UsdPhysics.CollisionAPI.Apply(prim)
-            sem = Semantics.SemanticsAPI.Apply(prim, 'Semantics')
-            sem.CreateSemanticTypeAttr()
-            sem.CreateSemanticDataAttr()
-            sem.GetSemanticTypeAttr().Set('class')
-            sem.GetSemanticDataAttr().Set(mat_name)
+            # prim=stage.GetPrimAtPath(prim_p)
+            # collisionAPI = UsdPhysics.CollisionAPI.Apply(prim)
+            # sem = Semantics.SemanticsAPI.Apply(prim, 'Semantics')
+            # sem.CreateSemanticTypeAttr()
+            # sem.CreateSemanticDataAttr()
+            # sem.GetSemanticTypeAttr().Set('class')
+            # sem.GetSemanticDataAttr().Set(mat_name)
 
         scale = 1#0.1
         random_rotation = 0.0
