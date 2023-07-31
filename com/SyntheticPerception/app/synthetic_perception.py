@@ -279,7 +279,7 @@ class SyntheticPerception(BaseSample):
         self.stage = (
             omni.usd.get_context().get_stage()
         )  # Used to access Geometry
-        self.sr.create_rig_from_file(path, self.stage)
+        self.sr.create_rig_from_file(path, self.stage, self._world)
         self.sr.setup_sensor_output_path(out_path)
 
 

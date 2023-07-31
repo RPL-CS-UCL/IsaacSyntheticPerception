@@ -194,7 +194,8 @@ class SensorRig:
         self.time = 0
 
 
-    def create_rig_from_file(self, path, stage):
+    def create_rig_from_file(self, path, stage,world):
+        self._world = world
         pos, ori = self.load_sensors_from_file(path, stage)
         print(f"{self._o} Creating sensor righ with initial position of: {pos} and rot of {ori}")
         position = np.array([pos[0], pos[1], pos[2]])
@@ -325,7 +326,7 @@ class SensorRig:
         print(f'{self._o} loaded waypoints from file ')
 
     def _waypoint_update(self, pos):
-
+        print(f"{self._o} Waypoint {self.__curr_waypoint_id}/{len(self.__waypoints)}")
         # Get the goal position and convert it into the correct type
         # print("moving")
         goal_pos = self.__waypoints[self.__curr_waypoint_id]
@@ -357,6 +358,9 @@ class SensorRig:
 
             if self.__curr_waypoint_id >= len(self.__waypoints):
                 self.__curr_waypoint_id = 0
+                timeline = omni.timeline.get_timeline_interface()
+                timeline.pause()
+
 
             return self._waypoint_update(pos)
 
@@ -372,6 +376,7 @@ class SensorRig:
         self.start_time += time_step
         if len(self.__waypoints) == 0:
             return
+        
         # Retrieve the current position and orientation of the sensor rig
         current_pos, current_rot = self.get_pos_rot()
         current_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])
