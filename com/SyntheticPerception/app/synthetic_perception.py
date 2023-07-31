@@ -203,7 +203,10 @@ class SyntheticPerception(BaseSample):
 
     def init_semantics_in_scene(self):
         self.stage = omni.usd.get_context().get_stage()
+        print(f"{self._o} Adding semantics to scene. Please wait until complete... ... ... ")
         self.__add_semantics_to_all2(self.stage)
+
+        print(f"{self._o} All semantics added to scene. Complete.")
 
     def init_sensor_and_semantics(self):
         """Initializes sensors and the replicator package"""
