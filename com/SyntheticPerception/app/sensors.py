@@ -196,7 +196,7 @@ class SensorRig:
 
     def create_rig_from_file(self, path, stage):
         pos, ori = self.load_sensors_from_file(path, stage)
-        print(f"{self._o} Creating sensor righ with initial position of: {pos}")
+        print(f"{self._o} Creating sensor righ with initial position of: {pos} and rot of {ori}")
         position = np.array([pos[0], pos[1], pos[2]])
         orientation = np.array([ori[0], ori[1], ori[2], ori[3]])
         self._prim = XFormPrim(
