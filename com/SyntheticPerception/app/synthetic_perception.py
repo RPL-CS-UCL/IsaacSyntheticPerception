@@ -50,7 +50,8 @@ from pxr import UsdShade, Sdf
 import omni.kit.commands
 # from omni import usd._usd
 from pxr import Sdf
-
+import omni.physx
+from omni.physx import get_physx_scene_query_interface
 class SyntheticPerception(BaseSample):
     """
 
@@ -315,6 +316,7 @@ class SyntheticPerception(BaseSample):
         override=False,
         rot = (0,0,0),
     ):
+
         prim_path = '/World/' + 'class_' + class_name + '/' + prim_name
 
         # if not override:
@@ -324,6 +326,13 @@ class SyntheticPerception(BaseSample):
         prim = stage.GetPrimAtPath(prim_path)
         # prim.GetReferences().AddReference(assetPath=asset_path, primPath=prim_path)
         prim.SetInstanceable(True)
+
+        collisionAPI = UsdPhysics.CollisionAPI.Apply(prim)
+        sem = Semantics.SemanticsAPI.Apply(prim, 'Semantics')
+        sem.CreateSemanticTypeAttr()
+        sem.CreateSemanticDataAttr()
+        sem.GetSemanticTypeAttr().Set('class')
+        sem.GetSemanticDataAttr().Set(class_name)
 
 
         # omni.kit.commands.execute('CopyPrim',
@@ -423,7 +432,11 @@ class SyntheticPerception(BaseSample):
             # print("triangle normals")
             # print(poss_rot)
             # second one is iterated fasted
+            if self.occupancy[int(y_ind/10)][int(x_ind/10)] != 0:
+                # print("skipping oj spawn")
+                continue
 
+            self.occupancy[int(y_ind/10)][int(x_ind/10)]= 1 
             _p_name = f'{p_name}_{i}'
             self.spawn_asset(
                 path,
@@ -473,6 +486,13 @@ class SyntheticPerception(BaseSample):
             self.create_material_and_bind(
                 mat_name, mat_path, prim_p, scale, stage
             )
+            prim=stage.GetPrimAtPath(prim_p)
+            collisionAPI = UsdPhysics.CollisionAPI.Apply(prim)
+            sem = Semantics.SemanticsAPI.Apply(prim, 'Semantics')
+            sem.CreateSemanticTypeAttr()
+            sem.CreateSemanticDataAttr()
+            sem.GetSemanticTypeAttr().Set('class')
+            sem.GetSemanticDataAttr().Set(mat_name)
 
         scale = 1#0.1
         random_rotation = 0.0
@@ -547,6 +567,7 @@ class SyntheticPerception(BaseSample):
             meshGen,
         ) = AreaMaskGenerator.generate_world_from_file(obj_path, world_path)
         height_map = meshGen._points2
+        self.occupancy = np.zeros((len(height_map),len(height_map)))
         self.create_terrains(terrain_info)
         meshGen.clean_up_files()
 
