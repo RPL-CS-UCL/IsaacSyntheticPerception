@@ -309,7 +309,8 @@ class SyntheticPerception(BaseSample):
         object_scale_delta,
         allow_rot,
         orign_p_name = "",
-        override=False
+        override=False,
+        rot = (0,0,0),
     ):
         prim_path = '/World/' + 'class_' + class_name + '/' + prim_name
 
@@ -333,7 +334,7 @@ class SyntheticPerception(BaseSample):
         # here we want to modify the scale
         low_lim = scale - object_scale_delta
         high_lim = scale + object_scale_delta
-        scale = random.uniform(low_lim, high_lim) / 100
+        scale = random.uniform(low_lim, high_lim) #/ 100
 
         random_rotation = 0
         if allow_rot:
@@ -411,6 +412,13 @@ class SyntheticPerception(BaseSample):
             #     print('y, overfilled', y_ind)
             #     y_ind = 2559
             z = float(height_map[int(y_ind/10)][int(x_ind/10)])# / mesh_height_modifier   # was abs
+
+            cc =(int(y_ind/10),int(x_ind/10) )
+            ind = np.ravel_multi_index(cc, (len(height_map), len(height_map)))
+            # print(np.asarray(self.t_normals))
+            poss_rot = np.asarray(self.t_normals)[ind]
+            # print("triangle normals")
+            # print(poss_rot)
             # second one is iterated fasted
 
             _p_name = f'{p_name}_{i}'
@@ -426,6 +434,7 @@ class SyntheticPerception(BaseSample):
                 allow_rot,
                 override = override,
                 orign_p_name = p_name,
+                rot = poss_rot
             )
 
     def create_terrains(self, terrain_info):
@@ -496,7 +505,8 @@ class SyntheticPerception(BaseSample):
             had_transform_at_key=False,
         )
 
-    async def spawn_all(self, obs_to_spawn, object_dict, height_map):
+    async def spawn_all(self, obs_to_spawn, object_dict, height_map, normals):
+        self.t_normals = normals
         length = len(obs_to_spawn)
         counter = 1
         for key in obs_to_spawn:
@@ -537,7 +547,7 @@ class SyntheticPerception(BaseSample):
         self.create_terrains(terrain_info)
         meshGen.clean_up_files()
 
-        return obs_to_spawn, object_dict, height_map
+        return obs_to_spawn, object_dict, height_map, meshGen.normals
 
 
     def create_material_and_bind(

@@ -154,6 +154,7 @@ class MeshGen:
 
         subdivisions = (self._size * self._scale) - 1
         materials = list(np.unique(self._regions_map))
+        print(f"There are {len(materials)},   {materials}")
 
         self.meshes_dict = {}
         for key in materials:
@@ -189,6 +190,7 @@ class MeshGen:
         self._mesh = self._mesh.compute_vertex_normals()
         self._mesh = self._mesh.remove_unreferenced_vertices()
         self._mesh = self._mesh.remove_duplicated_vertices()
+        self.normals = self._mesh.triangle_normals
 
         l = self._scale * self._size
         for i in range(len(self._mesh.vertices)):
@@ -216,4 +218,5 @@ class MeshGen:
             self.meshes_dict[key] = self.meshes_dict[
                 key
             ].compute_triangle_normals()
+            print(np.array(self.meshes_dict[key].triangle_normals))
 

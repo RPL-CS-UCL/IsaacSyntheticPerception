@@ -271,6 +271,7 @@ def generate_world_from_file(world_path, object_path):
 
         regs = list(np.unique(region_map))
         for key in terrain_info:
+            print(key)
             if float(key) in regs:
                 terrain_info[
                     str(key)

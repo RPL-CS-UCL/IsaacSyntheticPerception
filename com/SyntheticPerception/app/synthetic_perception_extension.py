@@ -790,13 +790,14 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             obs_to_spawn,
             object_dict,
             height_map,
+           normals 
         ) = self.sample.generate_world_generator(
             self._world_path, self._object_path
         )
         print("Starting obj spawn")
         asyncio.ensure_future(self.sample._on_load_world_async())
         asyncio.ensure_future(
-            self.sample.spawn_all(obs_to_spawn, object_dict, height_map)
+            self.sample.spawn_all(obs_to_spawn, object_dict, height_map, normals)
         )
 
     def build_pcg_env_ui(self, frame):
