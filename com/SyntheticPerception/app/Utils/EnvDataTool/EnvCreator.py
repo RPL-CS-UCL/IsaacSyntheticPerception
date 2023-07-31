@@ -211,7 +211,7 @@ class EnvTool:
             for i in self.listbx.curselection():
                 self.entry_info.objects_in_zone.append(self.listbx.get(i))
 
-            self.entry_info.identifier = len(self.entry_list) #+ 1
+            self.entry_info.identifier = len(self.entry_list) + 1
             id = self.entry_info.identifier
             self.entry_info.color = "BLACK"#generate_random_color()
             if parent_zone != '':
