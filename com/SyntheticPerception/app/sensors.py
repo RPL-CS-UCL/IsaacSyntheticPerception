@@ -12,7 +12,6 @@ The rig also handles sampling rates and timestamps.
 
 """
 from omni.syntheticdata.scripts.sensors import enable_sensors
-import os
 
 from omni.syntheticdata import helpers
 from omni.isaac.core.utils.prims import define_prim, delete_prim
@@ -25,14 +24,12 @@ from pxr import (
     Semantics,
 )  # pxr usd imports used to create cube
 import omni
-import asyncio
 import omni.kit.commands
 import omni.timeline
 import omni.kit.viewport
 from pxr import Usd, Gf, UsdGeom
 import omni.kit.commands
 import omni.replicator.core as rep
-import builtins
 import math
 
 
@@ -59,7 +56,6 @@ from omni.isaac.core.utils.rotations import (
 
 # .
 
-import numpy as np
 from numpy.linalg import norm
 import copy
 import traceback

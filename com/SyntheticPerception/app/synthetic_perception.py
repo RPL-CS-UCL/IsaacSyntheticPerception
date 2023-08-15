@@ -11,7 +11,6 @@ try:
     VERSION = v.get_version()[0]
 except:
     VERSION = '2021'
-import random
 from pxr import (
     UsdGeom,
     Gf,
@@ -24,7 +23,6 @@ from .PCG import AreaMaskGenerator
 from omni.isaac.examples.base_sample import BaseSample
 from omni.isaac.core.utils.semantics import get_semantics
 import omni
-import asyncio
 import omni.kit.commands
 import omni.timeline
 from omni.isaac.core.utils.prims import get_prim_at_path  # , get_prim_property
@@ -36,7 +34,6 @@ from omni.isaac.dynamic_control import _dynamic_control
 from omni.isaac.core import World
 
 import omni.appwindow  # Contains handle to keyboard
-import numpy as np
 import carb
 from omni.isaac.core.utils.stage import (
     add_reference_to_stage,

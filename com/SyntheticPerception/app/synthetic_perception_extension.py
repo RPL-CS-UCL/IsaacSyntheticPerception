@@ -11,7 +11,6 @@ import random
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.physx import acquire_physx_interface
 import os
-import csv
 from pxr import Usd, Gf, Ar, Pcp, Sdf, UsdRi, UsdGeom, UsdPhysics
 from pxr import UsdShade, Sdf
 from omni.isaac.examples.base_sample import BaseSampleExtension
@@ -51,20 +50,16 @@ from omni.isaac.core.utils.stage import (
     update_stage_async,
 )
 from omni.isaac.core.utils.prims import define_prim, delete_prim
-import os
 
 from .PCG.MeshGenerator import MeshGen
 # from .Utils.EnvDataTool.EnvCreator import EnvTool
 import open3d as o3d
-import numpy as np
 import os
 from perlin_numpy import generate_perlin_noise_2d, generate_fractal_noise_2d
 from sklearn.preprocessing import normalize
 from perlin_noise import PerlinNoise
 import matplotlib.pyplot as plt
 import cv2
-import colorsys
-import asyncio
 import omni.kit.asset_converter
 import carb
 from omni.kit.window.popup_dialog.dialog import PopupDialog
