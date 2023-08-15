@@ -37,6 +37,8 @@ from omni.isaac.ui import (
     CheckBox,
 )
 from omni.isaac.core import SimulationContext
+from .PCG.WorldGenerator import WorldManager 
+
 
 from .synthetic_perception import SyntheticPerception
 import omni
@@ -785,20 +787,25 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             )
             return
         print("Starting world gen")
+        WG = WorldManager()
+        WG.create_world(self._world_path, self._object_path)
+        print("world creation finished")
 
-        (
-            obs_to_spawn,
-            object_dict,
-            height_map,
-           normals 
-        ) = self.sample.generate_world_generator(
-            self._world_path, self._object_path
-        )
-        print("Starting obj spawn")
-        asyncio.ensure_future(self.sample._on_load_world_async())
-        asyncio.ensure_future(
-            self.sample.spawn_all(obs_to_spawn, object_dict, height_map, normals)
-        )
+        return
+
+        # (
+        #     obs_to_spawn,
+        #     object_dict,
+        #     height_map,
+        #    normals 
+        # ) = self.sample.generate_world_generator(
+        #     self._world_path, self._object_path
+        # )
+        # print("Starting obj spawn")
+        # asyncio.ensure_future(self.sample._on_load_world_async())
+        # asyncio.ensure_future(
+        #     self.sample.spawn_all(obs_to_spawn, object_dict, height_map, normals)
+        # )
 
     def build_pcg_env_ui(self, frame):
         def open_world_creator():
