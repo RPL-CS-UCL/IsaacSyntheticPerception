@@ -73,9 +73,7 @@ def quat_to_euler_angles(q):
     # pitch (y-axis rotation)
     sinp = 2 * (q_real * q_img[1] - q_img[2] * q_img[0])
     if abs(sinp) >= 1:
-        pitch = math.copysign(
-            math.pi / 2, sinp
-        )  # use 90 degrees if out of range
+        pitch = math.copysign(math.pi / 2, sinp)  # use 90 degrees if out of range
     else:
         pitch = math.asin(sinp)
 
@@ -113,15 +111,15 @@ def proj_orth(v1, v2, normalize_res=False, eps=1e-5):
         return v1
 
 
-def axes_to_mat(axis_x, axis_z, dominant_axis='z'):
-    if dominant_axis == 'z':
+def axes_to_mat(axis_x, axis_z, dominant_axis="z"):
+    if dominant_axis == "z":
         axis_x = proj_orth(axis_x, axis_z)
-    elif dominant_axis == 'x':
+    elif dominant_axis == "x":
         axis_z = proj_orth(axis_z, axis_x)
     elif dominant_axis is None:
         pass
     else:
-        raise RuntimeError('Unrecognized dominant_axis: %s' % dominant_axis)
+        raise RuntimeError("Unrecognized dominant_axis: %s" % dominant_axis)
 
     axis_x = axis_x / norm(axis_x)
     axis_z = axis_z / norm(axis_z)
@@ -144,14 +142,10 @@ def proj_to_align(R, v):
     return axes_to_mat(R[0:3, (max_entry[0] + 1) % 3], v)
 
 
-
-
 def get_world_translation(prim):
     transform = Gf.Transform()
     transform.SetMatrix(
-        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(
-            Usd.TimeCode.Default()
-        )
+        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
     )
     return transform.GetTranslation()
 
@@ -159,11 +153,10 @@ def get_world_translation(prim):
 def get_world_pose(prim):
     transform = Gf.Transform()
     transform.SetMatrix(
-        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(
-            Usd.TimeCode.Default()
-        )
+        UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
     )
     return transform.GetRotation()
+
 
 class SensorRig:
     def __init__(self, name, path) -> None:
@@ -173,7 +166,7 @@ class SensorRig:
 
         self._prim_path = path
         self._prim_name = name
-        self._full_prim_path = f'{self._prim_path}/{self._prim_name}'
+        self._full_prim_path = f"{self._prim_path}/{self._prim_name}"
         self._prim = None
         self._dc = None
         self._rb = None
@@ -185,34 +178,31 @@ class SensorRig:
         self.time = 0
         self.sample_time_counter = 0
         self._o = "[SensorRig] "
-    def reset(self):
 
+    def reset(self):
         self.time = 0
 
-
-    def ray_cast(self,origin):
-
-
+    def ray_cast(self, origin):
         # pos, _ = self.get_pos_rot()
 
-
         # print(pos)
-        hit = get_physx_scene_query_interface().raycast_closest(origin, [0,0,-1], 100000.0)
+        hit = get_physx_scene_query_interface().raycast_closest(
+            origin, [0, 0, -1], 100000.0
+        )
 
         if hit["hit"]:
-
-
             distance = hit["distance"]
 
             print(hit["position"][2])
             return hit["position"][2]
         return 0
 
-
-    def create_rig_from_file(self, path, stage,world):
+    def create_rig_from_file(self, path, stage, world):
         self._world = world
         pos, ori = self.load_sensors_from_file(path, stage)
-        print(f"{self._o} Creating sensor righ with initial position of: {pos} and rot of {ori}")
+        print(
+            f"{self._o} Creating sensor righ with initial position of: {pos} and rot of {ori}"
+        )
         position = np.array([pos[0], pos[1], pos[2]])
         orientation = np.array([ori[0], ori[1], ori[2], ori[3]])
         self._prim = XFormPrim(
@@ -222,16 +212,14 @@ class SensorRig:
             orientation=orientation,
         )
         omni.kit.commands.execute(
-            'AddPhysicsComponent',
+            "AddPhysicsComponent",
             usd_prim=stage.GetPrimAtPath(self._full_prim_path),
-            component='PhysicsRigidBodyAPI',
+            component="PhysicsRigidBodyAPI",
         )
 
         omni.kit.commands.execute(
-            'ChangeProperty',
-            prop_path=Sdf.Path(
-                f'{self._full_prim_path}.physxRigidBody:disableGravity'
-            ),
+            "ChangeProperty",
+            prop_path=Sdf.Path(f"{self._full_prim_path}.physxRigidBody:disableGravity"),
             value=True,
             prev=None,
         )
@@ -250,19 +238,17 @@ class SensorRig:
         )
         self.actual_prim = stage.GetPrimAtPath(self._full_prim_path)
 
-        self.orient_val = self.actual_prim.GetAttribute('xformOp:orient')
+        self.orient_val = self.actual_prim.GetAttribute("xformOp:orient")
         # collisionAPI = PhysicsRigidBodyAPI.Apply(self._prim)
         omni.kit.commands.execute(
-            'AddPhysicsComponent',
+            "AddPhysicsComponent",
             usd_prim=stage.GetPrimAtPath(self._full_prim_path),
-            component='PhysicsRigidBodyAPI',
+            component="PhysicsRigidBodyAPI",
         )
 
         omni.kit.commands.execute(
-            'ChangeProperty',
-            prop_path=Sdf.Path(
-                f'{self._full_prim_path}.physxRigidBody:disableGravity'
-            ),
+            "ChangeProperty",
+            prop_path=Sdf.Path(f"{self._full_prim_path}.physxRigidBody:disableGravity"),
             value=True,
             prev=None,
         )
@@ -276,8 +262,6 @@ class SensorRig:
         x = ang_veloc
         self._dc.set_rigid_body_angular_velocity(self._rb, x)
 
-
-
     def setup_sensor_output_path(self, path):
         print(path)
 
@@ -287,7 +271,7 @@ class SensorRig:
         np.save(f"{path}/mapping.npy", instance_mapping, allow_pickle=True)
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         pathlib.Path(path + "/timestamps.csv")
-        self._time_stamp_file = open(path +"/timestamps.csv", "a")
+        self._time_stamp_file = open(path + "/timestamps.csv", "a")
         for sensor in self.__sensors:
             sensor.init_output_folder(path)
 
@@ -302,13 +286,20 @@ class SensorRig:
         # print(self.time)
         # log timestep
         # Sample all sensors
-        if self.sample_time_counter >= (1/self.sample_rate):
+        if self.sample_time_counter >= (1 / self.sample_rate):
             # print("sampling at ", self.time)
             for sensor in self.__sensors:
                 # print(sensor)
                 sensor.sample_sensor()
-            self._time_stamp_file.write(f"{str(self.time)}\n") 
+            self._time_stamp_file.write(f"{str(self.time)}\n")
             self.sample_time_counter = 0
+
+    def sample_sensors_return(self):
+        sensor_output = []
+        for sensor in self.__sensors:
+            sensor_output.append(sensor.sample_sensor())
+
+        return sensor_output
 
     def sample_all_sensors(self):
         for sensor in self.__sensors:
@@ -329,24 +320,24 @@ class SensorRig:
         # go through each child and save its tranform details to the waypoints list.
         for prim_ref in stage.Traverse():
             prim_ref_name = str(prim_ref.GetPrimPath())
-            if '_waypoints_' in prim_ref_name:
+            if "_waypoints_" in prim_ref_name:
                 self._waypoints_parent = prim_ref
                 for i in range(len(prim_ref.GetChildren())):
                     prim_child = prim_ref.GetChildren()[i]
                     self.__waypoints.append(get_world_translation(prim_child))
 
-        print(f'{self._o} SensorRig waypoints initialization complete:')
+        print(f"{self._o} SensorRig waypoints initialization complete:")
         print(self.__waypoints)
 
     def initialize_waypoints_preloaded(self, waypoints, parent_prim):
         self.__waypoints = []
         self.__waypoints = waypoints
         self._waypoints_parent = parent_prim
-        print(f'{self._o} loaded waypoints from file ')
+        print(f"{self._o} loaded waypoints from file ")
         for i in range(len(self.__waypoints)):
             origin = self.__waypoints[i]
             z = self.ray_cast(origin)
-            z+= 0.7
+            z += 0.7
             self.__waypoints[i][2] = z
         print(f"{self._o} Synced waypoints to ground")
 
@@ -387,13 +378,11 @@ class SensorRig:
                 timeline = omni.timeline.get_timeline_interface()
                 timeline.pause()
 
-
             return self._waypoint_update(pos)
 
         return move_vec, rot_vec, rot_float
 
     def move(self, time_step):
-
         # timeline = omni.timeline.get_timeline_interface()
 
         # timecode = (
@@ -402,7 +391,7 @@ class SensorRig:
         self.start_time += time_step
         if len(self.__waypoints) == 0:
             return
-        
+
         # Retrieve the current position and orientation of the sensor rig
         current_pos, current_rot = self.get_pos_rot()
         current_pos = Gf.Vec3d(current_pos[0], current_pos[1], current_pos[2])
@@ -415,42 +404,41 @@ class SensorRig:
         self.apply_veloc(move_vec, rot_float)
 
     def load_sensors_from_file(self, file_path, stage):
-        with open(file_path, 'r+') as infile:
+        with open(file_path, "r+") as infile:
             print(f"{self._o} Loading sensor rig from file at {file_path}.")
             data = json.load(infile)
             # print(data)
-            pos = data['POSITION']
-            ori = data['ORIENTATION']
-            self.velocity = data['VELOCITY']
-            self.sample_rate = data['SAMPLE_RATE']
+            pos = data["POSITION"]
+            ori = data["ORIENTATION"]
+            self.velocity = data["VELOCITY"]
+            self.sample_rate = data["SAMPLE_RATE"]
 
             self.create_rig(np.array(pos), np.asarray(ori), stage)
-            sensors = data['SENSORS']
+            sensors = data["SENSORS"]
             print(sensors)
             for key in sensors:
-                if key == 'LIDAR':
-                    for sensor_id in sensors[key]['instances']:
-                        sensor_settings = sensors[key]['instances'][sensor_id]
+                if key == "LIDAR":
+                    for sensor_id in sensors[key]["instances"]:
+                        sensor_settings = sensors[key]["instances"][sensor_id]
                         lidar = Lidar()
                         lidar.read_from_json(sensor_settings)
                         self.add_sensor_to_rig(lidar)
-                elif key == 'CAMERA':
-                    print('creating camera')
+                elif key == "CAMERA":
+                    print("creating camera")
 
-                    for sensor_id in sensors[key]['instances']:
-                        sensor_settings = sensors[key]['instances'][sensor_id]
+                    for sensor_id in sensors[key]["instances"]:
+                        sensor_settings = sensors[key]["instances"][sensor_id]
                         cam = DepthCamera()
                         cam.read_from_json(sensor_settings)
                         self.add_sensor_to_rig(cam)
-                elif key == 'IMU':
-
-                    for sensor_id in sensors[key]['instances']:
-                        sensor_settings = sensors[key]['instances'][sensor_id]
+                elif key == "IMU":
+                    for sensor_id in sensors[key]["instances"]:
+                        sensor_settings = sensors[key]["instances"][sensor_id]
                         imu = IMUSensor()
                         imu.read_from_json(sensor_settings)
                         self.add_sensor_to_rig(imu)
                 else:
-                    print(' ERROR, tried adding sensor with type ', key)
+                    print(" ERROR, tried adding sensor with type ", key)
             return pos, ori
 
     def init_output_folder(self, path):
@@ -458,9 +446,8 @@ class SensorRig:
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         pathlib.Path(path + "/timestamps.csv")
 
-
         print(instance_mapping)
-        self._time_stamp_file = open(path +"/timestamps.csv", "a")
+        self._time_stamp_file = open(path + "/timestamps.csv", "a")
         # create any needed directories for the sensors
         for sensor in self.__sensors:
             sensor.init_output_folder(path)

@@ -148,3 +148,10 @@ class DepthCamera:
         self.sample_count += 1
         # np.save('/home/jon/Documents/temp/sem.npy', sem_data)
         return
+    def sample_sensor_return(self):
+
+        # return
+        # await rep.orchestrator.step_async()
+
+        rgb_data = self.rgb_annot.get_data()
+        return rgb_data
