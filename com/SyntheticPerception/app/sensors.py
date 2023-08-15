@@ -14,6 +14,7 @@ The rig also handles sampling rates and timestamps.
 from omni.syntheticdata.scripts.sensors import enable_sensors
 import os
 
+from omni.syntheticdata import helpers
 from omni.isaac.core.utils.prims import define_prim, delete_prim
 import pathlib
 import json
@@ -41,7 +42,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Sequence, Tuple, Union
 import omni.graph.core as og
 from omni.replicator.core.scripts.annotators import Annotator
-
+from omni.physx import get_physx_scene_query_interface
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.dynamic_control import _dynamic_control
@@ -168,7 +169,6 @@ def get_world_pose(prim):
     )
     return transform.GetRotation()
 
-
 class SensorRig:
     def __init__(self, name, path) -> None:
         self.__sensors = []
@@ -192,6 +192,25 @@ class SensorRig:
     def reset(self):
 
         self.time = 0
+
+
+    def ray_cast(self,origin):
+
+
+        # pos, _ = self.get_pos_rot()
+
+
+        # print(pos)
+        hit = get_physx_scene_query_interface().raycast_closest(origin, [0,0,-1], 100000.0)
+
+        if hit["hit"]:
+
+
+            distance = hit["distance"]
+
+            print(hit["position"][2])
+            return hit["position"][2]
+        return 0
 
 
     def create_rig_from_file(self, path, stage,world):
@@ -266,6 +285,10 @@ class SensorRig:
     def setup_sensor_output_path(self, path):
         print(path)
 
+        instance_mapping = helpers.get_instance_mappings()
+        print(" ================== initiating mapping")
+        print(instance_mapping)
+        np.save(f"{path}/mapping.npy", instance_mapping, allow_pickle=True)
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         pathlib.Path(path + "/timestamps.csv")
         self._time_stamp_file = open(path +"/timestamps.csv", "a")
@@ -324,12 +347,19 @@ class SensorRig:
         self.__waypoints = waypoints
         self._waypoints_parent = parent_prim
         print(f'{self._o} loaded waypoints from file ')
+        for i in range(len(self.__waypoints)):
+            origin = self.__waypoints[i]
+            z = self.ray_cast(origin)
+            z+= 0.7
+            self.__waypoints[i][2] = z
+        print(f"{self._o} Synced waypoints to ground")
 
     def _waypoint_update(self, pos):
         print(f"{self._o} Waypoint {self.__curr_waypoint_id}/{len(self.__waypoints)}")
         # Get the goal position and convert it into the correct type
         # print("moving")
         goal_pos = self.__waypoints[self.__curr_waypoint_id]
+        # goal_pos[2] = z_val
         goal_pos = Gf.Vec3d(goal_pos)
         ori_ = lookat_to_quatf(pos, goal_pos, Gf.Vec3d(0, 0, 1))
 
@@ -431,6 +461,9 @@ class SensorRig:
         # create any paths needed
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         pathlib.Path(path + "/timestamps.csv")
+
+
+        print(instance_mapping)
         self._time_stamp_file = open(path +"/timestamps.csv", "a")
         # create any needed directories for the sensors
         for sensor in self.__sensors:

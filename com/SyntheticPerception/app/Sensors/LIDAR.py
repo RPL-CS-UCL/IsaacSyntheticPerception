@@ -101,6 +101,7 @@ class Lidar:
         # self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
         _, self.__lidar_prim = omni.kit.commands.execute(
             'RangeSensorCreateLidar',
+
             path=self.__path,
             parent=parent,
             min_range=self.__min_range,
@@ -136,9 +137,10 @@ class Lidar:
             self.__lidar_path
         )
         semantics = self.__lidarInterface.get_semantic_data(self.__lidar_path)
+        # print(semantics)
 
         np.save(f"{self.save_path}velodyne/{self.sample_count}.npy",pointcloud)
-        np.save(f"{self.save_path}velodyneLabels/{self.sample_count}.npy",semantics)
+        np.save(f"{self.save_path}velodyneLabels/{self.sample_count}.npy",semantics, allow_pickle=True)
         return pointcloud, semantics
 
     def __get_position(self):

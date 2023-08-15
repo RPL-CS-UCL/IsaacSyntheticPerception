@@ -122,13 +122,13 @@ class MeshGen:
 
         scale = 5#250.0
         print(f'{self._o} Creating Noise Map for terrain heights.')
-        self._noise_map_xy = generate_fractal_noise_2d(
-            self._map_shape, (8, 8), 5
-        )
-
-        # self._noise_map_xy = generate_perlin_noise_2d(
-        #     self._map_shape, (8, 8)  
+        # self._noise_map_xy = generate_fractal_noise_2d(
+        #     self._map_shape, (8, 8), 5
         # )
+
+        self._noise_map_xy = generate_perlin_noise_2d(
+            self._map_shape, (8, 8) 
+        )
         x = np.linspace(
             0,
             self._size * self._scale,
