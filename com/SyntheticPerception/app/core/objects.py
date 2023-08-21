@@ -55,15 +55,16 @@ class Object:
         """
         Returns the rotation of the object.
         Args: None
-        Returns: Gf.Vec3d rotationXYZ
+        Returns: [] rotationXYZ
         """
-        return self._prim.GetAttribute('xformOp:rotateXYZ').Get()
+        rotate = self._prim.GetAttribute('xformOp:rotateXYZ').Get()
+        return [rotate[0], rotate[1], rotate[2]]
 
     def get_translate(self):
         """
         Returns the translation of the object.
         Args: None
-        Returns: Gf.Vec3d translation
+        Returns: [] translation
         """
         translate = self._prim.GetAttribute('xformOp:translate').Get()
         return [translate[0], translate[1], translate[2]]
@@ -72,7 +73,7 @@ class Object:
         """
         Returns the scale of the object.
         Args: None
-        Returns: Gf.Vec3d scale
+        Returns: [] scale
         """
         scale = self._prim.GetAttribute('xformOp:scale').Get()
         return [scale[0], scale[1], scale[2]]
@@ -109,6 +110,11 @@ class Object:
 
     def reset(self):
 
+        """
+        Resets the translation, scale, and rotation of the object back to its start.
+        Args: None
+        Returns: None
+        """
         self._translate = self._initial_translate
         self._rotation = self._initial_rotate
         self._scale = self._initial_scale
