@@ -63,6 +63,7 @@ import cv2
 import omni.kit.asset_converter
 import carb
 from omni.kit.window.popup_dialog.dialog import PopupDialog
+from .core.objects import Object
 
 
 class SelectedPrim:
@@ -369,6 +370,19 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         def sample():
             print("trying to sample")
             self.sample.sr.sample_all_sensors()
+        def testobject():
+            print("testing")
+            pos = [0,0,0]
+            rotation = [0,0,0]
+            usd_path = "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\Black_Oak.usd"
+
+            stage = self.usd_context.get_stage()
+            prim_name = "object"
+            parent_path = "/World"
+            scale = [1.0,1.0,1.0]
+            obj = Object(pos,rotation,scale, usd_path,prim_name,parent_path, stage)
+            print(obj.get_scale())
+
         self._sensor_rig_ui_inputs = {}
         with frame:
             with ui.VStack(spacing=5):
@@ -442,6 +456,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     'Sample sensors',
                     'sampe',
                     on_click_fn=sample,
+                )
+                
+                self._sensor_rig_ui_inputs['testobject'] = Button(
+                    'testobject',
+                    'sampe',
+                    on_click_fn=testobject,
                 )
 
     def init_semantics_in_scene(self):
