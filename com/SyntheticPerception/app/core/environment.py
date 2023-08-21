@@ -33,6 +33,7 @@ class IsaacHandler:
             update_stage_async,
             update_stage,
         )
+        import omni
         from omni.isaac.core import World
         from omni.isaac.quadruped.robots import Anymal
         from omni.isaac.core.utils.prims import define_prim, get_prim_at_path
