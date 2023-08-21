@@ -2,12 +2,15 @@ from pxr import Usd, Gf, UsdGeom
 
 from omni.isaac.core.utils.stage import (
     add_reference_to_stage,
-    is_stage_loading,
-    update_stage_async,
-    update_stage,
 )
 
 
+from pxr import (
+    UsdGeom,
+    Gf,
+    UsdPhysics,
+    Semantics,
+)  # pxr usd imports used to create cube
 class Object:
     def __init__(
         self,
@@ -18,6 +21,7 @@ class Object:
         prim_name,
         parent_path,
         stage,
+        semantic_class = "None" 
     ) -> None:
         self._initial_translate = position
         self._initial_rotate = rotation
@@ -50,6 +54,17 @@ class Object:
 
         self._scaleOp = self._xform.AddScaleOp()
         self._scaleOp.Set(self._scale)
+
+        self._semantic_class = semantic_class
+
+        self._prim.SetInstanceable(True)
+
+        collisionAPI = UsdPhysics.CollisionAPI.Apply(self._prim)
+        sem = Semantics.SemanticsAPI.Apply(self._prim, 'Semantics')
+        sem.CreateSemanticTypeAttr()
+        sem.CreateSemanticDataAttr()
+        sem.GetSemanticTypeAttr().Set('class')
+        sem.GetSemanticDataAttr().Set(self._semantic_class)
 
     def get_rotation(self) -> Gf.Vec3d:
         """
