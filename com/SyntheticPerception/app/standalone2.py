@@ -1,4 +1,4 @@
-from .core.environment import IsaacHandler
+from core.environment import IsaacHandler
 
 
 
