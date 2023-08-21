@@ -402,7 +402,7 @@ def main():
     Parse arguments and instantiate the ANYmal runner
 
     """
-    physics_dt = 1 / 200.0
+    physics_dt = 1 / 60.0
     render_dt = 1 / 60.0
 
     # envs.IsaacSim()
