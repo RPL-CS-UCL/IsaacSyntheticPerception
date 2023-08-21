@@ -3,14 +3,19 @@ from pxr import Usd, Gf, UsdGeom
 from omni.isaac.core.utils.stage import (
     add_reference_to_stage,
 )
-
-
+import omni
+from omni.isaac.dynamic_control import _dynamic_control
 from pxr import (
     UsdGeom,
     Gf,
     UsdPhysics,
     Semantics,
 )  # pxr usd imports used to create cube
+from pxr import Sdf, Usd
+
+from omni.physx.scripts import utils as physx_utils
+
+
 class Object:
     def __init__(
         self,
@@ -21,7 +26,7 @@ class Object:
         prim_name,
         parent_path,
         stage,
-        semantic_class = "None" 
+        semantic_class='None',
     ) -> None:
         self._initial_translate = position
         self._initial_rotate = rotation
@@ -30,9 +35,6 @@ class Object:
         self._usd_path = usd_path
         self._prim_name = prim_name
         self._prim_path = f'{parent_path}/{prim_name}'
-
-        self._rb = None
-        self._dc_interface = None
 
         self._stage = stage
         self._scale = Gf.Vec3d(scale[0], scale[1], scale[2])
@@ -59,12 +61,43 @@ class Object:
 
         self._prim.SetInstanceable(True)
 
-        collisionAPI = UsdPhysics.CollisionAPI.Apply(self._prim)
-        sem = Semantics.SemanticsAPI.Apply(self._prim, 'Semantics')
-        sem.CreateSemanticTypeAttr()
-        sem.CreateSemanticDataAttr()
-        sem.GetSemanticTypeAttr().Set('class')
-        sem.GetSemanticDataAttr().Set(self._semantic_class)
+        # collisionAPI = UsdPhysics.CollisionAPI.Apply(self._prim)
+        # sem = Semantics.SemanticsAPI.Apply(self._prim, 'Semantics')
+        # sem.CreateSemanticTypeAttr()
+        # sem.CreateSemanticDataAttr()
+        # sem.GetSemanticTypeAttr().Set('class')
+        # sem.GetSemanticDataAttr().Set(self._semantic_class)
+        # physx_utils.setRigidBody(self._prim, "sdf", False)
+        self._prim.CreateAttribute("physxsdfcollision:resolution", Sdf.ValueTypeNames.Int, True).Set(256)
+        # meshCollision = PhysxSchema.PhysxSDFMeshCollisionAPI.Apply(
+        # self._prim)
+        # meshCollision.CreateSdfResolutionAttr().Set(256)
+        # omni.kit.commands.execute('ChangeProperty',
+        #     prop_path=Sdf.Path('/World/object.physxSDFMeshCollision:sdfResolution'),
+        #     value=260,
+        #     prev=257,)
+        # omni.kit.commands.execute('ChangeProperty',
+        #     prop_path=Sdf.Path('/World/object.physics:approximation'),
+        #     value='sdf',
+        #     prev=None)
+
+        # omni.kit.commands.execute(
+        #             "AddPhysicsComponent",
+        #             usd_prim=stage.GetPrimAtPath(self._prim_path),
+        #             component="PhysicsRigidBodyAPI",
+        #         )
+        #
+        # omni.kit.commands.execute(
+        #     "ChangeProperty",
+        #     prop_path=Sdf.Path(f"{self._prim_path}.physxRigidBody:disableGravity"),
+        #     value=True,
+        #     prev=None,
+        # )
+        self._dc_interface = (
+            _dynamic_control.acquire_dynamic_control_interface()
+        )
+        self._rb = self._dc_interface.get_rigid_body(self._prim_path)
+        print(self._prim.GetAttributes())
 
     def get_rotation(self) -> Gf.Vec3d:
         """
