@@ -71,7 +71,18 @@ class Object:
         setRigidBody(self._prim, "sdfMesh", False)
         self._dc_interface = _dynamic_control.acquire_dynamic_control_interface()
         self._rb = self._dc_interface.get_rigid_body(self._prim_path)
-        print(self._prim.GetAttributes())
+
+    def apply_velocity(
+            self, linear_veloc, angular_veloc ) -> None:
+        """
+        Applys angular and or linear velocity to the object
+        Args: linear_veloc: list[float], angular_veloc: list[float]
+        Returns: None
+        """
+
+        self._rb = self._dc_interface.get_rigid_body(self._prim_path)
+        self._dc_interface.set_rigid_body_linear_velocity(self._rb, linear_veloc)
+        self._dc_interface.set_rigid_body_angular_velocity(self._rb, angular_veloc)
 
     def get_rotation(self) -> Gf.Vec3d:
         """

@@ -64,6 +64,7 @@ import omni.kit.asset_converter
 import carb
 from omni.kit.window.popup_dialog.dialog import PopupDialog
 from .core.objects import Object
+from .core.rig import Rig
 
 
 class SelectedPrim:
@@ -369,7 +370,11 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             )
         def sample():
             print("trying to sample")
-            self.sample.sr.sample_all_sensors()
+            # self.sample.sr.sample_all_sensors()
+
+            self.testrig.apply_velocity([10999,0,0],[100000,0,0])
+
+
         def testobject():
             print("testing")
             pos = [0,0,0]
@@ -382,8 +387,11 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             scale = [1.0,1.0,1.0]
             obj = Object(pos,rotation,scale, usd_path,prim_name,parent_path, stage)
             print(obj._prim.GetAttributes())
-            x =stage.GetPrimAtPath("/World/object")
-            print(x.GetAttributes())
+            # x =stage.GetPrimAtPath("/World/object")
+            # print(x.GetAttributes())
+            
+
+            self.testrig= Rig(pos,rotation,scale, usd_path,"RIG",parent_path, stage)
 
         self._sensor_rig_ui_inputs = {}
         with frame:
