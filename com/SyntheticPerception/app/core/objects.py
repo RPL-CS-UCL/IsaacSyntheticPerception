@@ -35,11 +35,12 @@ class Object:
         semantic_class="None",
         instanceable=False,
         visibility = "inherited",
-        gravity = True
+        disable_gravity = True
     ) -> None:
         self._initial_translate = position
         self._initial_rotate = rotation
         self._initial_scale = scale
+        self._initial_orientation = Gf.Quatf(1.0)
 
         self._usd_path = usd_path
         self._prim_name = prim_name
@@ -49,55 +50,60 @@ class Object:
         self._scale = Gf.Vec3d(scale[0], scale[1], scale[2])
         self._translate = Gf.Vec3d(position[0], position[1], position[2])
         self._rotate = Gf.Vec3d(rotation[0], rotation[1], rotation[2])
+        self._orientation = self._initial_orientation
 
-        print("here")
-        print(self._prim_name, "   ", usd_path)
         if not usd_path is None:
             add_reference_to_stage(usd_path=self._usd_path, prim_path=self._prim_path)
         else:
-            # self._prim = XFormPrim(
-            #     name=self._prim_name,
-            #     prim_path=self._prim_path,
-            #     position=position,
-            # )
+            omni.kit.commands.execute('CreateMeshPrimWithDefaultXform',
+                prim_type='Cube',
+                prim_path=self._prim_path)
 
-            self._prim = DynamicCuboid(
-                    prim_path=self._prim_path,# The prim path of the cube in the USD stage
-                    name=self._prim_name,  # The unique name used to retrieve the object from the scene later on
-                    position=position,
-                    scale=scale
-                )
 
         self._prim = self._stage.GetPrimAtPath(self._prim_path)
         self._xform = UsdGeom.Xformable(self._prim)
-
         self._semantic_class = semantic_class
+
         if instanceable:
             self._prim.SetInstanceable(True)
 
         if not usd_path is None:
             self._translateOp = self._xform.AddTranslateOp()
-            self._translateOp.Set(self._translate)
 
-            self._rotateXYZOp = self._xform.AddRotateXYZOp()
-            self._rotateXYZOp.Set(self._rotate)
+            self._orientOp = self._xform.AddOrientOp()
 
             self._scaleOp = self._xform.AddScaleOp()
-            self._scaleOp.Set(self._scale)
+
+        self._translateOp =self._prim.GetAttribute("xformOp:translate")# tmp[0]
+        self._orientOp = self._prim.GetAttribute("xformOp:orient")
+        self._scaleOp =  self._prim.GetAttribute("xformOp:scale")
+
+
+        self._translateOp.Set(self._translate)
+        self._orientOp.SetTypeName(Sdf.ValueTypeNames.Quatf)
+        self._orientOp.Set(self._orientation)
+        self._scaleOp.Set(self._scale)
 
         sem = Semantics.SemanticsAPI.Apply(self._prim, "Semantics")
         sem.CreateSemanticTypeAttr()
         sem.CreateSemanticDataAttr()
         sem.GetSemanticTypeAttr().Set("class")
         sem.GetSemanticDataAttr().Set(self._semantic_class)
+
         if usd_path:
             setRigidBody(self._prim, "sdfMesh", False)
-            # setRigidBody(self._prim, "convexHull", False)
+        else:
+            setRigidBody(self._prim, "convexHull", False)
+
+        self._disable_gravity = disable_gravity
         self._dc_interface = _dynamic_control.acquire_dynamic_control_interface()
         self._rb = self._dc_interface.get_rigid_body(self._prim_path)
 
         self._prim.GetAttribute('visibility').Set(visibility)
-        self._prim.GetAttribute('physxRigidBody:disableGravity').Set(gravity)
+
+        self._prim.GetAttribute('physxRigidBody:disableGravity').Set(self._disable_gravity)
+
+        
 
     def apply_velocity(self, linear_veloc, angular_veloc) -> None:
         """
@@ -118,6 +124,15 @@ class Object:
         """
         rotate = self._prim.GetAttribute("xformOp:rotateXYZ").Get()
         return [rotate[0], rotate[1], rotate[2]]
+
+    def get_orientation(self) -> Gf.Vec3d:
+        """
+        Returns the orientation of the object.
+        Args: None
+        Returns: [] rotationXYZ
+        """
+        orient = self._prim.GetAttribute("xformOp:orient").Get()
+        return [orient[0], orient[1], orient[2], orient[3]]
 
     def get_translate(self):
         """
@@ -155,6 +170,7 @@ class Object:
         self._translate = Gf.Vec3d(value[0], value[1], value[2])
         self._translateOp.Set(self._translate)
 
+
     def set_rotateXYZ(self, value):
         """
         Sets the rotation of the object.
@@ -162,7 +178,16 @@ class Object:
         Returns: None
         """
         self._rotate = Gf.Vec3d(value[0], value[1], value[2])
-        self._rotateXYZOp.Set(self._rotate)
+        # self._rotateXYZOp.Set(self._rotate)
+
+    def set_orient(self, value):
+        """
+        Sets the orientt of the object.
+        Args: [] rotation
+        Returns: None
+        """
+        self._orientation = Gf.Quatf(value[0], value[1], value[2],value[3])
+        self._orientOp.Set(self._orientation)
 
     def reset(self):
         """

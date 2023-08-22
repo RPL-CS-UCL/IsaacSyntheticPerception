@@ -15,39 +15,16 @@ from ..Sensors.Camera import DepthCamera
 class Rig(Object):
     def __init__(
         self,
-
-        position,
-        rotation,
-        scale,
-        prim_name,
-        parent_path,
-        stage,
-
-        usd_path=None,
-        semantic_class="None",
-
-        visibility = True,
-        gravity = True,
-        instanceable=False,
-        rig_file_path = "",
+        rig_file_path="",
+        *args,
+        **kwargs,
 
     ) -> None:
-        super().__init__(
-            position,
-            rotation,
-            scale,
-            prim_name,
-            parent_path,
-            stage,
-            usd_path=usd_path,
-            semantic_class=semantic_class,
-            instanceable=instanceable,
+        super().__init__(*args, **kwargs)
 
-            visibility = visibility,
-            gravity =gravity 
-        )
+        # lock axis of rotation
+        self._prim.GetAttribute('physxRigidBody:lockedRotAxis').Set(3)
 
-        # init rig related stuff
         # add rigid body with certain collider
         self._velocity = 0
         self._sample_rate = 0
@@ -84,9 +61,8 @@ class Rig(Object):
             self._velocity = data["VELOCITY"]
             self._sample_rate = data["SAMPLE_RATE"]
 
-            # self.create_rig(np.array(pos), np.asarray(ori), stage)
             sensors = data["SENSORS"]
-            print(sensors)
+            # print(sensors)
             for key in sensors:
                 if key == "LIDAR":
                     for sensor_id in sensors[key]["instances"]:
