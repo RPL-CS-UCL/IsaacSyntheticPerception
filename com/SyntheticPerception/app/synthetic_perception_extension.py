@@ -385,13 +385,14 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             prim_name = "object222"
             parent_path = "/World"
             scale = [1.0,1.0,1.0]
-            obj = Object(pos,rotation,scale, usd_path,prim_name,parent_path, stage)
+            obj = Object(pos,rotation,scale, prim_name,parent_path, stage,usd_path=usd_path, instanceable=True)
             print(obj._prim.GetAttributes())
             # x =stage.GetPrimAtPath("/World/object")
             # print(x.GetAttributes())
             
 
-            self.testrig= Rig(pos,rotation,scale, usd_path,"RIG",parent_path, stage)
+            self.testrig = Rig(pos,rotation,scale,"RIG",parent_path,stage,rig_file_path="/home/jon/Downloads/sensors.json",gravity=False,visibility="invisible")
+            # self.testrig= Rig(pos,rotation,scale, "RIG",parent_path, stage,rig_file_path="/home/jon/Downloads/sensors.json")
 
         self._sensor_rig_ui_inputs = {}
         with frame:

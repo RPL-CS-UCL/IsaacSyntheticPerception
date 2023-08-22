@@ -6,6 +6,7 @@ import numpy as np
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 import json
 
+from pxr import Sdf
 from omni.isaac.core.utils.stage import get_stage_units
 from ..Sensors.LIDAR import Lidar
 from ..Sensors.IMU import IMUSensor
@@ -14,28 +15,44 @@ from ..Sensors.Camera import DepthCamera
 class Rig(Object):
     def __init__(
         self,
+
         position,
         rotation,
         scale,
-        usd_path,
         prim_name,
         parent_path,
         stage,
+
+        usd_path=None,
         semantic_class="None",
+
+        visibility = True,
+        gravity = True,
+        instanceable=False,
+        rig_file_path = "",
+
     ) -> None:
         super().__init__(
             position,
             rotation,
             scale,
-            usd_path,
             prim_name,
             parent_path,
             stage,
-            semantic_class,
+            usd_path=usd_path,
+            semantic_class=semantic_class,
+            instanceable=instanceable,
+
+            visibility = visibility,
+            gravity =gravity 
         )
 
         # init rig related stuff
         # add rigid body with certain collider
+        self._velocity = 0
+        self._sample_rate = 0
+        self._sensors = []
+        self.create_rig_from_file(rig_file_path)
 
     def ray_cast(self, origin, direction, distance):
         """
@@ -53,37 +70,19 @@ class Rig(Object):
 
         return None
 
-    def create_rig_from_file(self, path, stage):
-        pos, ori = self.load_sensors_from_file(path, stage)
+    def create_rig_from_file(self, path):
+        pos, ori = self.load_sensors_from_file(path)
         position = np.array([pos[0], pos[1], pos[2]])
         orientation = np.array([ori[0], ori[1], ori[2], ori[3]])
-        self._prim = XFormPrim(
-            name=self._prim_name,
-            prim_path=self._prim_path,
-            position=position / get_stage_units(),
-            orientation=orientation,
-        )
-        omni.kit.commands.execute(
-            "AddPhysicsComponent",
-            usd_prim=stage.GetPrimAtPath(self._prim_path),
-            component="PhysicsRigidBodyAPI",
-        )
 
-        omni.kit.commands.execute(
-            "ChangeProperty",
-            prop_path=Sdf.Path(f"{self._prim_path}.physxRigidBody:disableGravity"),
-            value=True,
-            prev=None,
-        )
-
-    def load_sensors_from_file(self, file_path, stage):
+    def load_sensors_from_file(self, file_path):
         with open(file_path, "r+") as infile:
             data = json.load(infile)
             # print(data)
             pos = data["POSITION"]
             ori = data["ORIENTATION"]
-            self.velocity = data["VELOCITY"]
-            self.sample_rate = data["SAMPLE_RATE"]
+            self._velocity = data["VELOCITY"]
+            self._sample_rate = data["SAMPLE_RATE"]
 
             # self.create_rig(np.array(pos), np.asarray(ori), stage)
             sensors = data["SENSORS"]
@@ -114,5 +113,5 @@ class Rig(Object):
             return pos, ori
 
     def add_sensor_to_rig(self, sensor):
-        self.__sensors.append(sensor)
-        self.__sensors[-1].init_sensor(self._prim_path)
+        self._sensors.append(sensor)
+        self._sensors[-1].init_sensor(self._prim_path)

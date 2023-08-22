@@ -1,5 +1,7 @@
 from pxr import Usd, Gf, UsdGeom
 
+from omni.isaac.core.utils.stage import get_stage_units
+from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.isaac.core.utils.stage import (
     add_reference_to_stage,
 )
@@ -17,6 +19,7 @@ from pxr import Sdf, Usd
 # from physxutils import *
 # import .physxutils
 from .physxutils import setRigidBody
+from omni.isaac.core.objects import DynamicCuboid
 
 
 class Object:
@@ -25,11 +28,14 @@ class Object:
         position,
         rotation,
         scale,
-        usd_path,
         prim_name,
         parent_path,
         stage,
+        usd_path=None,
         semantic_class="None",
+        instanceable=False,
+        visibility = "inherited",
+        gravity = True
     ) -> None:
         self._initial_translate = position
         self._initial_rotate = rotation
@@ -44,36 +50,56 @@ class Object:
         self._translate = Gf.Vec3d(position[0], position[1], position[2])
         self._rotate = Gf.Vec3d(rotation[0], rotation[1], rotation[2])
 
-        add_reference_to_stage(usd_path=self._usd_path, prim_path=self._prim_path)
+        print("here")
+        print(self._prim_name, "   ", usd_path)
+        if not usd_path is None:
+            add_reference_to_stage(usd_path=self._usd_path, prim_path=self._prim_path)
+        else:
+            # self._prim = XFormPrim(
+            #     name=self._prim_name,
+            #     prim_path=self._prim_path,
+            #     position=position,
+            # )
+
+            self._prim = DynamicCuboid(
+                    prim_path=self._prim_path,# The prim path of the cube in the USD stage
+                    name=self._prim_name,  # The unique name used to retrieve the object from the scene later on
+                    position=position,
+                    scale=scale
+                )
 
         self._prim = self._stage.GetPrimAtPath(self._prim_path)
         self._xform = UsdGeom.Xformable(self._prim)
 
-        self._translateOp = self._xform.AddTranslateOp()
-        self._translateOp.Set(self._translate)
-
-        self._rotateXYZOp = self._xform.AddRotateXYZOp()
-        self._rotateXYZOp.Set(self._rotate)
-
-        self._scaleOp = self._xform.AddScaleOp()
-        self._scaleOp.Set(self._scale)
-
         self._semantic_class = semantic_class
+        if instanceable:
+            self._prim.SetInstanceable(True)
 
-        self._prim.SetInstanceable(True)
+        if not usd_path is None:
+            self._translateOp = self._xform.AddTranslateOp()
+            self._translateOp.Set(self._translate)
 
-        # collisionAPI = UsdPhysics.CollisionAPI.Apply(self._prim)
+            self._rotateXYZOp = self._xform.AddRotateXYZOp()
+            self._rotateXYZOp.Set(self._rotate)
+
+            self._scaleOp = self._xform.AddScaleOp()
+            self._scaleOp.Set(self._scale)
+
         sem = Semantics.SemanticsAPI.Apply(self._prim, "Semantics")
         sem.CreateSemanticTypeAttr()
         sem.CreateSemanticDataAttr()
         sem.GetSemanticTypeAttr().Set("class")
         sem.GetSemanticDataAttr().Set(self._semantic_class)
-        setRigidBody(self._prim, "sdfMesh", False)
+        if usd_path:
+            setRigidBody(self._prim, "sdfMesh", False)
+            # setRigidBody(self._prim, "convexHull", False)
         self._dc_interface = _dynamic_control.acquire_dynamic_control_interface()
         self._rb = self._dc_interface.get_rigid_body(self._prim_path)
 
-    def apply_velocity(
-            self, linear_veloc, angular_veloc ) -> None:
+        self._prim.GetAttribute('visibility').Set(visibility)
+        self._prim.GetAttribute('physxRigidBody:disableGravity').Set(gravity)
+
+    def apply_velocity(self, linear_veloc, angular_veloc) -> None:
         """
         Applys angular and or linear velocity to the object
         Args: linear_veloc: list[float], angular_veloc: list[float]
