@@ -1,0 +1,3 @@
+[submodule "com/SyntheticPerception/app/dreamer"]
+	path = com/SyntheticPerception/app/dreamer
+	url = git@github.com:RPL-CS-UCL/dreamerv3.git
