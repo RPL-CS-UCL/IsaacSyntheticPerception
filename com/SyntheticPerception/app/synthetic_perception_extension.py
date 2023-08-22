@@ -374,14 +374,16 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             print("testing")
             pos = [0,0,0]
             rotation = [0,0,0]
-            usd_path = "C:\\Users\\jonem\\Documents\\Isaac\\content\\ov-vegetation3dpack-01-100.1.0\\Trees\\Black_Oak.usd"
+            usd_path = "/home/jon/Documents/IsaacContent/ov-vegetation3dpack-01.100.1.0.linux-x86_64-ent-package/Trees/Black_Oak.usd"
 
             stage = self.usd_context.get_stage()
-            prim_name = "object"
+            prim_name = "object222"
             parent_path = "/World"
             scale = [1.0,1.0,1.0]
             obj = Object(pos,rotation,scale, usd_path,prim_name,parent_path, stage)
-            print(obj.get_scale())
+            print(obj._prim.GetAttributes())
+            x =stage.GetPrimAtPath("/World/object")
+            print(x.GetAttributes())
 
         self._sensor_rig_ui_inputs = {}
         with frame:
