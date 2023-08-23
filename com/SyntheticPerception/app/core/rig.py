@@ -105,7 +105,8 @@ class Agent(Object):
 
         if is_dead:
             self.reset()
-            return
+            return False
+        return True
 
     def _death_check(self):
         """
