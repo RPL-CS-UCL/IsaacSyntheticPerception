@@ -26,8 +26,6 @@ from gym import spaces
 TO DO
 
 
-fix the mappings from discrete to velocities
-fix the info and get observations
 sort the reward
 """
 
@@ -42,7 +40,12 @@ class Environment:
         self._step = 0
         self._objects = []
         self._agents = []
+
+
+
         self._agent = None
+        self._goal_pos = [0,0,0]
+
         physics_dt = 1/60
         render_dt = 1/60
         self._world = World(
@@ -54,7 +57,7 @@ class Environment:
         self._size = size
         self._action_repeat = action_repeat
         self.reward_range = [-np.inf, np.inf]
-        self.action_space = spaces.Discrete(4)
+        self.action_space = spaces.Discrete(6)
 
         """
 
@@ -68,16 +71,17 @@ class Environment:
 
         self._action_to_direction = {
             # linear
-            0: np.array([1, 0, 0], [0, 0, 0]),
-            1: np.array([0, 1, 0]),
-            2: np.array([-1, 0, 0]),
-            3: np.array([0, -1, 0]),
+            0: np.array([1, 0, 0], [0, 0, 0]),#forward
+            1: np.array([-1, 0, 0], [0, 0, 0]),#back
+            2: np.array([0, 1, 0], [0, 0, 0]),#left
+            3: np.array([0, -1, 0], [0, 0, 0]),#right
             # angular
-            4: np.array([0, 0, 0], [1, 1, 1]),
-            5: np.array([0, 1, 0]),
-            6: np.array([-1, 0, 0]),
-            7: np.array([0, -1, 0]),
+            4: np.array([0, 0, 0], [0, 0, 1]),#rotate right
+            5: np.array([0, 0, 0],[0, 0, -1]),#rotate left
         }
+
+    def setup_objects_agents_goals(self):
+        pass
 
     @property
     def observation_space(self):
@@ -87,18 +91,18 @@ class Environment:
         )
         return gym.spaces.Dict(spaces)
 
-    @property
-    def action_space(self):
-        return self.action_space
+    # @property
+    # def action_space(self):
+    #     return self.action_space
 
     def _get_obs(self):
         # return {"image": np.zeroslike(self._size)}
         obs = self._agent.get_observations()[0]
-        return
+        return {"image": obs}
 
     def _get_info(self):
         agent_pos = self._agent.get_translation()
-        dist_to_target = 0 - agent_pos
+        dist_to_target = self._goal_pos - agent_pos
         return {"discount": 0, "dist_to_target":0}
 
     def step(self, action):
@@ -112,16 +116,18 @@ class Environment:
         self._world.step(render=True)
 
         # ensure agent doesnt leave, if it does kill and reset
-        goal = [0, 0, 0]
         # check if agent is at goal
         terminated = not agent_alive
-
 
         obs = self._get_obs()
         info = self._get_info()
 
         # set reward as dist to goal
-        reward = 1
+        reward = 0  
+        threshold = 0.5
+        if info["dist_to_target"] < threshold:
+            reward = 1
+            terminated = True
 
         return obs, reward, terminated, False, info
 
