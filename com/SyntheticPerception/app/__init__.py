@@ -25,7 +25,7 @@ from gym.envs.registration import register
 
 
 register(
-    id='isaac_sim',
+    id='isaac-v0',
     entry_point='core.environment:Environment',
     max_episode_steps=300,
 )

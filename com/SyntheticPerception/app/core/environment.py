@@ -30,12 +30,12 @@ sort the reward
 """
 
 
-class Environment:
+class Environment(gym.Env):
     """
     Class that represents the world, agents, and, objects that can exist in an environment
     """
 
-    def __init__(self, name, action_repeat=1, size=(64, 64), seed=0) -> None:
+    def __init__(self, action_repeat=1, size=(64, 64), seed=0) -> None:
         # self._world = World()
         self._step = 0
         self._objects = []
@@ -69,16 +69,17 @@ class Environment:
 
         """
 
+        """  
         self._action_to_direction = {
-            # linear
-            0: np.array([1, 0, 0], [0, 0, 0]),#forward
-            1: np.array([-1, 0, 0], [0, 0, 0]),#back
-            2: np.array([0, 1, 0], [0, 0, 0]),#left
-            3: np.array([0, -1, 0], [0, 0, 0]),#right
-            # angular
-            4: np.array([0, 0, 0], [0, 0, 1]),#rotate right
-            5: np.array([0, 0, 0],[0, 0, -1]),#rotate left
-        }
+                # linear
+                0: np.array([1, 0, 0], [0, 0, 0]),#forward
+                1: np.array([-1, 0, 0], [0, 0, 0]),#back
+                2: np.array([0, 1, 0], [0, 0, 0]),#left
+                3: np.array([0, -1, 0], [0, 0, 0]),#right
+                # angular
+                4: np.array([0, 0, 0], [0, 0, 1]),#rotate right
+                5: np.array([0, 0, 0],[0, 0, -1]),#rotate left
+            }"""
 
     def setup_objects_agents_goals(self):
         pass
