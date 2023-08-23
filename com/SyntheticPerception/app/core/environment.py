@@ -38,6 +38,11 @@ class Environment:
         pass
 
     def step(self):
+        for agent in self._agents:
+            agent.getobs()
+            agent.step()
+
+
         pass
 
     def reset(self):

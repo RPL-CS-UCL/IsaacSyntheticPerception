@@ -76,6 +76,19 @@ class Agent(Object):
         position = np.array([pos[0], pos[1], pos[2]])
         orientation = np.array([ori[0], ori[1], ori[2], ori[3]])
         return position, orientation
+    
+    def get_observations(self):
+        """
+        Gets the observations from the current agents sensors
+        Args: None
+        Returns: Sensor data []
+        """
+        data = []
+        for sensor in self._sensors:
+            data.append(sensor.sample_sensor_return())
+
+        return data
+
 
     def step(self, step_size, linear_veloc, angular_veloc):
         """
@@ -95,6 +108,7 @@ class Agent(Object):
         if is_dead:
             self.reset()
             return
+
 
     def _death_check(self):
         """
@@ -174,3 +188,7 @@ class Agent(Object):
         """
         super().reset()
         # reset other values relating to agent here
+        
+        self._steps_since_moved = 0
+        self._last_translate = self._initial_translate
+        self._last_orientation = self._initial_orientation

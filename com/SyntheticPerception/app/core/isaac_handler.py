@@ -21,7 +21,7 @@ import carb
 from omni.isaac.core.utils.extensions import enable_extension
 from core.environment import Environment
 from core.objects import Object
-from core.rig import Rig
+from core.rig import Agent 
 class IsaacHandler:
     def __init__(self, physics_dt, render_dt, simulation_app) -> None:
         self.simulation_app = simulation_app
@@ -47,39 +47,36 @@ class IsaacHandler:
             'AgentInteract', callback_fn=self.agent_interact
         )
 
-        pos = [100.0, 0.0, 0.0]
-        orientation = [0, 0, 0,0]
-        usd_path = "/home/stuart/Documents/ov-vegetation3dpack-01-100.1.1/Trees/Black_Oak.usd"
-
-        prim_name = "object222"
-        parent_path = "/World"
-        scale = [1.0, 1.0, 1.0]
-        obj = Object(
-            pos,
-            orientation,
-            scale,
-            prim_name,
-            parent_path,
-            self._stage,
-            usd_path=usd_path,
-            instanceable=True,
-        )
-        # print(obj._prim.GetAttributes())
-        # x =stage.GetPrimAtPath("/World/object")
-        # print(x.GetAttributes())
-
-        self.testrig = Rig(
-            "/home/stuart/Downloads/sensors.json",
-            pos,
-            orientation,
-            scale,
-            "RIG",
-            parent_path,
-            self._stage,
-            disable_gravity=True,
-            visibility="invisible",
-
-        )
+        # pos = [100.0, 0.0, 0.0]
+        # orientation = [0, 0, 0,0]
+        # usd_path = "/home/stuart/Documents/ov-vegetation3dpack-01-100.1.1/Trees/Black_Oak.usd"
+        #
+        # prim_name = "object222"
+        # parent_path = "/World"
+        # scale = [1.0, 1.0, 1.0]
+        # obj = Object(
+        #     pos,
+        #     orientation,
+        #     scale,
+        #     prim_name,
+        #     parent_path,
+        #     self._stage,
+        #     usd_path=usd_path,
+        #     instanceable=True,
+        # )
+        #
+        # self.testrig = Rig(
+        #     "/home/stuart/Downloads/sensors.json",
+        #     pos,
+        #     orientation,
+        #     scale,
+        #     "RIG",
+        #     parent_path,
+        #     self._stage,
+        #     disable_gravity=True,
+        #     visibility="invisible",
+        #
+        # )
 
     def agent_interact(self, step_size):
         pass
