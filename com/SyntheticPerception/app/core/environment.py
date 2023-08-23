@@ -20,10 +20,14 @@ import carb
 from omni.isaac.core.utils.extensions import enable_extension
 
 class Environment:
+    """
+    Class that represents the world, agents, and, objects that can exist in an environment
+    """
     def __init__(self) -> None:
         # self._world = World()
         self._step = 0
         self._objects = []
+        self._agents = []
 
         # ==================== Isaac params
 
@@ -37,6 +41,14 @@ class Environment:
         pass
 
     def reset(self):
-        pass
+        """
+        Resets all objects and agents in the environment
+        Args: None
+        Returns: None
+        """
+        for obj in self._objects:
+            obj.reset()
+        for agent in self._agents:
+            agent.reset()
 
 
