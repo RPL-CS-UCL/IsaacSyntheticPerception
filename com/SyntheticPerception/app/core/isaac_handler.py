@@ -19,6 +19,9 @@ import omni.appwindow  # Contains handle to keyboard
 import numpy as np
 import carb
 from omni.isaac.core.utils.extensions import enable_extension
+from .environment import Environment
+from .objects import Object
+from .rig import Rig
 class IsaacHandler:
     def __init__(self, physics_dt, render_dt) -> None:
         self.simulation_app = SimulationApp({'headless': False})
@@ -42,6 +45,40 @@ class IsaacHandler:
         self._appwindow = omni.appwindow.get_default_app_window()
         self._world.add_physics_callback(
             'AgentInteract', callback_fn=self.agent_interact
+        )
+
+        pos = [0, 0, 0]
+        orientation = [0, 0, 0,0]
+        usd_path = "/home/jon/Documents/IsaacContent/ov-vegetation3dpack-01.100.1.0.linux-x86_64-ent-package/Trees/Black_Oak.usd"
+
+        prim_name = "object222"
+        parent_path = "/World"
+        scale = [1.0, 1.0, 1.0]
+        obj = Object(
+            pos,
+            orientation,
+            scale,
+            prim_name,
+            parent_path,
+            self._stage,
+            usd_path=usd_path,
+            instanceable=True,
+        )
+        # print(obj._prim.GetAttributes())
+        # x =stage.GetPrimAtPath("/World/object")
+        # print(x.GetAttributes())
+
+        self.testrig = Rig(
+            "/home/jon/Downloads/sensors.json",
+            pos,
+            orientation,
+            scale,
+            "RIG",
+            parent_path,
+            self._stage,
+            disable_gravity=True,
+            visibility="invisible",
+
         )
 
     def agent_interact(self, step_size):
