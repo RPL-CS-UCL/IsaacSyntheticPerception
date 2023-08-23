@@ -10,12 +10,22 @@
 
 import importlib
 import sys
-print ("[CUSTOM] Reloading...")
+
+print('[CUSTOM] Reloading...')
 L = list(sys.modules.keys())
 for k in L:
-  if "com.copycat" in k:
-    print (k)
-    importlib.reload(sys.modules[k])
-from .synthetic_perception import SyntheticPerception 
-from .synthetic_perception_extension import SyntheticPerceptionExtension 
+    if 'com.copycat' in k:
+        print(k)
+        importlib.reload(sys.modules[k])
+from .synthetic_perception import SyntheticPerception
+from .synthetic_perception_extension import SyntheticPerceptionExtension
+
 # from .sensors import Lidar
+from gym.envs.registration import register
+
+
+register(
+    id='isaac_sim',
+    entry_point='core.environment:Environment',
+    max_episode_steps=300,
+)
