@@ -196,6 +196,8 @@ class Object:
         self._orientation = value
         self._orientOp.Set(self._orientation)
 
+
+
     def reset(self):
         """
         Resets the translation, scale, and rotation of the object back to its start.
@@ -208,6 +210,23 @@ class Object:
         self.set_scale(self._scale)
         self.set_translate(self._translate)
         self.set_orient(self._orientation)
+
+    def change_start_and_reset(self, translate=None,scale=None,orientation=None):
+        """
+        Changes and resets the object to a new initial positon,orientation,scale
+        Args: translate [], scale [], orient []
+        Returns: None
+        """
+        if translate:
+            self._initial_translate = translate
+
+        if scale:
+            self._initial_scale = scale
+
+        if orientation:
+            self._initial_orientation = orientation
+
+        self.reset()
 
     def __repr__(self) -> str:
         output = f'===== object print ===== \nPrim Path: {self._prim_path} \nRotation: {self.get_rotation()} \nPosition: {self.get_translate()} \nscale: {self.get_rotation()}'

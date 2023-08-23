@@ -44,7 +44,7 @@ class Environment:
 
 
         self._agent = None
-        self._goal_pos = [0,0,0]
+        self._goal_object = None
 
         physics_dt = 1/60
         render_dt = 1/60
@@ -106,6 +106,7 @@ class Environment:
         return {"discount": 0, "dist_to_target":0}
 
     def step(self, action):
+        self._goal_pos = self._goal_object.get_translation()
         unpack_action = self._action_to_direction[action]
         linear_veloc = unpack_action[0]
         angular_veloc = unpack_action[1]
