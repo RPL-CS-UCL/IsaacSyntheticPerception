@@ -18,8 +18,9 @@ from pxr import Sdf, Usd
 # from omni.physx.scripts import utils as physx_utils
 # from physxutils import *
 # import .physxutils
-from .physxutils import setRigidBody
+from core.physxutils import setRigidBody
 from omni.isaac.core.objects import DynamicCuboid
+import numpy as np
 
 
 class Object:
@@ -102,7 +103,7 @@ class Object:
 
         self._prim.GetAttribute('physxRigidBody:disableGravity').Set(self._disable_gravity)
         self.set_scale(self._scale)
-        self.set_orient(self._orientation)
+        self.set_orient_quat(self._orientation)
         self.set_translate(self._translate)
 
         
@@ -184,11 +185,20 @@ class Object:
 
     def set_orient(self, value):
         """
-        Sets the orientt of the object.
+        Sets the orientation of the object.
         Args: [] rotation
         Returns: None
         """
-        self._orientation = Gf.Quatf(value[0], value[1], value[2],value[3])
+        #value = value.astype(np.float32)
+        self._orientation = Gf.Quatf(float(value[0]), float(value[1]), float(value[2]),float(value[3]))
+        self._orientOp.Set(self._orientation)
+    def set_orient_quat(self, value):
+        """
+        Sets the orientation of the object.
+        Args: [] rotation
+        Returns: None
+        """
+        self._orientation =value
         self._orientOp.Set(self._orientation)
 
     def reset(self):

@@ -8,9 +8,9 @@ import json
 
 from pxr import Sdf
 from omni.isaac.core.utils.stage import get_stage_units
-from ..Sensors.LIDAR import Lidar
-from ..Sensors.IMU import IMUSensor
-from ..Sensors.Camera import DepthCamera
+from Sensors.LIDAR import Lidar
+from Sensors.IMU import IMUSensor
+from Sensors.Camera import DepthCamera
 
 class Rig(Object):
     def __init__(
@@ -32,6 +32,7 @@ class Rig(Object):
         self._initial_translate, self._initial_orientation = self.create_rig_from_file(rig_file_path)
         self._translate = self._initial_translate
         self._orientation = self._initial_orientation
+        print(type(self._orientation))
         self.set_translate(self._translate)
         self.set_orient(self._orientation)
 
