@@ -43,52 +43,23 @@ class IsaacHandler:
     def setup(self):
 
         self._appwindow = omni.appwindow.get_default_app_window()
-        self._world.add_physics_callback(
-            'AgentInteract', callback_fn=self.agent_interact
-        )
-
-        # pos = [100.0, 0.0, 0.0]
-        # orientation = [0, 0, 0,0]
-        # usd_path = "/home/stuart/Documents/ov-vegetation3dpack-01-100.1.1/Trees/Black_Oak.usd"
-        #
-        # prim_name = "object222"
-        # parent_path = "/World"
-        # scale = [1.0, 1.0, 1.0]
-        # obj = Object(
-        #     pos,
-        #     orientation,
-        #     scale,
-        #     prim_name,
-        #     parent_path,
-        #     self._stage,
-        #     usd_path=usd_path,
-        #     instanceable=True,
-        # )
-        #
-        # self.testrig = Rig(
-        #     "/home/stuart/Downloads/sensors.json",
-        #     pos,
-        #     orientation,
-        #     scale,
-        #     "RIG",
-        #     parent_path,
-        #     self._stage,
-        #     disable_gravity=True,
-        #     visibility="invisible",
-        #
+        # self._world.add_physics_callback(
+        #     'AgentInteract', callback_fn=self.agent_interact
         # )
 
-    def agent_interact(self, step_size):
-        pass
+        self.env.setup()
+
 
     def step(self, render):
         if self._needs_reset:
             self._needs_reset = False
             self.env.reset()
             self._world.reset()
-
-        self._world.step(render=render)
+        
+        # make the env step the environment
         self.env.step()
+        # update the sim
+        self._world.step(render=render)
 
     def run(self):
         while self.simulation_app.is_running():

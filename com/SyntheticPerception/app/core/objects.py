@@ -128,20 +128,12 @@ class Object:
             self._rb, angular_veloc
         )
 
-    def get_rotation(self) -> Gf.Vec3d:
-        """
-        Returns the rotation of the object.
-        Args: None
-        Returns: [] rotationXYZ
-        """
-        rotate = self._prim.GetAttribute('xformOp:rotateXYZ').Get()
-        return [rotate[0], rotate[1], rotate[2]]
 
     def get_orientation(self) -> Gf.Vec3d:
         """
         Returns the orientation of the object.
         Args: None
-        Returns: [] rotationXYZ
+        Returns: [] orientation 
         """
         orient = self._prim.GetAttribute('xformOp:orient').Get()
         return [orient[0], orient[1], orient[2], orient[3]]
@@ -182,19 +174,11 @@ class Object:
         self._translate = Gf.Vec3d(value[0], value[1], value[2])
         self._translateOp.Set(self._translate)
 
-    def set_rotateXYZ(self, value):
-        """
-        Sets the rotation of the object.
-        Args: [] rotation
-        Returns: None
-        """
-        self._rotate = Gf.Vec3d(value[0], value[1], value[2])
-        # self._rotateXYZOp.Set(self._rotate)
 
     def set_orient(self, value):
         """
         Sets the orientation of the object.
-        Args: [] rotation
+        Args: [] orientation
         Returns: None
         """
         # value = value.astype(np.float32)
@@ -206,7 +190,7 @@ class Object:
     def set_orient_quat(self, value):
         """
         Sets the orientation of the object.
-        Args: [] rotation
+        Args: Gf.Quatf() orienation 
         Returns: None
         """
         self._orientation = value
@@ -219,13 +203,11 @@ class Object:
         Returns: None
         """
         self._translate = self._initial_translate
-        self._rotation = self._initial_rotate
         self._scale = self._initial_scale
         self._orientation = self._orientation
         self.set_scale(self._scale)
         self.set_translate(self._translate)
         self.set_orient(self._orientation)
-        # self.set_rotateXYZ(self._rotate)
 
     def __repr__(self) -> str:
         output = f'===== object print ===== \nPrim Path: {self._prim_path} \nRotation: {self.get_rotation()} \nPosition: {self.get_translate()} \nscale: {self.get_rotation()}'

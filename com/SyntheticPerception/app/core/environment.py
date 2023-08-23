@@ -31,6 +31,14 @@ class Environment:
 
         # ==================== Isaac params
 
+    def setup(self):
+        """
+        This method should setup the environemnt, models, and spawn all assets
+        Args: None
+        Returns: None
+        """
+        pass
+
     def action_space(self):
         pass
 
@@ -38,12 +46,19 @@ class Environment:
         pass
 
     def step(self):
+        #update objects
+
+
+        #update agents
         for agent in self._agents:
-            agent.getobs()
-            agent.step()
+            #get observations from agent
+            obs = agent.getobs()
+            #__________________________ = model.get_action(obs)
+            linear_veloc, angular_veloc = 0,0
+            agent.step(linear_veloc, angular_veloc)
 
 
-        pass
+
 
     def reset(self):
         """
