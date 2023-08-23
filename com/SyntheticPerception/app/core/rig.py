@@ -29,7 +29,11 @@ class Rig(Object):
         self._velocity = 0
         self._sample_rate = 0
         self._sensors = []
-        self.create_rig_from_file(rig_file_path)
+        self._initial_translate, self._initial_orientation = self.create_rig_from_file(rig_file_path)
+        self._translate = self._initial_translate
+        self._orientation = self._initial_orientation
+        self.set_translate(self._translate)
+        self.set_orient(self._orientation)
 
     def ray_cast(self, origin, direction, distance):
         """
@@ -51,6 +55,7 @@ class Rig(Object):
         pos, ori = self.load_sensors_from_file(path)
         position = np.array([pos[0], pos[1], pos[2]])
         orientation = np.array([ori[0], ori[1], ori[2], ori[3]])
+        return position, orientation
 
     def load_sensors_from_file(self, file_path):
         with open(file_path, "r+") as infile:

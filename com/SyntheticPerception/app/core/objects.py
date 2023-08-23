@@ -26,7 +26,7 @@ class Object:
     def __init__(
         self,
         position,
-        rotation,
+        orientation,
         scale,
         prim_name,
         parent_path,
@@ -37,10 +37,6 @@ class Object:
         visibility = "inherited",
         disable_gravity = True
     ) -> None:
-        self._initial_translate = position
-        self._initial_rotate = rotation
-        self._initial_scale = scale
-        self._initial_orientation = Gf.Quatf(1.0)
 
         self._usd_path = usd_path
         self._prim_name = prim_name
@@ -49,9 +45,12 @@ class Object:
         self._stage = stage
         self._scale = Gf.Vec3d(scale[0], scale[1], scale[2])
         self._translate = Gf.Vec3d(position[0], position[1], position[2])
-        self._rotate = Gf.Vec3d(rotation[0], rotation[1], rotation[2])
-        self._orientation = self._initial_orientation
+        # self._rotate = Gf.Vec3d(rotation[0], rotation[1], rotation[2])
+        self._orientation = Gf.Quatf(orientation[0], orientation[1],orientation[2], orientation[3])#self._initial_orientation
 
+        self._initial_translate = self._translate 
+        self._initial_scale = self._scale 
+        self._initial_orientation = self._orientation 
         if not usd_path is None:
             add_reference_to_stage(usd_path=self._usd_path, prim_path=self._prim_path)
         else:
@@ -102,6 +101,9 @@ class Object:
         self._prim.GetAttribute('visibility').Set(visibility)
 
         self._prim.GetAttribute('physxRigidBody:disableGravity').Set(self._disable_gravity)
+        self.set_scale(self._scale)
+        self.set_orient(self._orientation)
+        self.set_translate(self._translate)
 
         
 
@@ -198,9 +200,11 @@ class Object:
         self._translate = self._initial_translate
         self._rotation = self._initial_rotate
         self._scale = self._initial_scale
+        self._orientation = self._orientation
         self.set_scale(self._scale)
         self.set_translate(self._translate)
-        self.set_rotateXYZ(self._rotate)
+        self.set_orient(self._orientation)
+        # self.set_rotateXYZ(self._rotate)
 
     def __repr__(self) -> str:
         output = f"===== object print ===== \nPrim Path: {self._prim_path} \nRotation: {self.get_rotation()} \nPosition: {self.get_translate()} \nscale: {self.get_rotation()}"
