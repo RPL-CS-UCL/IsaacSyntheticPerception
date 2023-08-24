@@ -119,6 +119,12 @@ class Environment(gym.Env):
                 usd_path=usd_path,
                 instanceable=True,
             )
+        self._world.step(render=True)
+        self._world.step(render=True)
+        self._world.step(render=True)
+        self._world.step(render=True)
+        self._world.step(render=True)
+        self._world.step(render=True)
     @property
     def action_space(self):
         space = self._action_space
@@ -140,14 +146,14 @@ class Environment(gym.Env):
         # return {"image": np.zeroslike(self._size)}
 
         obs = self._agent.get_observations()[0]
-        print(obs)
-        #obs = obs[:, :-1]
-        print(obs.shape)
-        obs = np.delete(obs, 3, axis=1)
-        print(obs)
+        if len(obs) == 0:
+            return {"image" : np.zeros((64,64,3))}
+      
+        obs = obs[:, :,  :-1]
+     
   
 
-        return {"image": obs}
+        return {"image": obs,"is_terminal": False, "is_first": False}
 
     def _get_info(self):
         agent_pos = self._agent.get_translate()
