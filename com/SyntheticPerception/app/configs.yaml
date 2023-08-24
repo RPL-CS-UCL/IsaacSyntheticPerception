@@ -10,11 +10,11 @@ defaults:
   steps: 1e6
   parallel: False
   eval_every: 1e4
-  eval_episode_num: 10
+  eval_episode_num: 0
   log_every: 1e4
   reset_every: 0
   device: 'cuda:0'
-  compile: True
+  compile: False
   precision: 32
   debug: False
   expl_gifs: False
@@ -27,7 +27,7 @@ defaults:
   action_repeat: 2
   time_limit: 1000
   grayscale: False
-  prefill: 2500
+  prefill: 100
   eval_noise: 0.0
   reward_EMA: True
 
@@ -208,6 +208,7 @@ memorymaze:
   task: 'memorymaze_9x9'
 
 isaac_sim:
+  task: isaac_one
   step: 1e8
   envs: 1
   action_repeat: 1

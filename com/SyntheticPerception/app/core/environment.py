@@ -20,7 +20,8 @@ import carb
 from omni.isaac.core.utils.extensions import enable_extension
 import gym
 from gym import spaces
-
+from core.rig import Agent
+from core.objects import Object
 
 """
 TO DO
@@ -41,10 +42,8 @@ class Environment(gym.Env):
         self._objects = []
         self._agents = []
 
-
-
         self._agent = None
-        self._goal_object = None
+        self._goal = None
 
         physics_dt = 1/60
         render_dt = 1/60
@@ -57,7 +56,7 @@ class Environment(gym.Env):
         self._size = size
         self._action_repeat = action_repeat
         self.reward_range = [-np.inf, np.inf]
-        self.action_space = spaces.Discrete(6)
+        self._action_space = spaces.Discrete(6)
 
         """
 
@@ -69,21 +68,62 @@ class Environment(gym.Env):
 
         """
 
-        """  
+        
         self._action_to_direction = {
                 # linear
-                0: np.array([1, 0, 0], [0, 0, 0]),#forward
-                1: np.array([-1, 0, 0], [0, 0, 0]),#back
-                2: np.array([0, 1, 0], [0, 0, 0]),#left
-                3: np.array([0, -1, 0], [0, 0, 0]),#right
+                0: np.array([10, 0, 0, 0, 0, 0]),#forward
+                1: np.array([-10, 0, 0, 0, 0, 0]),#back
+                2: np.array([0, 10, 0, 0, 0, 0]),#left
+                3: np.array([0, -10, 0, 0, 0, 0]),#right
                 # angular
-                4: np.array([0, 0, 0], [0, 0, 1]),#rotate right
-                5: np.array([0, 0, 0],[0, 0, -1]),#rotate left
-            }"""
+                4: np.array([0, 0, 0, 0,0,10]),#rotate right
+                5: np.array([0, 0, 0,0,0,-10]),#rotate left
+            }
 
     def setup_objects_agents_goals(self):
-        pass
+        pos = [20, 0, 0]
+        rotation = [0, 0, 0,0]
+       
+        stage = omni.usd.get_context().get_stage()
+    
+        parent_path = "/World"
+    
+        # print(obj._prim.GetAttributes())
+        # x =stage.GetPrimAtPath("/World/object")
+        # print(x.GetAttributes())
 
+      
+
+        self._agent = Agent(
+            "/home/stuart/Downloads/sensors.json",
+            pos,
+            rotation,
+            [1.0,1.0,1.0],
+            "RIG",
+            parent_path,
+            stage,
+            disable_gravity=True,
+            visibility="invisible",
+
+        )
+        print("tryin to create ojbect")
+        pos = [60, 30, 0]
+        usd_path = "/home/stuart/Documents/ov-vegetation3dpack-01-100.1.1/Trees/White_Pine.usd"
+        self._goal_object = Object(
+                pos,
+                rotation,
+                [.1,.1,.1],
+                "goal",
+                parent_path,
+                stage,
+                usd_path=usd_path,
+                instanceable=True,
+            )
+    @property
+    def action_space(self):
+        space = self._action_space
+        space.discrete = True
+        return space
     @property
     def observation_space(self):
         spaces = {}
@@ -98,47 +138,73 @@ class Environment(gym.Env):
 
     def _get_obs(self):
         # return {"image": np.zeroslike(self._size)}
+
         obs = self._agent.get_observations()[0]
+        print(obs)
+        #obs = obs[:, :-1]
+        print(obs.shape)
+        obs = np.delete(obs, 3, axis=1)
+        print(obs)
+  
+
         return {"image": obs}
 
     def _get_info(self):
-        agent_pos = self._agent.get_translation()
-        dist_to_target = self._goal_pos - agent_pos
-        return {"discount": 0, "dist_to_target":0}
+        agent_pos = self._agent.get_translate()
+        #dist_to_target = self._goal_pos - agent_pos
+        goal_pos = self._goal_object.get_translate()
+        x_diff = abs(agent_pos[0]-goal_pos[0])
+        y_diff= abs(agent_pos[1]-goal_pos[1])
+        dist = x_diff + y_diff
+
+        return {"discount": 0, "dist_to_target":dist}
 
     def step(self, action):
-        self._goal_pos = self._goal_object.get_translation()
+        self._goal_pos = self._goal_object.get_translate()
         unpack_action = self._action_to_direction[action]
-        linear_veloc = unpack_action[0]
-        angular_veloc = unpack_action[1]
+        linear_veloc = unpack_action[:3]
+        angular_veloc = unpack_action[3:]
 
 
         # STEP AGENT HERE
         agent_alive = self._agent.step(linear_veloc,angular_veloc)
         self._world.step(render=True)
+        self._world.step(render=True)
+        self._world.step(render=True)
+        self._world.step(render=True)
+        self._world.step(render=True)
+        self._world.step(render=True)
+
 
         # ensure agent doesnt leave, if it does kill and reset
         # check if agent is at goal
         terminated = not agent_alive
-
         obs = self._get_obs()
         info = self._get_info()
 
         # set reward as dist to goal
         reward = 0  
-        threshold = 0.5
-        if info["dist_to_target"] < threshold:
+        threshold = 3
+        agent_pos = self._agent.get_translate()
+        goal_pos = self._goal_object.get_translate()
+        x_diff = abs(agent_pos[0]-goal_pos[0])
+        y_diff= abs(agent_pos[1]-goal_pos[1])
+        dist = x_diff + y_diff
+
+        if dist < threshold:
             reward = 1
             terminated = True
+    
 
-        return obs, reward, terminated, False, info
+        
+        return obs, reward, terminated, info
 
     def reset(self):
         self._world.reset()
         self._agent.reset()
         info = self._get_info()
         obs = self._get_obs()
-        return obs, info
+        return obs
 
     def render(self, *args, **kwargs):
         return None

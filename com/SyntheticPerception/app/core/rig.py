@@ -104,7 +104,7 @@ class Agent(Object):
         is_dead = self._death_check()
 
         if is_dead:
-            self.reset()
+            #self.reset()
             return False
         return True
 
@@ -114,7 +114,7 @@ class Agent(Object):
         Args: None
         Returns: boolean
         """
-        current_translate = self.get_translate()
+        """current_translate = self.get_translate()
         current_orientation = self.get_orientation()
         diff_translate = abs(current_translate - self._last_translate)
         diff_orientation = abs(current_orientation - self._last_orientation)
@@ -125,7 +125,7 @@ class Agent(Object):
             self._steps_since_moved += 1
 
         if self._steps_since_moved >= self._max_steps_death_count:
-            return True
+            return True"""
         return False
 
     def _load_sensors_from_file(self, file_path):

@@ -52,10 +52,12 @@ class Object:
         self._initial_scale = self._scale
         self._initial_orientation = self._orientation
         if not usd_path is None:
+            print("LOADING USD ")
             add_reference_to_stage(
                 usd_path=self._usd_path, prim_path=self._prim_path
             )
         else:
+            print(" CREATING CUBE")
             omni.kit.commands.execute(
                 'CreateMeshPrimWithDefaultXform',
                 prim_type='Cube',
@@ -70,15 +72,22 @@ class Object:
             self._prim.SetInstanceable(True)
 
         if not usd_path is None:
-            self._translateOp = self._xform.AddTranslateOp()
-
-            self._orientOp = self._xform.AddOrientOp()
-
-            self._scaleOp = self._xform.AddScaleOp()
+            x = self._prim.GetAttribute(
+            'xformOp:translate')
+            if not x:
+                self._translateOp = self._xform.AddTranslateOp()
+            x = self._prim.GetAttribute(
+            'xformOp:orient')
+            if not x:
+                self._orientOp = self._xform.AddOrientOp()
+            x = self._prim.GetAttribute(
+            'xformOp:scale')
+            if not x:
+                self._scaleOp = self._xform.AddScaleOp()
 
         self._translateOp = self._prim.GetAttribute(
             'xformOp:translate'
-        )  # tmp[0]
+        )  
         self._orientOp = self._prim.GetAttribute('xformOp:orient')
         self._scaleOp = self._prim.GetAttribute('xformOp:scale')
 
@@ -94,7 +103,7 @@ class Object:
         sem.GetSemanticDataAttr().Set(self._semantic_class)
 
         if usd_path:
-            setRigidBody(self._prim, 'sdfMesh', False)
+            setRigidBody(self._prim, 'convexHull', False)#sdfMesh
         else:
             setRigidBody(self._prim, 'convexHull', False)
 
@@ -103,7 +112,7 @@ class Object:
             _dynamic_control.acquire_dynamic_control_interface()
         )
         self._rb = self._dc_interface.get_rigid_body(self._prim_path)
-
+        #visibility = "inherited"
         self._prim.GetAttribute('visibility').Set(visibility)
 
         self._prim.GetAttribute('physxRigidBody:disableGravity').Set(
@@ -136,7 +145,8 @@ class Object:
         Returns: [] orientation 
         """
         orient = self._prim.GetAttribute('xformOp:orient').Get()
-        return [orient[0], orient[1], orient[2], orient[3]]
+        quat_list = [orient.GetReal()] + list(orient.GetImaginary())
+        return quat_list #[orient[0], orient[1], orient[2], orient[3]]
 
     def get_translate(self):
         """
@@ -209,7 +219,7 @@ class Object:
         self._orientation = self._orientation
         self.set_scale(self._scale)
         self.set_translate(self._translate)
-        self.set_orient(self._orientation)
+        self.set_orient_quat(self._orientation)
 
     def change_start_and_reset(self, translate=None,scale=None,orientation=None):
         """

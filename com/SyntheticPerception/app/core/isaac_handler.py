@@ -1,6 +1,7 @@
 import argparse
 import pathlib
 import sys
+import functools
 
 from omni.isaac.kit import SimulationApp
 
@@ -35,6 +36,8 @@ import dreamer.dreamer_copy as dreamer_fns
 from dreamer.dreamer_copy import Dreamer
 from dreamer.dreamer_copy import tools
 from dreamer.parallel import Damy
+
+to_np = lambda x: x.detach().cpu().numpy()
 
 class IsaacHandler:
     def __init__(self, physics_dt, render_dt, simulation_app) -> None:
@@ -100,6 +103,8 @@ class IsaacHandler:
         eval_eps = tools.load_episodes(directory, limit=1)
         make = lambda mode: dreamer_fns.make_env(config, mode)
         train_envs = [make("train") for _ in range(config.envs)]
+        print(" ======= ", len(train_envs))
+        train_envs[0].setup_objects_agents_goals()
         eval_envs = [make("eval") for _ in range(config.envs)]
         train_envs = [Damy(env) for env in train_envs]
         eval_envs = [Damy(env) for env in eval_envs]
@@ -109,6 +114,7 @@ class IsaacHandler:
         state = None
         prefill = config.prefill
         print(f"Prefill dataset ({prefill} steps).")
+        print(acts)
         if hasattr(acts, "discrete"):
             random_actor = tools.OneHotDist(
                 torch.zeros(config.num_actions).repeat(config.envs, 1)
@@ -133,7 +139,7 @@ class IsaacHandler:
             #self.step(render)
             state = tools.isaac_simulate(
             random_agent,
-            train_envs,
+            train_envs[0],
             train_eps,
             config.traindir,
             logger,
@@ -146,7 +152,53 @@ class IsaacHandler:
             print("Simulate agent.")
             train_dataset = dreamer_fns.make_dataset(train_eps, config)
             eval_dataset = dreamer_fns.make_dataset(eval_eps, config)
+            agent = Dreamer(
+                train_envs[0].observation_space,
+                train_envs[0].action_space,
+                config,
+                logger,
+                train_dataset,
+            ).to(config.device)
+            agent.requires_grad_(requires_grad=False)
+            if (logdir / "latest_model.pt").exists():
+                agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
+                agent._should_pretrain._once = False
 
+            # make sure eval will be executed once after config.steps
+            while agent._step < config.steps + config.eval_every:
+                logger.write()
+                if config.eval_episode_num > 0:
+                    print("Start evaluation.")
+                    eval_policy = functools.partial(agent, training=False)
+                    tools.isaac_simulate(
+                        eval_policy,
+                        eval_envs[0],
+                        eval_eps,
+                        config.evaldir,
+                        logger,
+                        is_eval=True,
+                        episodes=config.eval_episode_num,
+                    )
+                    if config.video_pred_log:
+                        video_pred = agent._wm.video_pred(next(eval_dataset))
+                        logger.video("eval_openl", to_np(video_pred))
+                print("Start training.")
+                state = tools.isaac_simulate(
+                    agent,
+                    train_envs[0],
+                    train_eps,
+                    config.traindir,
+                    logger,
+                    limit=config.dataset_size,
+                    steps=config.eval_every,
+                    state=state,
+                )
+                torch.save(agent.state_dict(), logdir / "latest_model.pt")
+            for env in train_envs + eval_envs:
+                try:
+                    env.close()
+                except Exception:
+                    pass
 
             if not self._world.is_simulating():
                 self._needs_reset = True
