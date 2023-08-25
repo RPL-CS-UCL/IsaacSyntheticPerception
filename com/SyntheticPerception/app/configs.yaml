@@ -1,6 +1,6 @@
 defaults:
 
-  logdir: null
+  logdir: '/home/stuart/Document/isaac_training'
   traindir: null
   evaldir: null
   offline_traindir: ''

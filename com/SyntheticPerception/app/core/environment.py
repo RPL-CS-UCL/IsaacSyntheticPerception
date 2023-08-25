@@ -12,7 +12,7 @@ from omni.isaac.core import World
 from omni.isaac.quadruped.robots import Anymal
 from omni.isaac.core.utils.prims import define_prim, get_prim_at_path
 from omni.isaac.core.utils.nucleus import get_assets_root_path
-from pxr import Gf, UsdGeom
+from pxr import Gf, UsdGeom, Sdf
 import time
 import omni.appwindow  # Contains handle to keyboard
 import numpy as np
@@ -44,6 +44,8 @@ class Environment(gym.Env):
 
         self._agent = None
         self._goal = None
+        self._step = 0
+        self._length = 500
 
         physics_dt = 1/60
         render_dt = 1/60
@@ -92,6 +94,25 @@ class Environment(gym.Env):
         # x =stage.GetPrimAtPath("/World/object")
         # print(x.GetAttributes())
 
+        omni.kit.commands.execute('CreatePrimWithDefaultXform',
+        prim_type='DistantLight',
+        prim_path=None,
+        attributes={'angle': 1.0, 'intensity': 3000},
+        select_new_prim=True)
+
+        omni.kit.commands.execute('AddGroundPlaneCommand',
+        stage=stage,
+        planePath='/GroundPlane',
+        axis='Z',
+        size=2500.0,
+        position=Gf.Vec3f(0.0, 0.0, 0.0),
+        color=Gf.Vec3f(1., 1., 1.))
+
+        omni.kit.commands.execute('ChangeProperty',
+            prop_path=Sdf.Path('/World/GroundPlane.xformOp:scale'),
+            value=Gf.Vec3f(500.0, 1.0, 1.0),
+            prev=Gf.Vec3f(1.0, 1.0, 1.0))
+            
       
 
         self._agent = Agent(
@@ -108,11 +129,11 @@ class Environment(gym.Env):
         )
         print("tryin to create ojbect")
         pos = [60, 30, 0]
-        usd_path = "/home/stuart/Documents/ov-vegetation3dpack-01-100.1.1/Trees/White_Pine.usd"
+        usd_path = "/home/stuart/Downloads/cone.usd"
         self._goal_object = Object(
                 pos,
                 rotation,
-                [.1,.1,.1],
+                [.2,.2,.2],
                 "goal",
                 parent_path,
                 stage,
@@ -151,9 +172,9 @@ class Environment(gym.Env):
       
         obs = obs[:, :,  :-1]
      
-  
+        is_first = self._step == 0
 
-        return {"image": obs,"is_terminal": False, "is_first": False}
+        return {"image": obs,"is_terminal": False, "is_first": is_first}
 
     def _get_info(self):
         agent_pos = self._agent.get_translate()
@@ -163,9 +184,12 @@ class Environment(gym.Env):
         y_diff= abs(agent_pos[1]-goal_pos[1])
         dist = x_diff + y_diff
 
-        return {"discount": 0, "dist_to_target":dist}
+        return {"discount": np.float32(0.997), "dist_to_target":dist}
 
     def step(self, action):
+
+        self._step +=1
+        
         self._goal_pos = self._goal_object.get_translate()
         unpack_action = self._action_to_direction[action]
         linear_veloc = unpack_action[:3]
@@ -180,11 +204,12 @@ class Environment(gym.Env):
         self._world.step(render=True)
         self._world.step(render=True)
         self._world.step(render=True)
+        self._done = (not agent_alive) or (self._length and self._step >= self._length)
 
 
         # ensure agent doesnt leave, if it does kill and reset
         # check if agent is at goal
-        terminated = not agent_alive
+        terminated = self._done #not agent_alive
         obs = self._get_obs()
         info = self._get_info()
 
@@ -200,6 +225,7 @@ class Environment(gym.Env):
         if dist < threshold:
             reward = 1
             terminated = True
+        obs["is_terminal"] = terminated
     
 
         
@@ -207,9 +233,12 @@ class Environment(gym.Env):
 
     def reset(self):
         self._world.reset()
-        self._agent.reset()
+        range = 100
+        self._agent.change_start_and_reset(translate=[np.random.uniform(0, range), np.random.uniform(0, range), 0])
+        self._goal_object.change_start_and_reset(translate=[np.random.uniform(0, range), np.random.uniform(0, range), 0])
         info = self._get_info()
         obs = self._get_obs()
+        obs["is_terminal"] = self._step == 0 
         return obs
 
     def render(self, *args, **kwargs):
