@@ -240,6 +240,7 @@ class IsaacHandler:
             eval_envs = [Damy(env) for env in eval_envs]
             acts = train_envs[0].action_space
             config.num_actions = acts.n if hasattr(acts, "n") else acts.shape[0]
+            
 
             state = None
             prefill = config.prefill
@@ -265,6 +266,7 @@ class IsaacHandler:
             
             # sort out this while loop
             while self.simulation_app.is_running():
+                
                 render = True
                 #self.step(render)
                 state = tools.simulate(
@@ -332,3 +334,5 @@ class IsaacHandler:
 
                 if not self._world.is_simulating():
                     self._needs_reset = True
+    def camera_test(config):
+        pass

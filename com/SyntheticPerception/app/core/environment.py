@@ -22,7 +22,8 @@ import gym
 from gym import spaces
 from core.rig import Agent
 from core.objects import Object
-
+from matplotlib import pyplot as plt
+from PIL import Image
 """
 TO DO
 
@@ -45,7 +46,7 @@ class Environment(gym.Env):
         self._agent = None
         self._goal = None
         self._step = 0
-        self._length = 500
+        self._length = 1500
 
         physics_dt = 1/60
         render_dt = 1/60
@@ -73,13 +74,13 @@ class Environment(gym.Env):
         
         self._action_to_direction = {
                 # linear
-                0: np.array([10, 0, 0, 0, 0, 0]),#forward
-                1: np.array([-10, 0, 0, 0, 0, 0]),#back
-                2: np.array([0, 10, 0, 0, 0, 0]),#left
-                3: np.array([0, -10, 0, 0, 0, 0]),#right
+                0: np.array([1, 0, 0, 0, 0, 0]),#forward
+                1: np.array([-1, 0, 0, 0, 0, 0]),#back
+                2: np.array([0, 1, 0, 0, 0, 0]),#left
+                3: np.array([0, -1, 0, 0, 0, 0]),#right
                 # angular
-                4: np.array([0, 0, 0, 0,0,10]),#rotate right
-                5: np.array([0, 0, 0,0,0,-10]),#rotate left
+                4: np.array([0, 0, 0, 0,0,1]),#rotate right
+                5: np.array([0, 0, 0,0,0,-1]),#rotate left
             }
 
     def setup_objects_agents_goals(self):
@@ -173,6 +174,8 @@ class Environment(gym.Env):
         obs = obs[:, :,  :-1]
      
         is_first = self._step == 0
+        #img = Image.fromarray(obs, 'RGB')  # 'L' means grayscale. For RGB, use 'RGB'
+        #img.save('/home/stuart/Desktop/image.png')
 
         return {"image": obs,"is_terminal": False, "is_first": is_first}
 
@@ -222,9 +225,59 @@ class Environment(gym.Env):
         y_diff= abs(agent_pos[1]-goal_pos[1])
         dist = x_diff + y_diff
 
+        def angle_between_vectors(v1, v2):
+            """Compute the angle (in degrees) between two vectors."""
+            dot_product = np.dot(v1, v2)
+            magnitude_product = np.linalg.norm(v1) * np.linalg.norm(v2)
+            cosine_angle = dot_product / magnitude_product
+            angle_rad = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
+            angle_deg = np.degrees(angle_rad)
+            return angle_deg
+        def rotate_vector_by_quaternion(vec, quat):
+            vec_quat = Gf.Quatf(0, vec)
+            rotated_quat = quat * vec_quat * quat.GetInverse()
+            return rotated_quat.GetImaginary()
+
+        # Define your points
+        agent_point = self._agent.get_translate_vec()
+        goal_point =self._goal_object.get_translate_vec()
+
+        # Compute desired direction
+        desired_direction = goal_point - agent_point
+        desired_direction.Normalize()
+
+        # Define agent orientation as a quaternion
+        # For demonstration, this is a unit quaternion (no rotation).
+        quat = self._agent.get_orientation_quat()
+
+        # Extract forward direction from the quaternion
+        # Assuming agent's initial forward direction is along z-axis (0, 0, 1)
+        forward_direction = rotate_vector_by_quaternion(Gf.Vec3f(1, 0, 0), quat)
+
+        # Convert Gf.Vec3f to numpy arrays for computation
+        desired_direction_np = np.array([desired_direction[0], desired_direction[1], desired_direction[2]])
+        forward_direction_np = np.array([forward_direction[0], forward_direction[1], forward_direction[2]])
+        angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
+        #print(angle)
+        reward = 0
+
+        #max can get is 1
+        if angle < 45:
+            reward += (1/(angle+1e-8))/10# .1 if looking direct 
+
+        #max can get is 20
+        #threshold = 3
         if dist < threshold:
-            reward = 1
+            reward += 20
             terminated = True
+        
+        #scaled dist to target
+        #max .25
+        if dist < 25:
+            reward += (25/(dist+1e-8))/100
+
+        # penalize reward
+        reward -= self._step/5000
         obs["is_terminal"] = terminated
     
 
@@ -234,6 +287,7 @@ class Environment(gym.Env):
     def reset(self):
         self._world.reset()
         range = 100
+        self._step = 0
         self._agent.change_start_and_reset(translate=[np.random.uniform(0, range), np.random.uniform(0, range), 0])
         self._goal_object.change_start_and_reset(translate=[np.random.uniform(0, range), np.random.uniform(0, range), 0])
         info = self._get_info()

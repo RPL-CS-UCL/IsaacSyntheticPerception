@@ -147,6 +147,14 @@ class Object:
         orient = self._prim.GetAttribute('xformOp:orient').Get()
         quat_list = [orient.GetReal()] + list(orient.GetImaginary())
         return quat_list #[orient[0], orient[1], orient[2], orient[3]]
+    def get_orientation_quat(self):
+        """
+        Returns the orientation of the object.
+        Args: None
+        Returns: [] orientation 
+        """
+        orient = self._prim.GetAttribute('xformOp:orient').Get()
+        return orient
 
     def get_translate(self):
         """
@@ -156,6 +164,14 @@ class Object:
         """
         translate = self._prim.GetAttribute('xformOp:translate').Get()
         return [translate[0], translate[1], translate[2]]
+    def get_translate_vec(self):
+        """
+        Returns the translation of the object.
+        Args: None
+        Returns: [] translation
+        """
+        translate = self._prim.GetAttribute('xformOp:translate').Get()
+        return translate
 
     def get_scale(self):
         """

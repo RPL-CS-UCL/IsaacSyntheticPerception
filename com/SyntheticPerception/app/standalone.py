@@ -37,8 +37,8 @@ from sensors import SensorRig
 from PCG.WorldGenerator import WorldManager
 
 # sys.path.append('/home/stuart/Github/IsaacSyntheticPerception/com')
-from dreamerv3_torch import envs
-from dreamerv3_torch.dreamer import Dreamer
+#from dreamerv3_torch import envs
+#from dreamerv3_torch.dreamer import Dreamer
 
 
 class Anymal_runner(object):
@@ -126,7 +126,7 @@ class Anymal_runner(object):
         for rig in range(self._num_rigs):
             self._rig_container.append(SensorRig(f"SensorRig_{rig}","/World/Rigs"))
             # if self.locations[rig]
-            self._rig_container[rig].create_rig_from_file(self.path, self.stage, self._world, self.locations[rig])
+            self._rig_container[rig].create_rig_from_file(self.path, self.stage, self._world)
             self._rig_container[rig].setup_sensor_output_path(self.out_path)
             omni.kit.commands.execute('CreateMeshPrimWithDefaultXform',
                                         prim_type='Cube',
