@@ -33,11 +33,13 @@ class Agent(Object):
         self._sample_rate = 0
         self._sensors = []
         (
-            self._initial_translate,
+            self._initial_translate_____,
             self._initial_orientation,
         ) = self.create_rig_from_file(rig_file_path)
+        
         self._translate = self._initial_translate
         self._orientation = self._initial_orientation
+        print("Starting location of rig ", self._initial_translate, " @ ", self._translate)
         print(type(self._orientation))
         self.set_translate(self._translate)
         self.set_orient(self._orientation)

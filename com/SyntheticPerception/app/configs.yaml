@@ -27,7 +27,7 @@ defaults:
   action_repeat: 2
   time_limit: 1000
   grayscale: False
-  prefill: 4500
+  prefill: 6000
   eval_noise: 0.0
   reward_EMA: True
 
@@ -102,7 +102,7 @@ defaults:
   actor_min_std: 0.1
   actor_max_std: 1.0
   actor_temp: 0.1
-  expl_amount: 0.0
+  expl_amount: 0.2
   eval_state_mean: False
   collect_dyn_sample: True
   behavior_stop_grad: True

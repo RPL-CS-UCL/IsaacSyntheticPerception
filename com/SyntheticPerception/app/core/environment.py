@@ -24,14 +24,65 @@ from core.rig import Agent
 from core.objects import Object
 from matplotlib import pyplot as plt
 from PIL import Image
+import math
 """
 TO DO
 
 
 sort the reward
 """
+def angle_between_vectors(v1, v2):
+        """Compute the angle (in degrees) between two vectors."""
+        dot_product = np.dot(v1, v2)
+        magnitude_product = np.linalg.norm(v1) * np.linalg.norm(v2)
+        cosine_angle = dot_product / magnitude_product
+        angle_rad = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
+        angle_deg = np.degrees(angle_rad)
+        return angle_deg
+def rotate_vector_by_quaternion(vec, quat):
+    vec_quat = Gf.Quatf(0, vec)
+    rotated_quat = quat * vec_quat * quat.GetInverse()
+    return rotated_quat.GetImaginary()
+class RunningStats:
+    def __init__(self):
+        self.n = 0
+        self.mean = 0
+        self.M2 = 0
 
+    def update(self, x):
+        """
+        Update the running statistics with new data point x.
+        
+        Parameters:
+            x (float): New data point.
+        """
+        self.n += 1
+        delta = x - self.mean
+        self.mean += delta / self.n
+        delta2 = x - self.mean
+        self.M2 += delta * delta2
 
+    @property
+    def variance(self):
+        """
+        Get the variance of the data seen so far.
+        
+        Returns:
+            float: Variance.
+        """
+        if self.n < 2:
+            return float('nan')
+        return self.M2 / self.n
+
+    @property
+    def standard_deviation(self):
+        """
+        Get the standard deviation of the data seen so far.
+        
+        Returns:
+            float: Standard deviation.
+        """
+        return self.variance ** 0.5
 class Environment(gym.Env):
     """
     Class that represents the world, agents, and, objects that can exist in an environment
@@ -46,7 +97,8 @@ class Environment(gym.Env):
         self._agent = None
         self._goal = None
         self._step = 0
-        self._length = 1500
+        self._length = 1000
+        self._angle_reward_steps = 0
 
         physics_dt = 1/60
         render_dt = 1/60
@@ -59,7 +111,11 @@ class Environment(gym.Env):
         self._size = size
         self._action_repeat = action_repeat
         self.reward_range = [-np.inf, np.inf]
-        self._action_space = spaces.Discrete(6)
+        self._action_space = spaces.Discrete(10)
+        self.threshold = 15
+
+        # average tracking
+        self.stats = RunningStats()
 
         """
 
@@ -71,16 +127,22 @@ class Environment(gym.Env):
 
         """
 
-        
+        velocity = 3
+        diag_veloc = velocity * math.sqrt(2) / 2
         self._action_to_direction = {
                 # linear
-                0: np.array([1, 0, 0, 0, 0, 0]),#forward
-                1: np.array([-1, 0, 0, 0, 0, 0]),#back
-                2: np.array([0, 1, 0, 0, 0, 0]),#left
-                3: np.array([0, -1, 0, 0, 0, 0]),#right
+                9: np.array([velocity, 0, 0, 0, 0, 0]),#forward
+                1: np.array([-velocity, 0, 0, 0, 0, 0]),#back
+                2: np.array([0, velocity, 0, 0, 0, 0]),#left
+                3: np.array([0, -velocity, 0, 0, 0, 0]),#right
+
+                4: np.array([diag_veloc, diag_veloc, 0, 0, 0, 0]),#forward
+                5: np.array([-diag_veloc, -diag_veloc, 0, 0, 0, 0]),#back
+                6: np.array([diag_veloc, -diag_veloc, 0, 0, 0, 0]),#left
+                7: np.array([-diag_veloc, diag_veloc, 0, 0, 0, 0]),#right
                 # angular
-                4: np.array([0, 0, 0, 0,0,1]),#rotate right
-                5: np.array([0, 0, 0,0,0,-1]),#rotate left
+                8: np.array([0, 0, 0, 0,0,1]),#rotate right
+                0: np.array([0, 0, 0,0,0,-1]),#rotate left
             }
 
     def setup_objects_agents_goals(self):
@@ -115,12 +177,12 @@ class Environment(gym.Env):
             prev=Gf.Vec3f(1.0, 1.0, 1.0))
             
       
-
+        agent_loc, goal_loc = self.get_valid_random_spawn()
         self._agent = Agent(
             "/home/stuart/Downloads/sensors.json",
-            pos,
+            agent_loc,
             rotation,
-            [1.0,1.0,1.0],
+            [1.,1.,1.],
             "RIG",
             parent_path,
             stage,
@@ -129,10 +191,10 @@ class Environment(gym.Env):
 
         )
         print("tryin to create ojbect")
-        pos = [60, 30, 0]
+
         usd_path = "/home/stuart/Downloads/cone.usd"
         self._goal_object = Object(
-                pos,
+                goal_loc,
                 rotation,
                 [.2,.2,.2],
                 "goal",
@@ -189,7 +251,11 @@ class Environment(gym.Env):
 
         return {"discount": np.float32(0.997), "dist_to_target":dist}
 
+
+
     def step(self, action):
+        #if self._step // 100:
+        #    print("Action : ", action, " : ", self._action_to_direction[action])
 
         self._step +=1
         
@@ -216,27 +282,27 @@ class Environment(gym.Env):
         obs = self._get_obs()
         info = self._get_info()
 
+        # ================= REWARD CALCULATIONS
+
         # set reward as dist to goal
         reward = 0  
-        threshold = 3
+        
         agent_pos = self._agent.get_translate()
+        agent_old_pos = self._agent._last_translate
         goal_pos = self._goal_object.get_translate()
-        x_diff = abs(agent_pos[0]-goal_pos[0])
-        y_diff= abs(agent_pos[1]-goal_pos[1])
-        dist = x_diff + y_diff
+        #x_diff = abs(agent_pos[0]-goal_pos[0])
+        #y_diff= abs(agent_pos[1]-goal_pos[1])
+        dist = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(goal_pos[:2]))
+        old_dist = np.linalg.norm(np.asarray(agent_old_pos[:2]) - np.asarray(goal_pos[:2]))
+        dist_since_previous_step = old_dist - dist
+    
+        # update the running stats
+        self.stats.update(dist_since_previous_step)
 
-        def angle_between_vectors(v1, v2):
-            """Compute the angle (in degrees) between two vectors."""
-            dot_product = np.dot(v1, v2)
-            magnitude_product = np.linalg.norm(v1) * np.linalg.norm(v2)
-            cosine_angle = dot_product / magnitude_product
-            angle_rad = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
-            angle_deg = np.degrees(angle_rad)
-            return angle_deg
-        def rotate_vector_by_quaternion(vec, quat):
-            vec_quat = Gf.Quatf(0, vec)
-            rotated_quat = quat * vec_quat * quat.GetInverse()
-            return rotated_quat.GetImaginary()
+
+        # dist = x_diff + y_diff
+
+      
 
         # Define your points
         agent_point = self._agent.get_translate_vec()
@@ -260,39 +326,133 @@ class Environment(gym.Env):
         angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
         #print(angle)
         reward = 0
-
-        #max can get is 1
-        if angle < 45:
-            reward += (1/(angle+1e-8))/10# .1 if looking direct 
-
-        #max can get is 20
-        #threshold = 3
-        if dist < threshold:
-            reward += 20
-            terminated = True
         
-        #scaled dist to target
-        #max .25
-        if dist < 25:
-            reward += (25/(dist+1e-8))/100
+        #         #max can get is 1
+        # if angle < 45:
+        #     angle_reward += (1/(angle+1e-8))/10# .1 if looking direct 
 
-        # penalize reward
-        reward -= self._step/5000
+        # 0.0023
+        #max can get is 1
+        # if angle < 1:
+        #     angle = 1
+        # if angle < 45:
+        #     angle_reward = (1/(angle+1e-8))/10# .1 if looking direct 
+     
+        #     self._angle_reward_steps += 1
+           
+        # else:
+        #     self._angle_reward_steps = 0
+        # if self._angle_reward_steps > 30:
+        #     angle_reward /= (self._angle_reward_steps - 30)
+        
+        # ============== ANGLE REWARD
+        angle_reward = 0#1e-20
+        if angle < 45:
+            angle_reward = (1/(angle+1e-8))#*10# .1 if looking direct 
+        #reward += angle_reward
+        normalized_angle_reward = np.cos(np.deg2rad(np.asarray(angle_reward)))
+
+       
+        # ======= DISTANCE REWARD
+        #scaled dist to target
+        # max 3.33 +-1
+        # min 0.2 +- 1
+        # if dist < 200:
+        def normalize_progress(progress_reward):
+            epsilon = 1e-10
+            self.stats.update(progress_reward)
+            if self.stats.standard_deviation < epsilon:
+                # If the standard deviation is extremely small, just return the un-normalized reward.
+                # This can happen, especially in the beginning when there's not much data.
+                return progress_reward
+            normalized_reward = (progress_reward - self.stats.mean) / (self.stats.standard_deviation + epsilon)
+            return normalized_reward
+        normalized_progress = normalize_progress(dist_since_previous_step)
+
+
+        dist -= self.threshold - 1
+        if dist <= 0:
+            dist = 1
+        normalized_distance = 1/(dist+1e-8)
+
+        #reward += (50/(dist+1e-8)) + dist_since_previous_step
+        w_distance = 0.2
+        w_angle = 0.2
+        w_progress = 0.50
+        w_penalty = 0.1
+        total_reward = (w_distance * normalized_distance +
+                        w_angle * normalized_angle_reward +
+                        w_progress * normalized_progress)
+                        #w_penalty * self.get_step_penalty())
+
+
+        
+
+        # ======= PENALTY REWARD
+
+        
+        total_reward -= w_penalty# * self._ste)
+
+
+#         print(f"""
+# Normalized dist: {normalized_distance} 
+# normalized angle reward:  {normalized_distance}
+# Normalized progress: {normalized_progress}
+# total_reward this step: {total_reward}
+#               """
+#               )
+        
+        #reward -= (self._step / self.length) * 10_000
+        #reward -= 1/self._step
+        # ==== apply all rewards
+        reward += total_reward
+        # ====== FINAL RWARD
+        #max can get is 20
+        #threshold = 15
+        dist += self.threshold -1
+        if dist < self.threshold:
+            #print(" WE ARE NOW TERMINATING ",dist,  "  ", self.threshold)
+            reward += 10_000
+            terminated = True
         obs["is_terminal"] = terminated
     
 
         
         return obs, reward, terminated, info
 
+
+    def get_valid_random_spawn(self):
+        range = 100
+        valid_start = False
+        agent_loc =[0,0,0]
+        goal_loc = [0,0,0]
+        while not valid_start:
+            agent_loc = [np.random.uniform(0, range), np.random.uniform(0, range), 0]
+            goal_loc = [np.random.uniform(0, range), np.random.uniform(0, range), 0]
+
+            dist = np.linalg.norm(np.asarray(goal_loc[:2]) - np.asarray(agent_loc[:2]))
+            if dist > (self.threshold + 10):
+                valid_start = True
+                break
+        return agent_loc, goal_loc
+
     def reset(self):
         self._world.reset()
-        range = 100
+   
         self._step = 0
-        self._agent.change_start_and_reset(translate=[np.random.uniform(0, range), np.random.uniform(0, range), 0])
-        self._goal_object.change_start_and_reset(translate=[np.random.uniform(0, range), np.random.uniform(0, range), 0])
+        agent_loc, goal_loc = self.get_valid_random_spawn()
+
+
+        
+        
+
+
+        self._agent.change_start_and_reset(translate=agent_loc)
+        self._goal_object.change_start_and_reset(translate=goal_loc)
         info = self._get_info()
         obs = self._get_obs()
         obs["is_terminal"] = self._step == 0 
+        self._angle_reward_steps = 0
         return obs
 
     def render(self, *args, **kwargs):
