@@ -182,6 +182,7 @@ class Environment(gym.Env):
             
       
         agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id*2500)
+        agent_loc[2] = 8
 
         print(f" starting positions for id {offset/2500}   {agent_loc}, {goal_loc}")
         self._agent = Agent(
@@ -598,18 +599,18 @@ class Environment(gym.Env):
 
     def get_valid_random_spawn(self, offset=0):
         
-        range = 100
+        range = 200
         valid_start = False
         agent_loc =[0,0,0]
         goal_loc = [0,0,0]
         while not valid_start:
-            agent_loc = [np.random.uniform(0, range), np.random.uniform(0, range), 0]
-            goal_loc = [np.random.uniform(0, range), np.random.uniform(0, range), 0]
+            agent_loc = [np.random.uniform(-range, range), np.random.uniform(-range, range), 0]
+            goal_loc = [np.random.uniform(-range, range), np.random.uniform(-range, range), 0]
             agent_loc[0] += offset
             goal_loc[0] += offset
 
             dist = np.linalg.norm(np.asarray(goal_loc[:2]) - np.asarray(agent_loc[:2]))
-            if dist > (self.threshold + 10):
+            if dist > (self.threshold + 20):
                 valid_start = True
                 break
         return agent_loc, goal_loc
