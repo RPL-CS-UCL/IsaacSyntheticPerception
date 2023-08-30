@@ -36,7 +36,7 @@ def main():
 
     environment = IsaacHandler(1/60, 1/60, simulation_app)
     environment.setup()
-    environment.run2(parser.parse_args(remaining))
+    environment.run3(parser.parse_args(remaining))
 
 if __name__ == "__main__":
     main()

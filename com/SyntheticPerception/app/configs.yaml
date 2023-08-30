@@ -1,6 +1,6 @@
 defaults:
 
-  logdir: '/home/stuart/Document/isaac_training'
+  logdir: '/home/jon/Document/Isaac_dreamer/isaac_training'
   traindir: null
   evaldir: null
   offline_traindir: ''
@@ -210,7 +210,7 @@ memorymaze:
 isaac_sim:
   task: isaac_one
   step: 1e8
-  envs: 1
+  envs: 5
   action_repeat: 1
   train_ratio: 1024
   video_pred_log: true

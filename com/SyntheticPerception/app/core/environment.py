@@ -102,11 +102,6 @@ class Environment(gym.Env):
 
         physics_dt = 1/60
         render_dt = 1/60
-        self._world = World(
-            stage_units_in_meters=1.0,
-            physics_dt=physics_dt,
-            rendering_dt=render_dt,
-        )
         # ### copied params
         self._size = size
         self._action_repeat = action_repeat
@@ -116,6 +111,7 @@ class Environment(gym.Env):
 
         self.env_id = id
         self.agent_alive = True
+        print(" ******* CREATING ENV WITH ID OF ", self.env_id)
 
         # average tracking
         self.stats = RunningStats()
@@ -148,42 +144,48 @@ class Environment(gym.Env):
                 8: np.array([0, 0, 0, 0,0,1]),#rotate right
                 0: np.array([0, 0, 0,0,0,-1]),#rotate left
             }
-
-    def setup_objects_agents_goals(self):
-        pos = [20, 0, 0]
-        rotation = [0, 0, 0,0]
-        stage = omni.usd.get_context().get_stage()
-        offset = self.env_id*2500
-    
-        parent_path = f"/World_{id}"
-    
-        # print(obj._prim.GetAttributes())
-        # x =stage.GetPrimAtPath("/World/object")
-        # print(x.GetAttributes())
+    def setup_light(self):
 
         omni.kit.commands.execute('CreatePrimWithDefaultXform',
         prim_type='DistantLight',
         prim_path=None,
         attributes={'angle': 1.0, 'intensity': 3000},
         select_new_prim=True)
+    def setup_objects_agents_goals(self,world, id):
+
+        self._world =world 
+        self.env_id = id
+        pos = [20, 0, 0]
+        rotation = [0, 0, 0,0]
+        stage = omni.usd.get_context().get_stage()
+        offset = self.env_id*2500
+    
+        parent_path = f"/World/env_{self.env_id}"#_{id}"
+    
+        # print(obj._prim.GetAttributes())
+        # x =stage.GetPrimAtPath("/World/object")
+        # print(x.GetAttributes())
+
 
         omni.kit.commands.execute('AddGroundPlaneCommand',
         stage=stage,
-        planePath='/GroundPlane_',
+        planePath=f'{parent_path}/GroundPlane',
         axis='Z',
-        size=2500.0,
+        size=500.0,
         position=Gf.Vec3f(offset, 0.0, 0.0),
         color=Gf.Vec3f(1., 1., 1.))
 
         omni.kit.commands.execute('ChangeProperty',
-            prop_path=Sdf.Path('{parent_path}/GroundPlane.xformOp:scale'),
-            value=Gf.Vec3f(500.0, 1.0, 1.0),
+            prop_path=Sdf.Path(f'{parent_path}/GroundPlane.xformOp:scale'),
+            value=Gf.Vec3f(1.0, 1.0, 1.0),
             prev=Gf.Vec3f(1.0, 1.0, 1.0))
             
       
         agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id*2500)
+
+        print(f" starting positions for id {offset/2500}   {agent_loc}, {goal_loc}")
         self._agent = Agent(
-            "/home/stuart/Downloads/sensors.json",
+            "/home/jon/Documents/Isaac_dreamer/sensors.json",
             agent_loc,
             rotation,
             [1.,1.,1.],
@@ -197,6 +199,7 @@ class Environment(gym.Env):
         print("tryin to create ojbect")
 
         usd_path = "/home/stuart/Downloads/cone.usd"
+        usd_path = "/home/jon/Documents/Isaac_dreamer/cone.usd"
         self._goal_object = Object(
                 goal_loc,
                 rotation,
@@ -207,6 +210,7 @@ class Environment(gym.Env):
                 usd_path=usd_path,
                 instanceable=True,
             )
+        print("actual object loc", self._goal_object.get_translate_vec())
         self._world.step(render=True)
         self._world.step(render=True)
         self._world.step(render=True)
@@ -264,6 +268,7 @@ class Environment(gym.Env):
         self._world.step(render=True)
 
     def pre_step(self,action):
+        print("in pre step, action is ", action)
         self._goal_pos = self._goal_object.get_translate()
         unpack_action = self._action_to_direction[action]
         linear_veloc = unpack_action[:3]
@@ -423,6 +428,7 @@ class Environment(gym.Env):
         
         return obs, reward, terminated, info
     def step(self, action):
+        # print("inside step the action is ", action)
         #if self._step // 100:
         #    print("Action : ", action, " : ", self._action_to_direction[action])
 
@@ -591,6 +597,7 @@ class Environment(gym.Env):
 
 
     def get_valid_random_spawn(self, offset=0):
+        
         range = 100
         valid_start = False
         agent_loc =[0,0,0]
@@ -611,7 +618,7 @@ class Environment(gym.Env):
         self._world.reset()
    
         self._step = 0
-        agent_loc, goal_loc = self.get_valid_random_spawn()
+        agent_loc, goal_loc = self.get_valid_random_spawn(offset = self.env_id*2500)
 
 
         

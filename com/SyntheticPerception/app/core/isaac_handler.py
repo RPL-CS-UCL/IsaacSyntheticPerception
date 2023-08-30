@@ -3,6 +3,7 @@ import pathlib
 import sys
 import functools
 
+from omni.isaac.core import World
 from omni.isaac.kit import SimulationApp
 
 from pxr import Usd, Gf, UsdGeom
@@ -210,7 +211,7 @@ class IsaacHandler:
             tools.enable_deterministic_run()
         print(pathlib.Path())
         logdir = pathlib.Path().expanduser()
-        logdir = pathlib.Path( "/home/stuart/Documents/isaac_training")
+        # logdir = pathlib.Path( "/home/stuart/Documents/isaac_training")
         #logdir = "/home/stuart/Documents/isaac_training"
         config.traindir = config.traindir or logdir / "train_eps"
         config.evaldir = config.evaldir or logdir / "eval_eps"
@@ -235,8 +236,21 @@ class IsaacHandler:
         make = lambda mode,id: dreamer_fns.make_env_seq(config, mode, id)
         train_envs = [make("train", id) for id in range(config.envs)]
         print(" ======= ", len(train_envs))
-        train_envs[0].setup_objects_agents_goals()
-        eval_envs = [make("eval",_) for _ in range(config.envs)]
+
+        world = World(
+            stage_units_in_meters=1.0,
+            physics_dt=1/60,
+            rendering_dt=1/60,
+        )
+        print("setup train envs !*!*!*!*!*!*!*")
+        for i in range(len(train_envs)):
+            train_envs[i].setup_objects_agents_goals(world=world, id=i)
+        train_envs[0].setup_light()
+        eval_envs = [make("eval",_+len(train_envs)) for _ in range(config.envs)]
+
+        for i in range(len(eval_envs)):
+        
+            eval_envs[i].setup_objects_agents_goals(world=world, id=i+len(train_envs)+1)
         train_envs = [Damy(env) for env in train_envs]
         eval_envs = [Damy(env) for env in eval_envs]
         acts = train_envs[0].action_space
@@ -342,7 +356,7 @@ class IsaacHandler:
                 tools.enable_deterministic_run()
             print(pathlib.Path())
             logdir = pathlib.Path().expanduser()
-            logdir = pathlib.Path( "/home/stuart/Documents/isaac_training")
+            logdir = pathlib.Path( "/home/jon/Documents/Isaac_dreamer/isaac_training")
             #logdir = "/home/stuart/Documents/isaac_training"
             config.traindir = config.traindir or logdir / "train_eps"
             config.evaldir = config.evaldir or logdir / "eval_eps"

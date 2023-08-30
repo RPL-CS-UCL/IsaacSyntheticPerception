@@ -40,6 +40,7 @@ class Object:
         self._usd_path = usd_path
         self._prim_name = prim_name
         self._prim_path = f'{parent_path}/{prim_name}'
+        print("Setting prim path to ", self._prim_path)
 
         self._stage = stage
         self._scale = Gf.Vec3d(scale[0], scale[1], scale[2])
