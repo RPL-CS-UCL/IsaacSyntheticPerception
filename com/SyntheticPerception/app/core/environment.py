@@ -94,6 +94,7 @@ class Environment(gym.Env):
         self._objects = []
         self._agents = []
 
+        self.id = id
         self._agent = None
         self._goal = None
         self._step = 0
@@ -144,6 +145,7 @@ class Environment(gym.Env):
                 8: np.array([0, 0, 0, 0,0,1]),#rotate right
                 0: np.array([0, 0, 0,0,0,-1]),#rotate left
             }
+        self._world = None
     def setup_light(self):
 
         omni.kit.commands.execute('CreatePrimWithDefaultXform',
@@ -153,8 +155,10 @@ class Environment(gym.Env):
         select_new_prim=True)
     def setup_objects_agents_goals(self,world, id):
 
-        self._world =world 
+        self._length = 1000
+        self._world =world
         self.env_id = id
+        self.id = id
         pos = [20, 0, 0]
         rotation = [0, 0, 0,0]
         stage = omni.usd.get_context().get_stage()
@@ -260,6 +264,7 @@ class Environment(gym.Env):
 
         return {"discount": np.float32(0.997), "dist_to_target":dist}
     def simulate_steps(self):
+        # print("num total steps ", self._length)
 
         self._world.step(render=True)
         self._world.step(render=True)
@@ -269,12 +274,13 @@ class Environment(gym.Env):
         self._world.step(render=True)
 
     def pre_step(self,action):
-        print("in pre step, action is ", action)
+        # print(action)
         self._goal_pos = self._goal_object.get_translate()
         unpack_action = self._action_to_direction[action]
         linear_veloc = unpack_action[:3]
         angular_veloc = unpack_action[3:]
         self.agent_alive = self._agent.step(linear_veloc,angular_veloc)
+        return 1
 
     def post_step(self, action):
         #if self._step // 100:

@@ -27,7 +27,7 @@ defaults:
   action_repeat: 2
   time_limit: 1000
   grayscale: False
-  prefill: 6000
+  prefill: 1000 
   eval_noise: 0.0
   reward_EMA: True
 
@@ -210,7 +210,7 @@ memorymaze:
 isaac_sim:
   task: isaac_one
   step: 1e8
-  envs: 5
+  envs: 3
   action_repeat: 1
   train_ratio: 1024
   video_pred_log: true
