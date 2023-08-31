@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# ignore user config file
+/com/SyntheticPerception/app/user_config.yaml
