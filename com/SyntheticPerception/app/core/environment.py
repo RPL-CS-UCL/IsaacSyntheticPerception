@@ -388,9 +388,9 @@ class Environment(gym.Env):
         normalized_distance = 1 / (dist + 1e-8)
 
         # reward += (50/(dist+1e-8)) + dist_since_previous_step
-        w_distance = 0.2
-        w_angle = 0.2
-        w_progress = 0.50
+        w_distance = 0.3
+        w_angle = 0.3
+        w_progress = 0.3
         w_penalty = 0.1
         total_reward = (
             w_distance * normalized_distance

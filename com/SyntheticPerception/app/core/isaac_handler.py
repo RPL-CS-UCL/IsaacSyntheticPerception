@@ -2,6 +2,10 @@ import argparse
 import pathlib
 import sys
 import functools
+import datetime
+import socket
+import os
+import shutil
 
 from omni.isaac.core import World
 from omni.isaac.kit import SimulationApp
@@ -73,6 +77,17 @@ class IsaacHandler:
         # make the env step the environment
         self.env.step()
         # self.env._world.step(render=render)
+
+    def create_session_name(self, config):
+        now = datetime.datetime.now()
+        # session_name = 'session_{}_{:04d}_{:02d}_{:02d}_{:02d}_{:02d}_{:02d}_{}'.format(
+        #     socket.gethostname(), now.year, now.month, now.day, now.hour, now.minute, now.second, config.tag)
+        # session_name = os.path.join((config.output_path), session_name)
+        session_name = 'session_{:04d}_{:02d}_{:02d}_{:02d}_{:02d}_{:02d}_{}'.format(
+        now.year, now.month, now.day, now.hour, now.minute, now.second, config.tag)
+        session_name = os.path.join((config.train_path), session_name)
+        os.makedirs(session_name)
+        return session_name
 
     def run(self, config):
         print(config)
@@ -208,9 +223,9 @@ class IsaacHandler:
         if config.deterministic_run:
             tools.enable_deterministic_run()
         logdir = pathlib.Path().expanduser()
-        # logdir = pathlib.Path( "/home/stuart/Documents/isaac_training")
-        logdir = "/home/jon/Documents/Isaac_dreamer/train"
+        logdir = self.create_session_name(config)
         logdir = pathlib.Path(logdir)
+        shutil.copy(config.environ_path, logdir)
         config.traindir = config.traindir or logdir / "train_eps"
         config.evaldir = config.evaldir or logdir / "eval_eps"
         config.steps //= config.action_repeat

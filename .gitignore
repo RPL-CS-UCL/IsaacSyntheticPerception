@@ -130,3 +130,6 @@ dmypy.json
 
 # ignore user config file
 /com/SyntheticPerception/app/user_config.yaml
+
+# ignore expermiment folder
+/com/SyntheticPerception/app/experiments

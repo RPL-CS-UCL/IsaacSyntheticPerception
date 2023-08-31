@@ -1,6 +1,6 @@
 defaults:
 
-  logdir: '/home/jon/Document/Isaac_dreamer/isaac_training'
+  logdir: null
   traindir: null
   evaldir: null
   offline_traindir: ''
@@ -19,6 +19,8 @@ defaults:
   debug: False
   expl_gifs: False
   video_pred_log: True
+  output_path: '/home/stuart/Isaac_Stuff/Buzz_V3/IsaacSyntheticPerception/com/SyntheticPerception/app/experiments/'
+  tag: 'testing'
 
   # Environment
   task: 'dmc_walker_walk'
@@ -102,7 +104,7 @@ defaults:
   actor_min_std: 0.1
   actor_max_std: 1.0
   actor_temp: 0.1
-  expl_amount: 0.2
+  expl_amount: 0.0
   eval_state_mean: False
   collect_dyn_sample: True
   behavior_stop_grad: True
@@ -210,7 +212,7 @@ memorymaze:
 isaac_sim:
   task: isaac_one
   step: 1e8
-  envs: 3
+  envs: 1
   action_repeat: 1
   train_ratio: 1024
   video_pred_log: true
