@@ -299,9 +299,6 @@ class Environment(gym.Env):
         self.agent_alive = self._agent.step(new_linear_veloc, angular_veloc)
 
     def post_step(self, action):
-        # if self._step // 100:
-        #    print("Action : ", action, " : ", self._action_to_direction[action])
-
         self._step += 1
 
         agent_alive = self.agent_alive
@@ -321,8 +318,6 @@ class Environment(gym.Env):
         agent_pos = self._agent.get_translate()
         agent_old_pos = self._agent._last_translate
         goal_pos = self._goal_object.get_translate()
-        # x_diff = abs(agent_pos[0]-goal_pos[0])
-        # y_diff= abs(agent_pos[1]-goal_pos[1])
         dist = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(goal_pos[:2]))
         old_dist = np.linalg.norm(
             np.asarray(agent_old_pos[:2]) - np.asarray(goal_pos[:2])
@@ -332,7 +327,6 @@ class Environment(gym.Env):
         # update the running stats
         self.stats.update(dist_since_previous_step)
 
-        # dist = x_diff + y_diff
 
         # Define your points
         agent_point = self._agent.get_translate_vec()
@@ -358,26 +352,7 @@ class Environment(gym.Env):
             [forward_direction[0], forward_direction[1], forward_direction[2]]
         )
         angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
-        # print(angle)
         reward = 0
-
-        #         #max can get is 1
-        # if angle < 45:
-        #     angle_reward += (1/(angle+1e-8))/10# .1 if looking direct
-
-        # 0.0023
-        # max can get is 1
-        # if angle < 1:
-        #     angle = 1
-        # if angle < 45:
-        #     angle_reward = (1/(angle+1e-8))/10# .1 if looking direct
-
-        #     self._angle_reward_steps += 1
-
-        # else:
-        #     self._angle_reward_steps = 0
-        # if self._angle_reward_steps > 30:
-        #     angle_reward /= (self._angle_reward_steps - 30)
 
         # ============== ANGLE REWARD
         angle_reward = 0  # 1e-20
@@ -395,8 +370,6 @@ class Environment(gym.Env):
             epsilon = 1e-10
             self.stats.update(progress_reward)
             if self.stats.standard_deviation < epsilon:
-                # If the standard deviation is extremely small, just return the un-normalized reward.
-                # This can happen, especially in the beginning when there's not much data.
                 return progress_reward
             normalized_reward = (progress_reward - self.stats.mean) / (
                 self.stats.standard_deviation + epsilon
@@ -426,16 +399,6 @@ class Environment(gym.Env):
 
         total_reward -= w_penalty  # * self._ste)
 
-        #         print(f"""
-        # Normalized dist: {normalized_distance}
-        # normalized angle reward:  {normalized_distance}
-        # Normalized progress: {normalized_progress}
-        # total_reward this step: {total_reward}
-        #               """
-        #               )
-
-        # reward -= (self._step / self.length) * 10_000
-        # reward -= 1/self._step
         # ==== apply all rewards
         reward += total_reward
         # ====== FINAL RWARD
