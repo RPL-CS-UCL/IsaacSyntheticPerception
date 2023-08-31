@@ -63,6 +63,7 @@ class IsaacHandler:
 
         self.env = gym.make("isaac-v0")
         # Environment("sim")
+        self.start_time = None
 
     def setup(self):
         self._appwindow = omni.appwindow.get_default_app_window()
@@ -347,6 +348,7 @@ class IsaacHandler:
                     if config.video_pred_log:
                         video_pred = agent._wm.video_pred(next(eval_dataset))
                         logger.video("eval_openl", to_np(video_pred))
+                self.start_time = time.time()
                 print("Start training.")
                 state = tools.simulate_multi(
                     agent,
@@ -354,6 +356,7 @@ class IsaacHandler:
                     train_eps,
                     config.traindir,
                     logger,
+                    start_time=self.start_time,
                     limit=config.dataset_size,
                     steps=config.eval_every,
                     state=state,
