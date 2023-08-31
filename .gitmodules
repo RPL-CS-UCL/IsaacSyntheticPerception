@@ -2,6 +2,3 @@
 	path = com/SyntheticPerception/app/dreamer
 	url = git@github.com:RPL-CS-UCL/dreamerv3.git
 
-[submodule "com/SyntheticPerception/app/sheeprl"]
-	path = com/SyntheticPerception/app/sheeprl
-	url = git@github.com:RPL-CS-UCL/sheeprl.git
