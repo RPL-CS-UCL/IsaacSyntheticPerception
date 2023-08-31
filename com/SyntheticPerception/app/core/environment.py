@@ -25,6 +25,7 @@ from core.objects import Object
 from matplotlib import pyplot as plt
 from PIL import Image
 import math
+import random
 
 """
 TO DO
@@ -644,8 +645,10 @@ class Environment(gym.Env):
 
         self._step = 0
         agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
-
-        self._agent.change_start_and_reset(translate=agent_loc)
+        random_rotation_angle = random.uniform(0, 2 * 3.14159)
+        rotation = Gf.Rotation(Gf.Vec3d(0, 0, 1), random_rotation_angle)
+        quat = rotation.GetQuaternion()
+        self._agent.change_start_and_reset(translate=agent_loc,orientation=quat)
         self._goal_object.change_start_and_reset(translate=goal_loc)
         info = self._get_info()
         obs = self._get_obs()
