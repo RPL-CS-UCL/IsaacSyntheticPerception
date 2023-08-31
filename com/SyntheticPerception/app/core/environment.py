@@ -164,7 +164,10 @@ class Environment(gym.Env):
             select_new_prim=True,
         )
 
-    def setup_objects_agents_goals(self, world, id):
+    def setup_objects_agents_goals(self, world, id,cone_path=None,sensor_path=None):
+        print(" ====== ")
+        print(cone_path)
+        print(sensor_path)
         self._length = 1000
         self._world = world
         self.env_id = id
@@ -202,7 +205,7 @@ class Environment(gym.Env):
 
         print(f" starting positions for id {offset/2500}   {agent_loc}, {goal_loc}")
         self._agent = Agent(
-            "/home/jon/Documents/Isaac_dreamer/sensors.json",
+            sensor_path,# "/home/jon/Documents/Isaac_dreamer/sensors.json",
             agent_loc,
             rotation,
             [1.0, 1.0, 1.0],
@@ -216,6 +219,7 @@ class Environment(gym.Env):
 
         usd_path = "/home/stuart/Downloads/cone.usd"
         usd_path = "/home/jon/Documents/Isaac_dreamer/cone.usd"
+        usd_path = cone_path
         self._goal_object = Object(
             goal_loc,
             rotation,

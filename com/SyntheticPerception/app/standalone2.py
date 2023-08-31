@@ -17,7 +17,12 @@ def main():
     configs = yaml.safe_load(
         (pathlib.Path(sys.argv[0]).parent / "configs.yaml").read_text()
     )
-
+    
+    user_configs= yaml.safe_load(
+        (pathlib.Path(sys.argv[0]).parent / "user_config.yaml").read_text()
+    )
+    for key in user_configs: 
+        configs["defaults"][key] =user_configs[key]#None#configs2.train_path
     def recursive_update(base, update):
         for key, value in update.items():
             if isinstance(value, dict) and key in base:
