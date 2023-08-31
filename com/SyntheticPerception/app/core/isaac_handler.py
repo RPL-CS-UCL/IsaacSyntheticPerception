@@ -240,13 +240,21 @@ class IsaacHandler:
             rendering_dt=1 / 60,
         )
         for i in range(len(train_envs)):
-            train_envs[i].setup_objects_agents_goals(world=world, id=i, cone_path =config.cone_asset, sensor_path = config.sensor_asset)
+            train_envs[i].setup_objects_agents_goals(
+                world=world,
+                id=i,
+                cone_path=config.cone_asset,
+                sensor_path=config.sensor_asset,
+            )
         train_envs[0].setup_light()
         eval_envs = [make("eval", _ + len(train_envs)) for _ in range(1)]
 
         for i in range(len(eval_envs)):
             eval_envs[i].setup_objects_agents_goals(
-                world=world, id=i + len(train_envs) + 1, cone_path =config.cone_asset, sensor_path = config.sensor_asset
+                world=world,
+                id=i + len(train_envs) + 1,
+                cone_path=config.cone_asset,
+                sensor_path=config.sensor_asset,
             )
         train_envs = [Damy(env) for env in train_envs]
         eval_envs = [Damy(env) for env in eval_envs]
@@ -277,7 +285,6 @@ class IsaacHandler:
 
         # sort out this while loop
         while self.simulation_app.is_running():
-
             render = True
             # self.step(render)
             state = tools.simulate_multi(

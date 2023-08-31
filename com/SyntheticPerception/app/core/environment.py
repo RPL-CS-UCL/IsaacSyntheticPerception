@@ -163,7 +163,7 @@ class Environment(gym.Env):
             select_new_prim=True,
         )
 
-    def setup_objects_agents_goals(self, world, id,cone_path=None,sensor_path=None):
+    def setup_objects_agents_goals(self, world, id, cone_path=None, sensor_path=None):
         self._length = 1000
         self._world = world
         self.env_id = id
@@ -200,7 +200,7 @@ class Environment(gym.Env):
         agent_loc[2] = 8
 
         self._agent = Agent(
-            sensor_path,# "/home/jon/Documents/Isaac_dreamer/sensors.json",
+            sensor_path,  # "/home/jon/Documents/Isaac_dreamer/sensors.json",
             agent_loc,
             rotation,
             [1.0, 1.0, 1.0],
@@ -289,10 +289,18 @@ class Environment(gym.Env):
 
         linear_veloc = unpack_action[:3]
         angular_veloc = unpack_action[3:]
-        linear_veloc_gf = Gf.Vec3d(float(linear_veloc[0]),float(linear_veloc[1]), float(linear_veloc[2]))
+        linear_veloc_gf = Gf.Vec3d(
+            float(linear_veloc[0]), float(linear_veloc[1]), float(linear_veloc[2])
+        )
         rotation = Gf.Rotation(self._agent.get_orientation_quat())
-        new_linear_veloc = rotation.TransformDir(linear_veloc_gf)#Gf.Vec3d(linear_veloc[0],linear_veloc[1],linear_veloc[2]))
-        new_linear_veloc = [new_linear_veloc[0], new_linear_veloc[1], new_linear_veloc[2]]
+        new_linear_veloc = rotation.TransformDir(
+            linear_veloc_gf
+        )  # Gf.Vec3d(linear_veloc[0],linear_veloc[1],linear_veloc[2]))
+        new_linear_veloc = [
+            new_linear_veloc[0],
+            new_linear_veloc[1],
+            new_linear_veloc[2],
+        ]
         self.agent_alive = self._agent.step(new_linear_veloc, angular_veloc)
 
     def post_step(self, action):
@@ -323,7 +331,6 @@ class Environment(gym.Env):
 
         # update the running stats
         self.stats.update(dist_since_previous_step)
-
 
         # Define your points
         agent_point = self._agent.get_translate_vec()
@@ -608,7 +615,7 @@ class Environment(gym.Env):
         random_rotation_angle = random.uniform(0, 2 * 3.14159)
         rotation = Gf.Rotation(Gf.Vec3d(0, 0, 1), random_rotation_angle)
         quat = rotation.GetQuaternion()
-        self._agent.change_start_and_reset(translate=agent_loc,orientation=quat)
+        self._agent.change_start_and_reset(translate=agent_loc, orientation=quat)
         self._goal_object.change_start_and_reset(translate=goal_loc)
         info = self._get_info()
         obs = self._get_obs()
