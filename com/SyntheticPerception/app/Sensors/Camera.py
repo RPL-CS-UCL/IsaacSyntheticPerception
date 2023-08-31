@@ -54,7 +54,7 @@ class DepthCamera:
         pathlib.Path(path +"/cameraPC").mkdir(parents=True, exist_ok=True)
 
     def init_sensor(self, parent):
-        print(self.__clipping_range)
+        # print(self.__clipping_range)
         self.__cam = rep.create.camera(
             position=self.__pos,
             parent=parent,
@@ -68,11 +68,11 @@ class DepthCamera:
             vertical_aperture_offset=self.__vertical_aperture_offset,
             clipping_range=self.__clipping_range,
         )
-        print("resolution ", self.__resolution)
+        # print("resolution ", self.__resolution)
         self.__rp: og.Node = rep.create.render_product(
             self.__cam, self.__resolution
         )
-        print(f"{self._o} Attaching annotaors to camera.")
+        # print(f"{self._o} Attaching annotaors to camera.")
         if self.__attach:
             self.__init_annotators()
             self.__attach_annotoators()

@@ -40,7 +40,6 @@ class Object:
         self._usd_path = usd_path
         self._prim_name = prim_name
         self._prim_path = f'{parent_path}/{prim_name}'
-        print("Setting prim path to ", self._prim_path)
 
         self._stage = stage
         self._scale = Gf.Vec3d(scale[0], scale[1], scale[2])
@@ -53,12 +52,10 @@ class Object:
         self._initial_scale = self._scale
         self._initial_orientation = self._orientation
         if not usd_path is None:
-            print("LOADING USD ")
             add_reference_to_stage(
                 usd_path=self._usd_path, prim_path=self._prim_path
             )
         else:
-            print(" CREATING CUBE")
             omni.kit.commands.execute(
                 'CreateMeshPrimWithDefaultXform',
                 prim_type='Cube',

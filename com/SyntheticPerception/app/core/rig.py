@@ -39,8 +39,8 @@ class Agent(Object):
         
         self._translate = self._initial_translate
         self._orientation = self._initial_orientation
-        print("Starting location of rig ", self._initial_translate, " @ ", self._translate)
-        print(type(self._orientation))
+        # print("Starting location of rig ", self._initial_translate, " @ ", self._translate)
+        # print(type(self._orientation))
         self.set_translate(self._translate)
         self.set_orient(self._orientation)
 
@@ -154,7 +154,7 @@ class Agent(Object):
                         lidar.read_from_json(sensor_settings)
                         self.add_sensor_to_rig(lidar)
                 elif key == 'CAMERA':
-                    print('creating camera')
+                    # print('creating camera')
 
                     for sensor_id in sensors[key]['instances']:
                         sensor_settings = sensors[key]['instances'][sensor_id]

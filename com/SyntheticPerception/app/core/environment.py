@@ -122,7 +122,6 @@ class Environment(gym.Env):
 
         self.env_id = id
         self.agent_alive = True
-        print(" ******* CREATING ENV WITH ID OF ", self.env_id)
 
         # average tracking
         self.stats = RunningStats()
@@ -165,9 +164,6 @@ class Environment(gym.Env):
         )
 
     def setup_objects_agents_goals(self, world, id,cone_path=None,sensor_path=None):
-        print(" ====== ")
-        print(cone_path)
-        print(sensor_path)
         self._length = 1000
         self._world = world
         self.env_id = id
@@ -203,7 +199,6 @@ class Environment(gym.Env):
         agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
         agent_loc[2] = 8
 
-        print(f" starting positions for id {offset/2500}   {agent_loc}, {goal_loc}")
         self._agent = Agent(
             sensor_path,# "/home/jon/Documents/Isaac_dreamer/sensors.json",
             agent_loc,
@@ -215,7 +210,6 @@ class Environment(gym.Env):
             disable_gravity=True,
             visibility="invisible",
         )
-        print("tryin to create ojbect")
 
         usd_path = "/home/stuart/Downloads/cone.usd"
         usd_path = "/home/jon/Documents/Isaac_dreamer/cone.usd"
@@ -230,7 +224,6 @@ class Environment(gym.Env):
             usd_path=usd_path,
             instanceable=True,
         )
-        print("actual object loc", self._goal_object.get_translate_vec())
         self._world.step(render=True)
         self._world.step(render=True)
         self._world.step(render=True)

@@ -204,18 +204,13 @@ class IsaacHandler:
                 self._needs_reset = True
 
     def run3(self, config):
-        print(config)
         tools.set_seed_everywhere(config.seed)
         if config.deterministic_run:
             tools.enable_deterministic_run()
-        print(pathlib.Path())
         logdir = pathlib.Path().expanduser()
         # logdir = pathlib.Path( "/home/stuart/Documents/isaac_training")
         logdir = "/home/jon/Documents/Isaac_dreamer/train"
         logdir = pathlib.Path(logdir)
-        print("()()()()()()()()()()()()()()()()()()()()")
-        print(logdir)
-        print(config.train_path)
         config.traindir = config.traindir or logdir / "train_eps"
         config.evaldir = config.evaldir or logdir / "eval_eps"
         config.steps //= config.action_repeat
@@ -238,8 +233,6 @@ class IsaacHandler:
         eval_eps = tools.load_episodes(directory, limit=1)
         make = lambda mode, id: dreamer_fns.make_env_seq(config, mode, id)
         train_envs = [make("train", id) for id in range(config.envs)]
-        print(" ======= ", len(train_envs))
-        print("There will be ", config.steps, " steps")
 
         world = World(
             stage_units_in_meters=1.0,
@@ -263,7 +256,7 @@ class IsaacHandler:
         state = None
         prefill = config.prefill
         print(f"Prefill dataset ({prefill} steps).")
-        print(acts)
+        # print(acts)
         if hasattr(acts, "discrete"):
             random_actor = tools.OneHotDist(
                 torch.zeros(config.num_actions).repeat(config.envs, 1)
@@ -284,8 +277,6 @@ class IsaacHandler:
 
         # sort out this while loop
         while self.simulation_app.is_running():
-            print(" &&&& starting profile")
-            start_time = time.time()
 
             render = True
             # self.step(render)
@@ -298,9 +289,6 @@ class IsaacHandler:
                 limit=config.dataset_size,
                 steps=prefill,
             )
-            time_taken = time.time() - start_time
-            print("*********************")
-            print("1k sims took ", time_taken)
             logger.step += prefill * config.action_repeat
             print(f"Logger: ({logger.step} steps).")
 
@@ -359,11 +347,9 @@ class IsaacHandler:
                 self._needs_reset = True
 
     def run2(self, config):
-        print(config)
         tools.set_seed_everywhere(config.seed)
         if config.deterministic_run:
             tools.enable_deterministic_run()
-        print(pathlib.Path())
         logdir = pathlib.Path().expanduser()
         logdir = pathlib.Path("/home/jon/Documents/Isaac_dreamer/isaac_training")
 
