@@ -25,24 +25,31 @@ from core.objects import Object
 from matplotlib import pyplot as plt
 from PIL import Image
 import math
+
 """
 TO DO
 
 
 sort the reward
 """
+
+
 def angle_between_vectors(v1, v2):
-        """Compute the angle (in degrees) between two vectors."""
-        dot_product = np.dot(v1, v2)
-        magnitude_product = np.linalg.norm(v1) * np.linalg.norm(v2)
-        cosine_angle = dot_product / magnitude_product
-        angle_rad = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
-        angle_deg = np.degrees(angle_rad)
-        return angle_deg
+    """Compute the angle (in degrees) between two vectors."""
+    dot_product = np.dot(v1, v2)
+    magnitude_product = np.linalg.norm(v1) * np.linalg.norm(v2)
+    cosine_angle = dot_product / magnitude_product
+    angle_rad = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
+    angle_deg = np.degrees(angle_rad)
+    return angle_deg
+
+
 def rotate_vector_by_quaternion(vec, quat):
     vec_quat = Gf.Quatf(0, vec)
     rotated_quat = quat * vec_quat * quat.GetInverse()
     return rotated_quat.GetImaginary()
+
+
 class RunningStats:
     def __init__(self):
         self.n = 0
@@ -52,7 +59,7 @@ class RunningStats:
     def update(self, x):
         """
         Update the running statistics with new data point x.
-        
+
         Parameters:
             x (float): New data point.
         """
@@ -66,29 +73,31 @@ class RunningStats:
     def variance(self):
         """
         Get the variance of the data seen so far.
-        
+
         Returns:
             float: Variance.
         """
         if self.n < 2:
-            return float('nan')
+            return float("nan")
         return self.M2 / self.n
 
     @property
     def standard_deviation(self):
         """
         Get the standard deviation of the data seen so far.
-        
+
         Returns:
             float: Standard deviation.
         """
-        return self.variance ** 0.5
+        return self.variance**0.5
+
+
 class Environment(gym.Env):
     """
     Class that represents the world, agents, and, objects that can exist in an environment
     """
 
-    def __init__(self, action_repeat=1, size=(64, 64), seed=0, id = 0) -> None:
+    def __init__(self, action_repeat=1, size=(64, 64), seed=0, id=0) -> None:
         # self._world = World()
         self._step = 0
         self._objects = []
@@ -101,8 +110,8 @@ class Environment(gym.Env):
         self._length = 1000
         self._angle_reward_steps = 0
 
-        physics_dt = 1/60
-        render_dt = 1/60
+        physics_dt = 1 / 60
+        render_dt = 1 / 60
         # ### copied params
         self._size = size
         self._action_repeat = action_repeat
@@ -117,7 +126,6 @@ class Environment(gym.Env):
         # average tracking
         self.stats = RunningStats()
 
-
         """
 
         The following dictionary maps abstract actions from `self.action_space` to 
@@ -131,61 +139,64 @@ class Environment(gym.Env):
         velocity = 3
         diag_veloc = velocity * math.sqrt(2) / 2
         self._action_to_direction = {
-                # linear
-                9: np.array([velocity, 0, 0, 0, 0, 0]),#forward
-                1: np.array([-velocity, 0, 0, 0, 0, 0]),#back
-                2: np.array([0, velocity, 0, 0, 0, 0]),#left
-                3: np.array([0, -velocity, 0, 0, 0, 0]),#right
-
-                4: np.array([diag_veloc, diag_veloc, 0, 0, 0, 0]),#forward
-                5: np.array([-diag_veloc, -diag_veloc, 0, 0, 0, 0]),#back
-                6: np.array([diag_veloc, -diag_veloc, 0, 0, 0, 0]),#left
-                7: np.array([-diag_veloc, diag_veloc, 0, 0, 0, 0]),#right
-                # angular
-                8: np.array([0, 0, 0, 0,0,1]),#rotate right
-                0: np.array([0, 0, 0,0,0,-1]),#rotate left
-            }
+            # linear
+            0: np.array([velocity, 0, 0, 0, 0, 0]),  # forward
+            1: np.array([-velocity, 0, 0, 0, 0, 0]),  # back
+            2: np.array([0, velocity, 0, 0, 0, 0]),  # left
+            3: np.array([0, -velocity, 0, 0, 0, 0]),  # right
+            4: np.array([diag_veloc, diag_veloc, 0, 0, 0, 0]),  # forward
+            5: np.array([-diag_veloc, -diag_veloc, 0, 0, 0, 0]),  # back
+            6: np.array([diag_veloc, -diag_veloc, 0, 0, 0, 0]),  # left
+            7: np.array([-diag_veloc, diag_veloc, 0, 0, 0, 0]),  # right
+            # angular
+            8: np.array([0, 0, 0, 0, 0, 1]),  # rotate right
+            9: np.array([0, 0, 0, 0, 0, -1]),  # rotate left
+        }
         self._world = None
+
     def setup_light(self):
+        omni.kit.commands.execute(
+            "CreatePrimWithDefaultXform",
+            prim_type="DistantLight",
+            prim_path=None,
+            attributes={"angle": 1.0, "intensity": 3000},
+            select_new_prim=True,
+        )
 
-        omni.kit.commands.execute('CreatePrimWithDefaultXform',
-        prim_type='DistantLight',
-        prim_path=None,
-        attributes={'angle': 1.0, 'intensity': 3000},
-        select_new_prim=True)
-    def setup_objects_agents_goals(self,world, id):
-
+    def setup_objects_agents_goals(self, world, id):
         self._length = 1000
-        self._world =world
+        self._world = world
         self.env_id = id
         self.id = id
         pos = [20, 0, 0]
-        rotation = [0, 0, 0,0]
+        rotation = [0, 0, 0, 0]
         stage = omni.usd.get_context().get_stage()
-        offset = self.env_id*2500
-    
-        parent_path = f"/World/env_{self.env_id}"#_{id}"
-    
+        offset = self.env_id * 2500
+
+        parent_path = f"/World/env_{self.env_id}"  # _{id}"
+
         # print(obj._prim.GetAttributes())
         # x =stage.GetPrimAtPath("/World/object")
         # print(x.GetAttributes())
 
+        omni.kit.commands.execute(
+            "AddGroundPlaneCommand",
+            stage=stage,
+            planePath=f"{parent_path}/GroundPlane",
+            axis="Z",
+            size=500.0,
+            position=Gf.Vec3f(offset, 0.0, 0.0),
+            color=Gf.Vec3f(1.0, 1.0, 1.0),
+        )
 
-        omni.kit.commands.execute('AddGroundPlaneCommand',
-        stage=stage,
-        planePath=f'{parent_path}/GroundPlane',
-        axis='Z',
-        size=500.0,
-        position=Gf.Vec3f(offset, 0.0, 0.0),
-        color=Gf.Vec3f(1., 1., 1.))
-
-        omni.kit.commands.execute('ChangeProperty',
-            prop_path=Sdf.Path(f'{parent_path}/GroundPlane.xformOp:scale'),
+        omni.kit.commands.execute(
+            "ChangeProperty",
+            prop_path=Sdf.Path(f"{parent_path}/GroundPlane.xformOp:scale"),
             value=Gf.Vec3f(1.0, 1.0, 1.0),
-            prev=Gf.Vec3f(1.0, 1.0, 1.0))
-            
-      
-        agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id*2500)
+            prev=Gf.Vec3f(1.0, 1.0, 1.0),
+        )
+
+        agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
         agent_loc[2] = 8
 
         print(f" starting positions for id {offset/2500}   {agent_loc}, {goal_loc}")
@@ -193,28 +204,27 @@ class Environment(gym.Env):
             "/home/jon/Documents/Isaac_dreamer/sensors.json",
             agent_loc,
             rotation,
-            [1.,1.,1.],
+            [1.0, 1.0, 1.0],
             "AGENT",
             parent_path,
             stage,
             disable_gravity=True,
             visibility="invisible",
-
         )
         print("tryin to create ojbect")
 
         usd_path = "/home/stuart/Downloads/cone.usd"
         usd_path = "/home/jon/Documents/Isaac_dreamer/cone.usd"
         self._goal_object = Object(
-                goal_loc,
-                rotation,
-                [.2,.2,.2],
-                "goal",
-                parent_path,
-                stage,
-                usd_path=usd_path,
-                instanceable=True,
-            )
+            goal_loc,
+            rotation,
+            [0.2, 0.2, 0.2],
+            "goal",
+            parent_path,
+            stage,
+            usd_path=usd_path,
+            instanceable=True,
+        )
         print("actual object loc", self._goal_object.get_translate_vec())
         self._world.step(render=True)
         self._world.step(render=True)
@@ -222,17 +232,17 @@ class Environment(gym.Env):
         self._world.step(render=True)
         self._world.step(render=True)
         self._world.step(render=True)
+
     @property
     def action_space(self):
         space = self._action_space
         space.discrete = True
         return space
+
     @property
     def observation_space(self):
         spaces = {}
-        spaces['image'] = gym.spaces.Box(
-            0, 255, self._size + (3,), dtype=np.uint8
-        )
+        spaces["image"] = gym.spaces.Box(0, 255, self._size + (3,), dtype=np.uint8)
         return gym.spaces.Dict(spaces)
 
     # @property
@@ -244,25 +254,26 @@ class Environment(gym.Env):
 
         obs = self._agent.get_observations()[0]
         if len(obs) == 0:
-            return {"image" : np.zeros((64,64,3))}
-      
-        obs = obs[:, :,  :-1]
-     
-        is_first = self._step == 0
-        #img = Image.fromarray(obs, 'RGB')  # 'L' means grayscale. For RGB, use 'RGB'
-        #img.save('/home/stuart/Desktop/image.png')
+            return {"image": np.zeros((64, 64, 3))}
 
-        return {"image": obs,"is_terminal": False, "is_first": is_first}
+        obs = obs[:, :, :-1]
+
+        is_first = self._step == 0
+        # img = Image.fromarray(obs, 'RGB')  # 'L' means grayscale. For RGB, use 'RGB'
+        # img.save('/home/stuart/Desktop/image.png')
+
+        return {"image": obs, "is_terminal": False, "is_first": is_first}
 
     def _get_info(self):
         agent_pos = self._agent.get_translate()
-        #dist_to_target = self._goal_pos - agent_pos
+        # dist_to_target = self._goal_pos - agent_pos
         goal_pos = self._goal_object.get_translate()
-        x_diff = abs(agent_pos[0]-goal_pos[0])
-        y_diff= abs(agent_pos[1]-goal_pos[1])
+        x_diff = abs(agent_pos[0] - goal_pos[0])
+        y_diff = abs(agent_pos[1] - goal_pos[1])
         dist = x_diff + y_diff
 
-        return {"discount": np.float32(0.997), "dist_to_target":dist}
+        return {"discount": np.float32(0.997), "dist_to_target": dist}
+
     def simulate_steps(self):
         # print("num total steps ", self._length)
 
@@ -273,55 +284,58 @@ class Environment(gym.Env):
         self._world.step(render=True)
         self._world.step(render=True)
 
-    def pre_step(self,action):
+    def pre_step(self, action):
         # print(action)
         self._goal_pos = self._goal_object.get_translate()
         unpack_action = self._action_to_direction[action]
+
         linear_veloc = unpack_action[:3]
         angular_veloc = unpack_action[3:]
-        self.agent_alive = self._agent.step(linear_veloc,angular_veloc)
-        return 1
+        linear_veloc_gf = Gf.Vec3d(float(linear_veloc[0]),float(linear_veloc[1]), float(linear_veloc[2]))
+        rotation = Gf.Rotation(self._agent.get_orientation_quat())
+        new_linear_veloc = rotation.TransformDir(linear_veloc_gf)#Gf.Vec3d(linear_veloc[0],linear_veloc[1],linear_veloc[2]))
+        new_linear_veloc = [new_linear_veloc[0], new_linear_veloc[1], new_linear_veloc[2]]
+        self.agent_alive = self._agent.step(new_linear_veloc, angular_veloc)
 
     def post_step(self, action):
-        #if self._step // 100:
+        # if self._step // 100:
         #    print("Action : ", action, " : ", self._action_to_direction[action])
 
-        self._step +=1
-        
+        self._step += 1
+
         agent_alive = self.agent_alive
         self._done = (not agent_alive) or (self._length and self._step >= self._length)
 
         # ensure agent doesnt leave, if it does kill and reset
         # check if agent is at goal
-        terminated = self._done #not agent_alive
+        terminated = self._done  # not agent_alive
         obs = self._get_obs()
         info = self._get_info()
 
         # ================= REWARD CALCULATIONS
 
         # set reward as dist to goal
-        reward = 0  
-        
+        reward = 0
+
         agent_pos = self._agent.get_translate()
         agent_old_pos = self._agent._last_translate
         goal_pos = self._goal_object.get_translate()
-        #x_diff = abs(agent_pos[0]-goal_pos[0])
-        #y_diff= abs(agent_pos[1]-goal_pos[1])
+        # x_diff = abs(agent_pos[0]-goal_pos[0])
+        # y_diff= abs(agent_pos[1]-goal_pos[1])
         dist = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(goal_pos[:2]))
-        old_dist = np.linalg.norm(np.asarray(agent_old_pos[:2]) - np.asarray(goal_pos[:2]))
+        old_dist = np.linalg.norm(
+            np.asarray(agent_old_pos[:2]) - np.asarray(goal_pos[:2])
+        )
         dist_since_previous_step = old_dist - dist
-    
+
         # update the running stats
         self.stats.update(dist_since_previous_step)
 
-
         # dist = x_diff + y_diff
-
-      
 
         # Define your points
         agent_point = self._agent.get_translate_vec()
-        goal_point =self._goal_object.get_translate_vec()
+        goal_point = self._goal_object.get_translate_vec()
 
         # Compute desired direction
         desired_direction = goal_point - agent_point
@@ -336,40 +350,43 @@ class Environment(gym.Env):
         forward_direction = rotate_vector_by_quaternion(Gf.Vec3f(1, 0, 0), quat)
 
         # Convert Gf.Vec3f to numpy arrays for computation
-        desired_direction_np = np.array([desired_direction[0], desired_direction[1], desired_direction[2]])
-        forward_direction_np = np.array([forward_direction[0], forward_direction[1], forward_direction[2]])
+        desired_direction_np = np.array(
+            [desired_direction[0], desired_direction[1], desired_direction[2]]
+        )
+        forward_direction_np = np.array(
+            [forward_direction[0], forward_direction[1], forward_direction[2]]
+        )
         angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
-        #print(angle)
+        # print(angle)
         reward = 0
-        
+
         #         #max can get is 1
         # if angle < 45:
-        #     angle_reward += (1/(angle+1e-8))/10# .1 if looking direct 
+        #     angle_reward += (1/(angle+1e-8))/10# .1 if looking direct
 
         # 0.0023
-        #max can get is 1
+        # max can get is 1
         # if angle < 1:
         #     angle = 1
         # if angle < 45:
-        #     angle_reward = (1/(angle+1e-8))/10# .1 if looking direct 
-     
+        #     angle_reward = (1/(angle+1e-8))/10# .1 if looking direct
+
         #     self._angle_reward_steps += 1
-           
+
         # else:
         #     self._angle_reward_steps = 0
         # if self._angle_reward_steps > 30:
         #     angle_reward /= (self._angle_reward_steps - 30)
-        
+
         # ============== ANGLE REWARD
-        angle_reward = 0#1e-20
+        angle_reward = 0  # 1e-20
         if angle < 45:
-            angle_reward = (1/(angle+1e-8))#*10# .1 if looking direct 
-        #reward += angle_reward
+            angle_reward = 1 / (angle + 1e-8)  # *10# .1 if looking direct
+        # reward += angle_reward
         normalized_angle_reward = np.cos(np.deg2rad(np.asarray(angle_reward)))
 
-       
         # ======= DISTANCE REWARD
-        #scaled dist to target
+        # scaled dist to target
         # max 3.33 +-1
         # min 0.2 +- 1
         # if dist < 200:
@@ -380,75 +397,72 @@ class Environment(gym.Env):
                 # If the standard deviation is extremely small, just return the un-normalized reward.
                 # This can happen, especially in the beginning when there's not much data.
                 return progress_reward
-            normalized_reward = (progress_reward - self.stats.mean) / (self.stats.standard_deviation + epsilon)
+            normalized_reward = (progress_reward - self.stats.mean) / (
+                self.stats.standard_deviation + epsilon
+            )
             return normalized_reward
-        normalized_progress = normalize_progress(dist_since_previous_step)
 
+        normalized_progress = normalize_progress(dist_since_previous_step)
 
         dist -= self.threshold - 1
         if dist <= 0:
             dist = 1
-        normalized_distance = 1/(dist+1e-8)
+        normalized_distance = 1 / (dist + 1e-8)
 
-        #reward += (50/(dist+1e-8)) + dist_since_previous_step
+        # reward += (50/(dist+1e-8)) + dist_since_previous_step
         w_distance = 0.2
         w_angle = 0.2
         w_progress = 0.50
         w_penalty = 0.1
-        total_reward = (w_distance * normalized_distance +
-                        w_angle * normalized_angle_reward +
-                        w_progress * normalized_progress)
-                        #w_penalty * self.get_step_penalty())
-
-
-        
+        total_reward = (
+            w_distance * normalized_distance
+            + w_angle * normalized_angle_reward
+            + w_progress * normalized_progress
+        )
+        # w_penalty * self.get_step_penalty())
 
         # ======= PENALTY REWARD
 
-        
-        total_reward -= w_penalty# * self._ste)
+        total_reward -= w_penalty  # * self._ste)
 
+        #         print(f"""
+        # Normalized dist: {normalized_distance}
+        # normalized angle reward:  {normalized_distance}
+        # Normalized progress: {normalized_progress}
+        # total_reward this step: {total_reward}
+        #               """
+        #               )
 
-#         print(f"""
-# Normalized dist: {normalized_distance} 
-# normalized angle reward:  {normalized_distance}
-# Normalized progress: {normalized_progress}
-# total_reward this step: {total_reward}
-#               """
-#               )
-        
-        #reward -= (self._step / self.length) * 10_000
-        #reward -= 1/self._step
+        # reward -= (self._step / self.length) * 10_000
+        # reward -= 1/self._step
         # ==== apply all rewards
         reward += total_reward
         # ====== FINAL RWARD
-        #max can get is 20
-        #threshold = 15
-        dist += self.threshold -1
+        # max can get is 20
+        # threshold = 15
+        dist += self.threshold - 1
         if dist < self.threshold:
-            #print(" WE ARE NOW TERMINATING ",dist,  "  ", self.threshold)
+            # print(" WE ARE NOW TERMINATING ",dist,  "  ", self.threshold)
             reward += 10_000
             terminated = True
         obs["is_terminal"] = terminated
-    
 
-        
         return obs, reward, terminated, info
+
     def step(self, action):
         # print("inside step the action is ", action)
-        #if self._step // 100:
+        # if self._step // 100:
         #    print("Action : ", action, " : ", self._action_to_direction[action])
 
-        self._step +=1
-        
+        self._step += 1
+
         self._goal_pos = self._goal_object.get_translate()
         unpack_action = self._action_to_direction[action]
         linear_veloc = unpack_action[:3]
         angular_veloc = unpack_action[3:]
 
-
         # STEP AGENT HERE
-        agent_alive = self._agent.step(linear_veloc,angular_veloc)
+        agent_alive = self._agent.step(linear_veloc, angular_veloc)
         self._world.step(render=True)
         self._world.step(render=True)
         self._world.step(render=True)
@@ -457,38 +471,36 @@ class Environment(gym.Env):
         self._world.step(render=True)
         self._done = (not agent_alive) or (self._length and self._step >= self._length)
 
-
         # ensure agent doesnt leave, if it does kill and reset
         # check if agent is at goal
-        terminated = self._done #not agent_alive
+        terminated = self._done  # not agent_alive
         obs = self._get_obs()
         info = self._get_info()
 
         # ================= REWARD CALCULATIONS
 
         # set reward as dist to goal
-        reward = 0  
-        
+        reward = 0
+
         agent_pos = self._agent.get_translate()
         agent_old_pos = self._agent._last_translate
         goal_pos = self._goal_object.get_translate()
-        #x_diff = abs(agent_pos[0]-goal_pos[0])
-        #y_diff= abs(agent_pos[1]-goal_pos[1])
+        # x_diff = abs(agent_pos[0]-goal_pos[0])
+        # y_diff= abs(agent_pos[1]-goal_pos[1])
         dist = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(goal_pos[:2]))
-        old_dist = np.linalg.norm(np.asarray(agent_old_pos[:2]) - np.asarray(goal_pos[:2]))
+        old_dist = np.linalg.norm(
+            np.asarray(agent_old_pos[:2]) - np.asarray(goal_pos[:2])
+        )
         dist_since_previous_step = old_dist - dist
-    
+
         # update the running stats
         self.stats.update(dist_since_previous_step)
 
-
         # dist = x_diff + y_diff
-
-      
 
         # Define your points
         agent_point = self._agent.get_translate_vec()
-        goal_point =self._goal_object.get_translate_vec()
+        goal_point = self._goal_object.get_translate_vec()
 
         # Compute desired direction
         desired_direction = goal_point - agent_point
@@ -503,40 +515,43 @@ class Environment(gym.Env):
         forward_direction = rotate_vector_by_quaternion(Gf.Vec3f(1, 0, 0), quat)
 
         # Convert Gf.Vec3f to numpy arrays for computation
-        desired_direction_np = np.array([desired_direction[0], desired_direction[1], desired_direction[2]])
-        forward_direction_np = np.array([forward_direction[0], forward_direction[1], forward_direction[2]])
+        desired_direction_np = np.array(
+            [desired_direction[0], desired_direction[1], desired_direction[2]]
+        )
+        forward_direction_np = np.array(
+            [forward_direction[0], forward_direction[1], forward_direction[2]]
+        )
         angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
-        #print(angle)
+        # print(angle)
         reward = 0
-        
+
         #         #max can get is 1
         # if angle < 45:
-        #     angle_reward += (1/(angle+1e-8))/10# .1 if looking direct 
+        #     angle_reward += (1/(angle+1e-8))/10# .1 if looking direct
 
         # 0.0023
-        #max can get is 1
+        # max can get is 1
         # if angle < 1:
         #     angle = 1
         # if angle < 45:
-        #     angle_reward = (1/(angle+1e-8))/10# .1 if looking direct 
-     
+        #     angle_reward = (1/(angle+1e-8))/10# .1 if looking direct
+
         #     self._angle_reward_steps += 1
-           
+
         # else:
         #     self._angle_reward_steps = 0
         # if self._angle_reward_steps > 30:
         #     angle_reward /= (self._angle_reward_steps - 30)
-        
+
         # ============== ANGLE REWARD
-        angle_reward = 0#1e-20
+        angle_reward = 0  # 1e-20
         if angle < 45:
-            angle_reward = (1/(angle+1e-8))#*10# .1 if looking direct 
-        #reward += angle_reward
+            angle_reward = 1 / (angle + 1e-8)  # *10# .1 if looking direct
+        # reward += angle_reward
         normalized_angle_reward = np.cos(np.deg2rad(np.asarray(angle_reward)))
 
-       
         # ======= DISTANCE REWARD
-        #scaled dist to target
+        # scaled dist to target
         # max 3.33 +-1
         # min 0.2 +- 1
         # if dist < 200:
@@ -547,71 +562,74 @@ class Environment(gym.Env):
                 # If the standard deviation is extremely small, just return the un-normalized reward.
                 # This can happen, especially in the beginning when there's not much data.
                 return progress_reward
-            normalized_reward = (progress_reward - self.stats.mean) / (self.stats.standard_deviation + epsilon)
+            normalized_reward = (progress_reward - self.stats.mean) / (
+                self.stats.standard_deviation + epsilon
+            )
             return normalized_reward
-        normalized_progress = normalize_progress(dist_since_previous_step)
 
+        normalized_progress = normalize_progress(dist_since_previous_step)
 
         dist -= self.threshold - 1
         if dist <= 0:
             dist = 1
-        normalized_distance = 1/(dist+1e-8)
+        normalized_distance = 1 / (dist + 1e-8)
 
-        #reward += (50/(dist+1e-8)) + dist_since_previous_step
+        # reward += (50/(dist+1e-8)) + dist_since_previous_step
         w_distance = 0.2
         w_angle = 0.2
         w_progress = 0.50
         w_penalty = 0.1
-        total_reward = (w_distance * normalized_distance +
-                        w_angle * normalized_angle_reward +
-                        w_progress * normalized_progress)
-                        #w_penalty * self.get_step_penalty())
-
-
-        
+        total_reward = (
+            w_distance * normalized_distance
+            + w_angle * normalized_angle_reward
+            + w_progress * normalized_progress
+        )
+        # w_penalty * self.get_step_penalty())
 
         # ======= PENALTY REWARD
 
-        
-        total_reward -= w_penalty# * self._ste)
+        total_reward -= w_penalty  # * self._ste)
 
+        #         print(f"""
+        # Normalized dist: {normalized_distance}
+        # normalized angle reward:  {normalized_distance}
+        # Normalized progress: {normalized_progress}
+        # total_reward this step: {total_reward}
+        #               """
+        #               )
 
-#         print(f"""
-# Normalized dist: {normalized_distance} 
-# normalized angle reward:  {normalized_distance}
-# Normalized progress: {normalized_progress}
-# total_reward this step: {total_reward}
-#               """
-#               )
-        
-        #reward -= (self._step / self.length) * 10_000
-        #reward -= 1/self._step
+        # reward -= (self._step / self.length) * 10_000
+        # reward -= 1/self._step
         # ==== apply all rewards
         reward += total_reward
         # ====== FINAL RWARD
-        #max can get is 20
-        #threshold = 15
-        dist += self.threshold -1
+        # max can get is 20
+        # threshold = 15
+        dist += self.threshold - 1
         if dist < self.threshold:
-            #print(" WE ARE NOW TERMINATING ",dist,  "  ", self.threshold)
+            # print(" WE ARE NOW TERMINATING ",dist,  "  ", self.threshold)
             reward += 10_000
             terminated = True
         obs["is_terminal"] = terminated
-    
 
-        
         return obs, reward, terminated, info
 
-
     def get_valid_random_spawn(self, offset=0):
-        
         range = 200
         valid_start = False
-        agent_loc =[0,0,0]
-        goal_loc = [0,0,0]
+        agent_loc = [0, 0, 0]
+        goal_loc = [0, 0, 0]
         while not valid_start:
-            agent_loc = [np.random.uniform(-range, range), np.random.uniform(-range, range), 0]
-            goal_loc = [np.random.uniform(-range, range), np.random.uniform(-range, range), 0]
+            agent_loc = [
+                np.random.uniform(-range, range),
+                np.random.uniform(-range, range),
+                0,
+            ]
+            goal_loc = [
+                np.random.uniform(-range, range),
+                np.random.uniform(-range, range),
+                0,
+            ]
             agent_loc[0] += offset
             goal_loc[0] += offset
 
@@ -623,20 +641,15 @@ class Environment(gym.Env):
 
     def reset(self):
         self._world.reset()
-   
+
         self._step = 0
-        agent_loc, goal_loc = self.get_valid_random_spawn(offset = self.env_id*2500)
-
-
-        
-        
-
+        agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
 
         self._agent.change_start_and_reset(translate=agent_loc)
         self._goal_object.change_start_and_reset(translate=goal_loc)
         info = self._get_info()
         obs = self._get_obs()
-        obs["is_terminal"] = self._step == 0 
+        obs["is_terminal"] = self._step == 0
         self._angle_reward_steps = 0
         return obs
 
@@ -684,7 +697,6 @@ class Environment(gym.Env):
     #         agent.reset()
     #
     #
-
 
     """
 
