@@ -464,7 +464,7 @@ class Environment(gym.Env):
         self._world.step(render=True)
         self._world.step(render=True)
 
-    def temp_force_look(self):
+    def temp_force_look(self, random_ori=True):
         agent_point = self._agent.get_translate_vec()
         goal_point = self._goal_object.get_translate_vec()
         # Compute desired direction
@@ -494,12 +494,15 @@ class Environment(gym.Env):
         # forward_direction_np = np.array(
         #     [forward_direction[0], forward_direction[1], forward_direction[2]]
         # )
-        angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
-        angle = signed_angle_between_vectors(
-            forward_direction_np[:2], desired_direction_np[:2]
-        )
-        angle = angle_to_align_vectors(
-            forward_direction_np[:2], desired_direction_np[:2]
+        # angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
+        # angle = signed_angle_between_vectors(
+        #     forward_direction_np[:2], desired_direction_np[:2]
+        # )
+        if random_ori:
+            angle = random.uniform(0.,360.)
+        else:
+            angle = angle_to_align_vectors(
+                forward_direction_np[:2], desired_direction_np[:2]
         )
         # print(
         #     self.id,
@@ -960,7 +963,7 @@ class Environment(gym.Env):
         return obs, reward, terminated, info
 
     def get_valid_random_spawn(self, offset=0):
-        range = 15  # 50#200
+        range = 25  # 50#200
         valid_start = False
         agent_loc = [0, 0, 0]
         goal_loc = [0, 0, 0]
@@ -995,8 +998,7 @@ class Environment(gym.Env):
         self._goal_object.change_start_and_reset(translate=goal_loc)
 
         self.simulate_steps()
-        self.simulate_steps()
-        quat = self.temp_force_look()
+        quat = self.temp_force_look(random_ori=True)
         quat = Gf.Quatf(quat[0], quat[1], quat[2], quat[3])
         self._agent.change_start_and_reset(orientation=quat)
         self.simulate_steps()
