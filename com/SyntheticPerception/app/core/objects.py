@@ -218,6 +218,8 @@ class Object:
         Returns: None
         """
         self._orientation = value
+
+        # print("seeting orienation to ", value, " of type ", type(value))
         self._orientOp.Set(self._orientation)
 
 
@@ -230,10 +232,13 @@ class Object:
         """
         self._translate = self._initial_translate
         self._scale = self._initial_scale
-        self._orientation = self._orientation
+        self._orientation = self._initial_orientation
         self.set_scale(self._scale)
         self.set_translate(self._translate)
+        
         self.set_orient_quat(self._orientation)
+        # print(self._orientation)
+        # print(self.get_orientation_quat())
 
     def change_start_and_reset(self, translate=None,scale=None,orientation=None):
         """
@@ -249,6 +254,8 @@ class Object:
 
         if orientation:
             self._initial_orientation = orientation
+            # print("seeting orienation to ", orientation, " of type ", type(orientation))
+        self.apply_velocity([0.,0.,0.], [0.,0.,0.])
 
         self.reset()
 

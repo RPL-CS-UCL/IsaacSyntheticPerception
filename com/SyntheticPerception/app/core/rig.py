@@ -12,6 +12,12 @@ from Sensors.LIDAR import Lidar
 from Sensors.IMU import IMUSensor
 from Sensors.Camera import DepthCamera
 
+from pxr import (
+    UsdGeom,
+    Gf,
+    UsdPhysics,
+    Semantics,
+)  # pxr usd imports used to create cube
 
 class Agent(Object):
     """
@@ -39,10 +45,16 @@ class Agent(Object):
         
         self._translate = self._initial_translate
         self._orientation = self._initial_orientation
+
+        self._orientation = Gf.Quatf(1.0,1.0,1.0,1.0
+        )  # self._initial_orientation
+        self._initial_orientation = self._orientation
         # print("Starting location of rig ", self._initial_translate, " @ ", self._translate)
-        # print(type(self._orientation))
+        print( " INITINITAL ORIENTATION ++=== ====== ")
+
+        print(type(self._orientation))
         self.set_translate(self._translate)
-        self.set_orient(self._orientation)
+        self.set_orient_quat(self._orientation)
 
         # Used for death checks
         self._steps_since_moved = 0
