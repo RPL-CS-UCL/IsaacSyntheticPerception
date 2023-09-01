@@ -261,8 +261,9 @@ class IsaacHandler:
                 id=i,
                 cone_path=config.cone_asset,
                 sensor_path=config.sensor_asset,
+                mat_path =config.mat_path
             )
-        train_envs[0].setup_light()
+        train_envs[0].setup_light(skybox_path = config.skybox_path)
         eval_envs = [make("eval", _ + len(train_envs)) for _ in range(1)]
 
         for i in range(len(eval_envs)):
@@ -271,6 +272,8 @@ class IsaacHandler:
                 id=i + len(train_envs) + 1,
                 cone_path=config.cone_asset,
                 sensor_path=config.sensor_asset,
+
+                mat_path =config.mat_path
             )
         train_envs = [Damy(env) for env in train_envs]
         eval_envs = [Damy(env) for env in eval_envs]
