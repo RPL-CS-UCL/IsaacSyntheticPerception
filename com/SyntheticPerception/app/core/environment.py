@@ -27,14 +27,60 @@ from PIL import Image
 import math
 import random
 
-"""
-TO DO
+from pxr import UsdShade, Sdf
 
 
-sort the reward
-"""
+def create_material_and_bind(
+     mat_name, mat_path, prim_path, scale, stage
+):
 
 
+    # omni.kit.commands.execute('CreateMdlMaterialPrimCommand',
+    #     mtl_url='http://omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Masonry/Adobe_Brick.mdl',
+    #     mtl_name='Adobe_Brick',
+    #     mtl_path='/World/Looks/Adobe_Brick')
+    #
+    # omni.kit.commands.execute('BindMaterialCommand',
+    #     prim_path=prim_path,
+    #     material_path='/World/Looks/Adobe_Brick')
+
+# omni.kit.commands.execute('ChangePrimVarCommand',
+# 	prim_path='/World/Plane',
+# 	primvar_name='doNotCastShadows',
+# 	value=False,
+# 	type_to_create_if_not_exist=<pxr.Sdf.ValueTypeName object at 0x7f81d01a1e90>)
+    obj_prim = stage.GetPrimAtPath(prim_path)
+    mtl_created_list = []
+    print(obj_prim)
+    print(mat_path)
+
+    omni.kit.commands.execute(
+        'CreateAndBindMdlMaterialFromLibrary',
+        mdl_name=mat_path,
+        mtl_name=mat_name,
+        mtl_created_list=mtl_created_list,
+    )
+    print(mtl_created_list)
+    mtl_prim = stage.GetPrimAtPath(mtl_created_list[0])
+    print(mtl_prim)
+    omni.usd.create_material_input(
+        mtl_prim,
+        'project_uvw',
+        True,
+        Sdf.ValueTypeNames.Bool,
+    )
+
+    omni.usd.create_material_input(
+        mtl_prim,
+        'texture_scale',
+        Gf.Vec2f(scale, scale),
+        Sdf.ValueTypeNames.Float2,
+    )
+    cube_mat_shade = UsdShade.Material(mtl_prim)
+
+    UsdShade.MaterialBindingAPI(obj_prim).Bind(
+        cube_mat_shade, UsdShade.Tokens.strongerThanDescendants
+    )
 def angle_between_vectors(v1, v2):
     """Compute the angle (in degrees) between two vectors."""
     dot_product = np.dot(v1, v2)
@@ -125,7 +171,7 @@ class Environment(gym.Env):
         self._size = size
         self._action_repeat = action_repeat
         self.reward_range = [-np.inf, np.inf]
-        self._action_space = spaces.Discrete(10)
+        self._action_space = spaces.Discrete(6)
         self.threshold = 15
 
         self.env_id = id
@@ -144,8 +190,8 @@ class Environment(gym.Env):
 
         """
 
-        velocity = 3
-        self._velocity = 3
+        velocity = 10#5
+        self._velocity = velocity 
         self._max_movement_per_step = self._velocity * 1 / 10
         diag_veloc = velocity * math.sqrt(2) / 2
         self._action_to_direction = {
@@ -154,26 +200,36 @@ class Environment(gym.Env):
             1: np.array([-velocity, 0, 0, 0, 0, 0]),  # back
             2: np.array([0, velocity, 0, 0, 0, 0]),  # left
             3: np.array([0, -velocity, 0, 0, 0, 0]),  # right
-            4: np.array([diag_veloc, diag_veloc, 0, 0, 0, 0]),  # forward
-            5: np.array([-diag_veloc, -diag_veloc, 0, 0, 0, 0]),  # back
-            6: np.array([diag_veloc, -diag_veloc, 0, 0, 0, 0]),  # left
-            7: np.array([-diag_veloc, diag_veloc, 0, 0, 0, 0]),  # right
+            # 4: np.array([diag_veloc, diag_veloc, 0, 0, 0, 0]),  # forward
+            # 5: np.array([-diag_veloc, -diag_veloc, 0, 0, 0, 0]),  # back
+            # 6: np.array([diag_veloc, -diag_veloc, 0, 0, 0, 0]),  # left
+            # 7: np.array([-diag_veloc, diag_veloc, 0, 0, 0, 0]),  # right
             # angular
-            8: np.array([0, 0, 0, 0, 0, 1]),  # rotate right
-            9: np.array([0, 0, 0, 0, 0, -1]),  # rotate left
+            4: np.array([0, 0, 0, 0, 0, 1]),  # rotate right
+            5: np.array([0, 0, 0, 0, 0, -1]),  # rotate left
         }
         self._world = None
 
-    def setup_light(self):
-        omni.kit.commands.execute(
-            "CreatePrimWithDefaultXform",
-            prim_type="DistantLight",
-            prim_path=None,
-            attributes={"angle": 1.0, "intensity": 3000},
-            select_new_prim=True,
-        )
+    def setup_light(self, skybox_path = None):
 
-    def setup_objects_agents_goals(self, world, id, cone_path=None, sensor_path=None):
+        stage = omni.usd.get_context().get_stage()
+        if skybox_path:
+
+            rotation = [0, 0, 0, 0]
+            
+            add_reference_to_stage(
+                usd_path=skybox_path, prim_path="/World/sky"
+            )
+        else:
+            omni.kit.commands.execute(
+                "CreatePrimWithDefaultXform",
+                prim_type="DistantLight",
+                prim_path=None,
+                attributes={"angle": 1.0, "intensity": 3000},
+                select_new_prim=True,
+            )
+
+    def setup_objects_agents_goals(self, world, id, cone_path=None, sensor_path=None,mat_path=None):
         # self._length = 1000
         self._world = world
         self.env_id = id
@@ -206,6 +262,10 @@ class Environment(gym.Env):
             prev=Gf.Vec3f(1.0, 1.0, 1.0),
         )
 
+        self._world.step(render=True)
+        self._world.step(render=True)
+        create_material_and_bind("Grass_Countryside",mat_path,f"{parent_path}/GroundPlane",0.01,stage)
+
         agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
         agent_loc[2] = 8
 
@@ -227,7 +287,7 @@ class Environment(gym.Env):
         self._goal_object = Object(
             goal_loc,
             rotation,
-            [0.2, 0.2, 0.2],
+            [0.1, 0.1, 0.1],
             "goal",
             parent_path,
             stage,
@@ -371,7 +431,7 @@ class Environment(gym.Env):
         angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
 
         state_dist = -1
-        if angle < 45:
+        if angle < 70:
             state_dist = dist
 
         obs = self._get_obs(state_dist)
@@ -628,7 +688,7 @@ class Environment(gym.Env):
         return obs, reward, terminated, info
 
     def get_valid_random_spawn(self, offset=0):
-        range = 20#50#200
+        range = 15#50#200
         valid_start = False
         agent_loc = [0, 0, 0]
         goal_loc = [0, 0, 0]
@@ -647,7 +707,7 @@ class Environment(gym.Env):
             goal_loc[0] += offset
 
             dist = np.linalg.norm(np.asarray(goal_loc[:2]) - np.asarray(agent_loc[:2]))
-            if dist > (self.threshold + 20):
+            if dist > (self.threshold + 5):
                 valid_start = True
                 break
         return agent_loc, goal_loc
@@ -666,6 +726,9 @@ class Environment(gym.Env):
         obs = self._get_obs(-1)
         obs["is_terminal"] = self._step == 0
         self._angle_reward_steps = 0
+
+        dist = np.linalg.norm(np.asarray(agent_loc[:2]) - np.asarray(goal_loc[:2]))
+        print(f" Agent {self.id} spawning at a dist of {dist}")
         return obs
 
     def render(self, *args, **kwargs):
