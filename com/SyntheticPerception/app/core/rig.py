@@ -3,21 +3,23 @@ import omni
 from omni.physx import get_physx_scene_query_interface
 import numpy as np
 
+
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 import json
-
+from omni.physx import get_physx_simulation_interface
 from pxr import Sdf
 from omni.isaac.core.utils.stage import get_stage_units
 from Sensors.LIDAR import Lidar
 from Sensors.IMU import IMUSensor
 from Sensors.Camera import DepthCamera
-
+from pxr import PhysicsSchemaTools, PhysxSchema, UsdPhysics
 from pxr import (
     UsdGeom,
     Gf,
     UsdPhysics,
     Semantics,
 )  # pxr usd imports used to create cube
+
 
 class Agent(Object):
     """
@@ -26,14 +28,14 @@ class Agent(Object):
 
     def __init__(
         self,
-        rig_file_path='',
+        rig_file_path="",
         *args,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
 
         # lock axis of rotation
-        self._prim.GetAttribute('physxRigidBody:lockedRotAxis').Set(3)
+        self._prim.GetAttribute("physxRigidBody:lockedRotAxis").Set(3)
 
         self._velocity = 0
         self._sample_rate = 0
@@ -42,15 +44,14 @@ class Agent(Object):
             self._initial_translate_____,
             self._initial_orientation,
         ) = self.create_rig_from_file(rig_file_path)
-        
+
         self._translate = self._initial_translate
         self._orientation = self._initial_orientation
 
-        self._orientation = Gf.Quatf(1.0,1.0,1.0,1.0
-        )  # self._initial_orientation
+        self._orientation = Gf.Quatf(1.0, 1.0, 1.0, 1.0)  # self._initial_orientation
         self._initial_orientation = self._orientation
         # print("Starting location of rig ", self._initial_translate, " @ ", self._translate)
-        print( " INITINITAL ORIENTATION ++=== ====== ")
+        print(" INITINITAL ORIENTATION ++=== ====== ")
 
         print(type(self._orientation))
         self.set_translate(self._translate)
@@ -63,7 +64,6 @@ class Agent(Object):
         self._death_delta_orientation = 0.1
         self._last_translate = self._initial_translate
         self._last_orientation = self._initial_orientation
-
     def ray_cast(self, origin, direction, distance):
         """
         Returns the hit information from a raycast
@@ -75,7 +75,7 @@ class Agent(Object):
             origin, direction, distance
         )
 
-        if hit['hit']:
+        if hit["hit"]:
             return hit
 
         return None
@@ -118,7 +118,7 @@ class Agent(Object):
         is_dead = self._death_check()
 
         if is_dead:
-            #self.reset()
+            # self.reset()
             return False
         return True
 
@@ -148,39 +148,39 @@ class Agent(Object):
         Args: file_path: str
         Returns: Gf.Vec3d translation, orientation
         """
-        with open(file_path, 'r+') as infile:
+        with open(file_path, "r+") as infile:
             data = json.load(infile)
             # print(data)
-            pos = data['POSITION']
-            ori = data['ORIENTATION']
-            self._velocity = data['VELOCITY']
-            self._sample_rate = data['SAMPLE_RATE']
+            pos = data["POSITION"]
+            ori = data["ORIENTATION"]
+            self._velocity = data["VELOCITY"]
+            self._sample_rate = data["SAMPLE_RATE"]
 
-            sensors = data['SENSORS']
+            sensors = data["SENSORS"]
             # print(sensors)
             for key in sensors:
-                if key == 'LIDAR':
-                    for sensor_id in sensors[key]['instances']:
-                        sensor_settings = sensors[key]['instances'][sensor_id]
+                if key == "LIDAR":
+                    for sensor_id in sensors[key]["instances"]:
+                        sensor_settings = sensors[key]["instances"][sensor_id]
                         lidar = Lidar()
                         lidar.read_from_json(sensor_settings)
                         self.add_sensor_to_rig(lidar)
-                elif key == 'CAMERA':
+                elif key == "CAMERA":
                     # print('creating camera')
 
-                    for sensor_id in sensors[key]['instances']:
-                        sensor_settings = sensors[key]['instances'][sensor_id]
+                    for sensor_id in sensors[key]["instances"]:
+                        sensor_settings = sensors[key]["instances"][sensor_id]
                         cam = DepthCamera()
                         cam.read_from_json(sensor_settings)
                         self.add_sensor_to_rig(cam)
-                elif key == 'IMU':
-                    for sensor_id in sensors[key]['instances']:
-                        sensor_settings = sensors[key]['instances'][sensor_id]
+                elif key == "IMU":
+                    for sensor_id in sensors[key]["instances"]:
+                        sensor_settings = sensors[key]["instances"][sensor_id]
                         imu = IMUSensor()
                         imu.read_from_json(sensor_settings)
                         self.add_sensor_to_rig(imu)
                 else:
-                    print(' ERROR, tried adding sensor with type ', key)
+                    print(" ERROR, tried adding sensor with type ", key)
             return pos, ori
 
     def add_sensor_to_rig(self, sensor):

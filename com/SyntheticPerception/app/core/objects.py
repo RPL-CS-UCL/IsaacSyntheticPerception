@@ -60,6 +60,7 @@ class Object:
                 'CreateMeshPrimWithDefaultXform',
                 prim_type='Cube',
                 prim_path=self._prim_path,
+                scale=5
             )
 
         self._prim = self._stage.GetPrimAtPath(self._prim_path)
@@ -231,6 +232,8 @@ class Object:
         Returns: None
         """
         self._translate = self._initial_translate
+
+        # print("ressetting ranslate to", self._translate)
         self._scale = self._initial_scale
         self._orientation = self._initial_orientation
         self.set_scale(self._scale)
@@ -247,6 +250,7 @@ class Object:
         Returns: None
         """
         if translate:
+            # translate[2] = 0
             self._initial_translate = translate
 
         if scale:
@@ -255,7 +259,7 @@ class Object:
         if orientation:
             self._initial_orientation = orientation
             # print("seeting orienation to ", orientation, " of type ", type(orientation))
-        self.apply_velocity([0.,0.,0.], [0.,0.,0.])
+        # self.apply_velocity([0.,0.,0.], [0.,0.,0.])
 
         self.reset()
 

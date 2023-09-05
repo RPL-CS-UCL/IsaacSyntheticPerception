@@ -212,7 +212,7 @@ memorymaze:
 isaac_sim:
   task: isaac_one
   step: 1e8
-  envs: 4
+  envs: 1
   action_repeat: 1
   train_ratio: 1024
   video_pred_log: true

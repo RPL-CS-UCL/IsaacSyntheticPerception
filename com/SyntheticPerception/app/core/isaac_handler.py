@@ -219,12 +219,14 @@ class IsaacHandler:
             if not self._world.is_simulating():
                 self._needs_reset = True
 
-    def run3(self, config):
+    def test_agent(self, config):
         tools.set_seed_everywhere(config.seed)
         if config.deterministic_run:
             tools.enable_deterministic_run()
         logdir = pathlib.Path().expanduser()
         logdir = self.create_session_name(config)
+
+        logdir = config.agent_path
         logdir = pathlib.Path(logdir)
         shutil.copy(config.environ_path, logdir)
         config.traindir = config.traindir or logdir / "train_eps"
@@ -261,7 +263,8 @@ class IsaacHandler:
                 id=i,
                 cone_path=config.cone_asset,
                 sensor_path=config.sensor_asset,
-                mat_path =config.mat_path
+                mat_path =config.mat_path,
+                obstacle_path = config.obstacle_path
             )
         train_envs[0].setup_light(skybox_path = config.skybox_path)
         eval_envs = [make("eval", _ + len(train_envs)) for _ in range(1)]
@@ -282,6 +285,245 @@ class IsaacHandler:
 
         state = None
         prefill = config.prefill
+        # sort out this while loop
+        while self.simulation_app.is_running():
+            render = True
+            # self.step(render)
+
+            print("Simulate agent.")
+            agent = Dreamer(
+                train_envs[0].observation_space,
+                train_envs[0].action_space,
+                config,
+                logger,
+                None,
+            ).to(config.device)
+            agent.requires_grad_(requires_grad=False)
+            if (logdir / "latest_model.pt").exists():
+                print(" _+_+_+_+_+_+_+_+_+_+_+_ LOADING")
+                print(" loagdir", logdir)
+                agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
+                agent._should_pretrain._once = False
+
+            # make sure eval will be executed once after config.steps
+            while agent._step < config.steps + config.eval_every:
+                logger.write()
+                self.start_time = time.time()
+
+                eval_policy = functools.partial(agent, training=False)
+                state = tools.run_agent(
+                    eval_policy,
+                    train_envs,
+                    train_eps,
+                    config.traindir,
+                    logger,
+                    start_time=self.start_time,
+                    limit=config.dataset_size,
+                    steps=config.eval_every,
+                    state=state,
+                )
+            if not self._world.is_simulating():
+                self._needs_reset = True
+
+    def test_agent2(self, config):
+        tools.set_seed_everywhere(config.seed)
+        if config.deterministic_run:
+            tools.enable_deterministic_run()
+
+        logdir = config.agent_path
+        logdir = pathlib.Path(logdir)
+        shutil.copy(config.environ_path, logdir)
+        config.traindir = config.traindir or logdir / "train_eps"
+        config.evaldir = config.evaldir or logdir / "eval_eps"
+        config.steps //= config.action_repeat
+        config.eval_every //= config.action_repeat
+        config.log_every //= config.action_repeat
+        config.time_limit //= config.action_repeat
+
+        print("Logdir", logdir)
+        logdir.mkdir(parents=True, exist_ok=True)
+        config.traindir.mkdir(parents=True, exist_ok=True)
+        config.evaldir.mkdir(parents=True, exist_ok=True)
+        step = dreamer_fns.count_steps(config.traindir)
+        # step in logger is environmental step
+        logger = tools.Logger(logdir, config.action_repeat * step)
+
+        print("Create envs.")
+        directory = config.traindir
+        train_eps = tools.load_episodes(directory, limit=config.dataset_size)
+        directory = config.evaldir
+        eval_eps = tools.load_episodes(directory, limit=1)
+        make = lambda mode, id: dreamer_fns.make_env_seq(config, mode, id)
+        train_envs = [make("train", id) for id in range(config.envs)]
+
+        world = World(
+            stage_units_in_meters=1.0,
+            physics_dt=1 / 60,
+            rendering_dt=1 / 60,
+        )
+        for i in range(len(train_envs)):
+            train_envs[i].setup_objects_agents_goals(
+                world=world,
+                id=i,
+                cone_path=config.cone_asset,
+                sensor_path=config.sensor_asset,
+                mat_path =config.mat_path,
+                obstacle_path = config.obstacle_path
+            )
+        train_envs[0].setup_light(skybox_path = config.skybox_path)
+        eval_envs = [make("eval", _ + len(train_envs)) for _ in range(1)]
+
+        for i in range(len(eval_envs)):
+            eval_envs[i].setup_objects_agents_goals(
+                world=world,
+                id=i + len(train_envs) + 1,
+                cone_path=config.cone_asset,
+                sensor_path=config.sensor_asset,
+
+                mat_path =config.mat_path
+            )
+        train_envs = [Damy(env) for env in train_envs]
+        eval_envs = [Damy(env) for env in eval_envs]
+        acts = train_envs[0].action_space
+        config.num_actions = acts.n if hasattr(acts, "n") else acts.shape[0]
+
+        state = None
+        prefill = config.prefill
+        prefill = 0  
+        print(f"Prefill dataset ({prefill} steps).")
+        # print(acts)
+        if hasattr(acts, "discrete"):
+            random_actor = tools.OneHotDist(
+                torch.zeros(config.num_actions).repeat(config.envs, 1)
+            )
+        else:
+            random_actor = torchd.independent.Independent(
+                torchd.uniform.Uniform(
+                    torch.Tensor(acts.low).repeat(config.envs, 1),
+                    torch.Tensor(acts.high).repeat(config.envs, 1),
+                ),
+                1,
+            )
+
+        def random_agent(o, d, s):
+            action = random_actor.sample()
+            logprob = random_actor.log_prob(action)
+            return {"action": action, "logprob": logprob}, None
+
+        # sort out this while loop
+        while self.simulation_app.is_running():
+            render = True
+            # self.step(render)
+            print(f"Logger: ({logger.step} steps).")
+
+            print("Simulate agent.")
+            train_dataset = dreamer_fns.make_dataset(train_eps, config)
+            eval_dataset = dreamer_fns.make_dataset(eval_eps, config)
+            agent = Dreamer(
+                train_envs[0].observation_space,
+                train_envs[0].action_space,
+                config,
+                logger,
+                train_dataset,
+            ).to(config.device)
+            agent.requires_grad_(requires_grad=False)
+            if (logdir / "latest_model.pt").exists():
+                agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
+                agent._should_pretrain._once = False
+
+            # make sure eval will be executed once after config.steps
+            while agent._step < config.steps + config.eval_every:
+                logger.write()
+                self.start_time = time.time()
+                print("Start training.")
+                state = tools.simulate_multi_test(
+                    agent,
+                    train_envs,
+                    train_eps,
+                    config.traindir,
+                    logger,
+                    start_time=self.start_time,
+                    limit=config.dataset_size,
+                    steps=config.eval_every,
+                    state=state,
+                )
+                torch.save(agent.state_dict(), logdir / "latest_model.pt")
+            for env in train_envs + eval_envs:
+                try:
+                    env.close()
+                except Exception:
+                    pass
+
+            if not self._world.is_simulating():
+                self._needs_reset = True
+    def run3(self, config):
+        tools.set_seed_everywhere(config.seed)
+        if config.deterministic_run:
+            tools.enable_deterministic_run()
+        logdir = pathlib.Path().expanduser()
+        logdir = self.create_session_name(config)
+        logdir = pathlib.Path(logdir)
+
+        logdir = config.agent_path
+        logdir = pathlib.Path(logdir)
+        shutil.copy(config.environ_path, logdir)
+        config.traindir = config.traindir or logdir / "train_eps"
+        config.evaldir = config.evaldir or logdir / "eval_eps"
+        config.steps //= config.action_repeat
+        config.eval_every //= config.action_repeat
+        config.log_every //= config.action_repeat
+        config.time_limit //= config.action_repeat
+
+        print("Logdir", logdir)
+        logdir.mkdir(parents=True, exist_ok=True)
+        config.traindir.mkdir(parents=True, exist_ok=True)
+        config.evaldir.mkdir(parents=True, exist_ok=True)
+        step = dreamer_fns.count_steps(config.traindir)
+        # step in logger is environmental step
+        logger = tools.Logger(logdir, config.action_repeat * step)
+
+        print("Create envs.")
+        directory = config.traindir
+        train_eps = tools.load_episodes(directory, limit=config.dataset_size)
+        directory = config.evaldir
+        eval_eps = tools.load_episodes(directory, limit=1)
+        make = lambda mode, id: dreamer_fns.make_env_seq(config, mode, id)
+        train_envs = [make("train", id) for id in range(config.envs)]
+
+        world = World(
+            stage_units_in_meters=1.0,
+            physics_dt=1 / 60,
+            rendering_dt=1 / 60,
+        )
+        for i in range(len(train_envs)):
+            train_envs[i].setup_objects_agents_goals(
+                world=world,
+                id=i,
+                cone_path=config.cone_asset,
+                sensor_path=config.sensor_asset,
+                mat_path =config.mat_path,
+                obstacle_path = config.obstacle_path
+            )
+        train_envs[0].setup_light(skybox_path = config.skybox_path)
+        eval_envs = [make("eval", _ + len(train_envs)) for _ in range(1)]
+
+        for i in range(len(eval_envs)):
+            eval_envs[i].setup_objects_agents_goals(
+                world=world,
+                id=i + len(train_envs) + 1,
+                cone_path=config.cone_asset,
+                sensor_path=config.sensor_asset,
+
+                mat_path =config.mat_path
+            )
+        train_envs = [Damy(env) for env in train_envs]
+        eval_envs = [Damy(env) for env in eval_envs]
+        acts = train_envs[0].action_space
+        config.num_actions = acts.n if hasattr(acts, "n") else acts.shape[0]
+
+        state = None
+        prefill = config.prefill
+        prefill = 0  
         print(f"Prefill dataset ({prefill} steps).")
         # print(acts)
         if hasattr(acts, "discrete"):
