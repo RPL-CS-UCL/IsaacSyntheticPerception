@@ -131,7 +131,47 @@ def signed_angle_between_vectors(v1, v2):
         signed_angle += 2 * math.pi
 
     return math.degrees(signed_angle)
+def create_materials(mat_paths, scale,stage):
 
+    print("creating materials -=-=-=-=-=-")
+    mtl_shades= []
+    mtl_created_list = [] 
+    for mat_path in mat_paths:
+
+        mat_name = mat_path.split("/")
+        mat_name = mat_name[-1].split(".")[0]
+        print(mat_name, " = ", mat_path)
+
+        omni.kit.commands.execute(
+            "CreateAndBindMdlMaterialFromLibrary",
+            mdl_name=mat_path,
+            mtl_name=mat_name,
+            mtl_created_list=mtl_created_list,
+        )
+        print(mtl_created_list)
+        mtl_prim = stage.GetPrimAtPath(mtl_created_list[-1])
+        print(mtl_prim)
+        omni.usd.create_material_input(
+            mtl_prim,
+            "project_uvw",
+            True,
+            Sdf.ValueTypeNames.Bool,
+        )
+
+        omni.usd.create_material_input(
+            mtl_prim,
+            "texture_scale",
+            Gf.Vec2f(scale, scale),
+            Sdf.ValueTypeNames.Float2,
+        )
+        mtl_shades.append(UsdShade.Material(mtl_prim))
+
+        # UsdShade.MaterialBindingAPI(obj_prim).Bind(
+        #     cube_mat_shade, UsdShade.Tokens.strongerThanDescendants
+        # )
+
+    print(mtl_shades)
+    return mtl_shades
 
 def create_material_and_bind(mat_name, mat_path, prim_path, scale, stage):
     # omni.kit.commands.execute('CreateMdlMaterialPrimCommand',
@@ -366,9 +406,18 @@ class Environment(gym.Env):
 
         self._world.step(render=True)
         self._world.step(render=True)
-        create_material_and_bind(
-            "Grass_Countryside", mat_path, f"{parent_path}/GroundPlane", 0.01, stage
+
+        self.ground_prim = stage.GetPrimAtPath(f"{parent_path}/GroundPlane")
+        self._materials = create_materials(mat_path, 0.1,stage)
+        print(self._materials)
+        mat_index = random.randint(0, len(self._materials)-1)
+        print(mat_index)
+        UsdShade.MaterialBindingAPI(self.ground_prim).Bind(
+            self._materials[mat_index], UsdShade.Tokens.strongerThanDescendants
         )
+        # create_material_and_bind(
+        #     "Grass_Countryside", mat_path, f"{parent_path}/GroundPlane", 0.01, stage
+        # )
 
         agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
         # agent_loc[2] = 8
@@ -417,7 +466,7 @@ class Environment(gym.Env):
         self._locations_to_avoid.append(goal_loc)
         self._locations_to_avoid.append(agent_loc)
         if obstacle_path:
-            for i in range(10):
+            for i in range(15):
                 obs_loc = self.get_random_obstacle_loc(goal_loc=goal_loc,offset=self.env_id * 2500)
                 self._locations_to_avoid.append(obs_loc)
                 self._obstacles.append( Object(
@@ -754,7 +803,7 @@ class Environment(gym.Env):
         angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
 
         state_dist = -1
-        if angle < 30:
+        if angle < 45:
             state_dist = dist
 
         obs = self._get_obs(state_dist)
@@ -825,7 +874,7 @@ class Environment(gym.Env):
         dist_since_previous_step = old_dist - dist
 
         # update the running stats
-        self.stats.update(dist_since_previous_step)
+        # self.stats.update(dist_since_previous_step)
 
         # Define your points
         agent_point = list_to_vec3d(agent_pos)  # self._agent.get_translate_vec()
@@ -853,7 +902,7 @@ class Environment(gym.Env):
         angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
 
         state_dist = -1
-        if angle < 30:
+        if angle < 45:
             state_dist = dist
 
         obs = self._get_obs(state_dist)
@@ -1124,7 +1173,7 @@ class Environment(gym.Env):
             goal_loc = [
                 np.random.uniform(-range, range),
                 np.random.uniform(-range, range),
-                4,
+                2,
             ]
             agent_loc[0] += offset
             goal_loc[0] += offset
@@ -1136,14 +1185,14 @@ class Environment(gym.Env):
         return agent_loc, goal_loc
 
     def get_random_obstacle_loc(self,goal_loc = [0,0,0], offset=0):
-        range = 25  # 50#200
+        range = 35  # 50#200
         valid_start = False
         agent_loc = [0, 0, 0]
         while not valid_start:
             obstacle_loc= [
                 np.random.uniform(-range, range),
                 np.random.uniform(-range, range),
-                1,
+                0,
             ]
             obstacle_loc[0] += offset
             away_from_all = True
@@ -1152,7 +1201,7 @@ class Environment(gym.Env):
                 dist = np.linalg.norm(np.asarray(loc[:2]) - np.asarray(obstacle_loc[:2]))
                 # print(dist, " ", self.threshold + 15)
             
-                if dist < (self.threshold ):
+                if dist < (15):
                     valid_start = False
                     invalid_counter+=1
             if invalid_counter == 0:
@@ -1164,13 +1213,19 @@ class Environment(gym.Env):
         # self._world.reset()
         # print("ressetting env ", self.id)
 
+        mat_index = random.randint(0, len(self._materials)-1)
+        # print(mat_index)
+        UsdShade.MaterialBindingAPI(self.ground_prim).Bind(
+            self._materials[mat_index], UsdShade.Tokens.strongerThanDescendants
+        )
         self._collision_reset = False
 
         self.simulate_steps()
         self._step = 0
+
         agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
-        agent_loc[2] = 4.0
-        goal_loc[2] = 1.0
+        agent_loc[2] = 2.0
+        goal_loc[2] = 0.0
 
         self._agent.change_start_and_reset(translate=agent_loc)
         self._goal_object.change_start_and_reset(translate=goal_loc)
