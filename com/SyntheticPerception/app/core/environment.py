@@ -874,7 +874,7 @@ class Environment(gym.Env):
         dist_since_previous_step = old_dist - dist
 
         # update the running stats
-        self.stats.update(dist_since_previous_step)
+        # self.stats.update(dist_since_previous_step)
 
         # Define your points
         agent_point = list_to_vec3d(agent_pos)  # self._agent.get_translate_vec()
@@ -1160,7 +1160,7 @@ class Environment(gym.Env):
         return obs, reward, terminated, info
 
     def get_valid_random_spawn(self, offset=0):
-        range = 35  # 50#200
+        range = 25  # 50#200
         valid_start = False
         agent_loc = [0, 0, 0]
         goal_loc = [0, 0, 0]
@@ -1213,6 +1213,11 @@ class Environment(gym.Env):
         # self._world.reset()
         # print("ressetting env ", self.id)
 
+        mat_index = random.randint(0, len(self._materials)-1)
+        # print(mat_index)
+        UsdShade.MaterialBindingAPI(self.ground_prim).Bind(
+            self._materials[mat_index], UsdShade.Tokens.strongerThanDescendants
+        )
         self._collision_reset = False
 
         self.simulate_steps()
