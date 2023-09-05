@@ -292,6 +292,11 @@ class Environment(gym.Env):
     """
     Class that represents the world, agents, and, objects that can exist in an environment
     """
+    def set_curriculum_values(self,map_size, random_starting_orientation, num_obstacles, min_dist_between_objs):
+        self._num_obstacles = num_obstacles
+        self._random_starting_orientation = random_starting_orientation
+        self._size_of_map = map_size
+        self._minimum_distance_between_objects = min_dist_between_objs
 
     def __init__(self, action_repeat=1, size=(64, 64), seed=0, id=0) -> None:
         # self._world = World()
@@ -313,7 +318,7 @@ class Environment(gym.Env):
         self._action_repeat = action_repeat
         self.reward_range = [-np.inf, np.inf]
         self._action_space = spaces.Discrete(6)
-        self.threshold = 7
+        self.threshold = 10
 
         self.env_id = id
         self.agent_alive = True
@@ -321,6 +326,12 @@ class Environment(gym.Env):
 
         # average tracking
         self.stats = RunningStats()
+
+        # Values for learning
+        self._num_obstacles = 15
+        self._random_starting_orientation = False
+        self._size_of_map = 25
+        self._minimum_distance_between_objects = 15
 
         """
 
@@ -466,7 +477,7 @@ class Environment(gym.Env):
         self._locations_to_avoid.append(goal_loc)
         self._locations_to_avoid.append(agent_loc)
         if obstacle_path:
-            for i in range(15):
+            for i in range(self._num_obstacles):
                 obs_loc = self.get_random_obstacle_loc(goal_loc=goal_loc,offset=self.env_id * 2500)
                 self._locations_to_avoid.append(obs_loc)
                 self._obstacles.append( Object(
@@ -1160,7 +1171,7 @@ class Environment(gym.Env):
         return obs, reward, terminated, info
 
     def get_valid_random_spawn(self, offset=0):
-        range = 25  # 50#200
+        range = self._size_of_map # 25  # 50#200
         valid_start = False
         agent_loc = [0, 0, 0]
         goal_loc = [0, 0, 0]
@@ -1185,7 +1196,7 @@ class Environment(gym.Env):
         return agent_loc, goal_loc
 
     def get_random_obstacle_loc(self,goal_loc = [0,0,0], offset=0):
-        range = 35  # 50#200
+        range = self._size_of_map # 35  # 50#200
         valid_start = False
         agent_loc = [0, 0, 0]
         while not valid_start:
@@ -1201,7 +1212,7 @@ class Environment(gym.Env):
                 dist = np.linalg.norm(np.asarray(loc[:2]) - np.asarray(obstacle_loc[:2]))
                 # print(dist, " ", self.threshold + 15)
             
-                if dist < (15):
+                if dist < (self._minimum_distance_between_objects):
                     valid_start = False
                     invalid_counter+=1
             if invalid_counter == 0:
@@ -1231,7 +1242,7 @@ class Environment(gym.Env):
         self._goal_object.change_start_and_reset(translate=goal_loc)
 
         self.simulate_steps()
-        quat = self.temp_force_look(random_ori=False)
+        quat = self.temp_force_look(random_ori=self._random_starting_orientation)
         quat = Gf.Quatf(quat[0], quat[1], quat[2], quat[3])
         self._agent.change_start_and_reset(orientation=quat)
         self.simulate_steps()
