@@ -464,8 +464,8 @@ class IsaacHandler:
         logdir = self.create_session_name(config)
         logdir = pathlib.Path(logdir)
 
-        logdir = config.agent_path
-        logdir = pathlib.Path(logdir)
+        # logdir = config.agent_path
+        # logdir = pathlib.Path(logdir)
         shutil.copy(config.environ_path, logdir)
         config.traindir = config.traindir or logdir / "train_eps"
         config.evaldir = config.evaldir or logdir / "eval_eps"
@@ -523,7 +523,7 @@ class IsaacHandler:
 
         state = None
         prefill = config.prefill
-        prefill = 0  
+        # prefill = 0  
         print(f"Prefill dataset ({prefill} steps).")
         # print(acts)
         if hasattr(acts, "discrete"):
