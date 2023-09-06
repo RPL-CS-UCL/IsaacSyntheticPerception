@@ -313,7 +313,7 @@ class Environment(gym.Env):
         self._action_repeat = action_repeat
         self.reward_range = [-np.inf, np.inf]
         self._action_space = spaces.Discrete(6)
-        self.threshold = 7
+        self.threshold = 10
 
         self.env_id = id
         self.agent_alive = True

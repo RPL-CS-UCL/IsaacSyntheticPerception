@@ -243,6 +243,8 @@ class Object:
         # print(self._orientation)
         # print(self.get_orientation_quat())
 
+        self.apply_velocity([0.,0.,0.], [0.,0.,0.])
+
     def change_start_and_reset(self, translate=None,scale=None,orientation=None):
         """
         Changes and resets the object to a new initial positon,orientation,scale
@@ -259,7 +261,6 @@ class Object:
         if orientation:
             self._initial_orientation = orientation
             # print("seeting orienation to ", orientation, " of type ", type(orientation))
-        # self.apply_velocity([0.,0.,0.], [0.,0.,0.])
 
         self.reset()
 
