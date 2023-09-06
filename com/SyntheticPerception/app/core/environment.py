@@ -199,9 +199,9 @@ class Environment(gym.Env):
 
 
         # Values for learning
-        self._num_obstacles = 15
+        self._num_obstacles = 10
         self._random_starting_orientation = False
-        self._size_of_map = 25
+        self._size_of_map = 35
         self._minimum_distance_between_objects = 15
 
 
@@ -370,6 +370,7 @@ class Environment(gym.Env):
                 if env_str in act1_path and env_str in act0_path:
                     if "obs" in act0_path or "obs" in act1_path:
                         self._collision_reset = True
+                        # print(env_str, " collided on step ", self._step)
 
     @property
     def action_space(self):
@@ -380,20 +381,36 @@ class Environment(gym.Env):
     @property
     def observation_space(self):
         spaces = {}
-        spaces["image"] = gym.spaces.Box(0, 255, self._size + (3,), dtype=np.uint8)
+        spaces["image"] = gym.spaces.Box(0, 255, self._size + (3,), dtype=np.float32)
         spaces["dist_to_target"] = gym.spaces.Box(
             -np.inf, np.inf, (1,), dtype=np.float32
         )
+
+        spaces["depth"] = gym.spaces.Box(0,np.inf , self._size + (1,), dtype=np.float32)
 
         return gym.spaces.Dict(spaces)
 
 
     def _get_obs(self, dist):
 
-        obs = self._agent.get_observations()[0]
+        obs, depth = self._agent.get_observations()[0]
+        # print(obs)
+        depth = depth.reshape(self._size+(1,))
+        obs = np.float32(obs)
+        # depth = np.uint8(depth)
+        # depth[depth==np.inf] = np.finfo(np.float32).max
+        # depth[depth == 0.0] = 1e-10
+
+        # print(depth)
+        # print(depth)
+        # print(depth.shape)
+        # print(depth.max())
+        # print(depth.min())
+        # print(np.unique(np.isnan(depth)))
         if len(obs) == 0:
             return {
                 "image": np.zeros((64, 64, 3)),
+                "depth": np.ones((64,64,1)),
                 "dist_to_target": np.float32([dist]),
             }
 
@@ -403,6 +420,7 @@ class Environment(gym.Env):
 
         return {
             "image": obs,
+            "depth" : depth,
             "dist_to_target": np.float32([dist]),
             "is_terminal": False,
             "is_first": is_first,
@@ -565,7 +583,6 @@ class Environment(gym.Env):
             or (self._length and self._step >= self._length)
             or (self._collision_reset)
         )
-
         # ensure agent doesnt leave, if it does kill and reset
         # check if agent is at goal
         terminated = self._done  # not agent_alive
@@ -704,7 +721,14 @@ class Environment(gym.Env):
 
         dist = np.linalg.norm(np.asarray(agent_loc[:2]) - np.asarray(goal_loc[:2]))
         self.reset_obstacles(agent_loc, goal_loc)
-        # print(f" Agent {self.id} spawning at a dist of {dist}")
+
+        for loc in self._locations_to_avoid:
+            dist = np.linalg.norm(
+                np.asarray(loc[:2]) - np.asarray(agent_loc[:2])
+            )
+            # print(f" Agent {self.id} spawning at a dist of {dist}")
+
+        self._collision_reset = False
         return obs
 
     def render(self, *args, **kwargs):
@@ -931,29 +955,4 @@ def create_material_and_bind(mat_name, mat_path, prim_path, scale, stage):
         # ======= PENALTY REWARD
 
         total_reward -= w_penalty  # * self._ste)
-
-        #         print(f"""
-        # Normalized dist: {normalized_distance}
-        # normalized angle reward:  {normalized_distance}
-        # Normalized progress: {normalized_progress}
-        # total_reward this step: {total_reward}
-        #               """
-        #               )
-
-        # reward -= (self._step / self.length) * 10_000
-        # reward -= 1/self._step
-        # ==== apply all rewards
-        reward += total_reward
-        # ====== FINAL RWARD
-        # max can get is 20
-        # threshold = 15
-        dist += self.threshold - 1
-        if dist < self.threshold:
-            # print(" WE ARE NOW TERMINATING ",dist,  "  ", self.threshold)
-            reward += 10_000
-            terminated = True
-        obs["is_terminal"] = terminated
-
-        return obs, reward, terminated, info
-
     """

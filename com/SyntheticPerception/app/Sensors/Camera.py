@@ -154,4 +154,5 @@ class DepthCamera:
         # await rep.orchestrator.step_async()
 
         rgb_data = self.rgb_annot.get_data()
-        return rgb_data
+        depth = self.depth_annot.get_data()
+        return rgb_data, depth
