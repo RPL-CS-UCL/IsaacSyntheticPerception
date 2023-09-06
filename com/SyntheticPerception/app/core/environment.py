@@ -386,7 +386,7 @@ class Environment(gym.Env):
             -np.inf, np.inf, (1,), dtype=np.float32
         )
 
-        spaces["depth"] = gym.spaces.Box(0,np.inf , self._size + (1,), dtype=np.float32)
+        spaces["depth"] = gym.spaces.Box(0.0,np.inf , self._size + (1,), dtype=np.float32)
 
         return gym.spaces.Dict(spaces)
 
@@ -396,26 +396,31 @@ class Environment(gym.Env):
         obs, depth = self._agent.get_observations()[0]
         # print(obs)
         depth = depth.reshape(self._size+(1,))
-        obs = np.float32(obs)
+        # print(depth.dtype)
         # depth = np.uint8(depth)
-        # depth[depth==np.inf] = np.finfo(np.float32).max
+
+        depth[depth==np.inf] = 320#1500#np.finfo(np.float32).max
+        x = depth
+        depth= (x-np.min(x))/(np.max(x)-np.min(x))
+
+        # print(depth.max())
         # depth[depth == 0.0] = 1e-10
 
         # print(depth)
         # print(depth)
         # print(depth.shape)
-        # print(depth.max())
         # print(depth.min())
         # print(np.unique(np.isnan(depth)))
         if len(obs) == 0:
             return {
-                "image": np.zeros((64, 64, 3)),
-                "depth": np.ones((64,64,1)),
+                "image": np.zeros((64, 64, 3),dtype=np.float32),
+                "depth": np.ones((64,64,1),dtype=np.float32),
                 "dist_to_target": np.float32([dist]),
             }
 
         obs = obs[:, :, :-1]
 
+        obs = np.float32(obs)
         is_first = self._step == 0
 
         return {
