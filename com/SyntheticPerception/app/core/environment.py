@@ -35,20 +35,9 @@ from pxr import UsdShade, Sdf
 
 
 def rotate_quaternion_by_angle(original_quaternion, angle_degrees, axis_of_rotation):
-    # Convert the angle from degrees to radians
-
     angle_radians = np.deg2rad(angle_degrees)
-
-    # Calculate the half-angle
-
     half_angle = angle_radians / 2.0
-
-    # Normalize the axis of rotation
-
     axis_of_rotation /= np.linalg.norm(axis_of_rotation)
-
-    # Create a quaternion representing the desired rotation
-
     rotation_quaternion = np.array(
         [
             np.cos(half_angle),
@@ -57,54 +46,33 @@ def rotate_quaternion_by_angle(original_quaternion, angle_degrees, axis_of_rotat
             axis_of_rotation[2] * np.sin(half_angle),
         ]
     )
-
-    # Ensure both quaternions are normalized
-
     original_quaternion /= np.linalg.norm(original_quaternion)
-
     rotation_quaternion /= np.linalg.norm(rotation_quaternion)
-
-    # Perform slerp (spherical linear interpolation)
-
     t = 0.5  # You can adjust this value to control the interpolation
-
     result_quaternion = slerp(original_quaternion, rotation_quaternion, t)
-
     return result_quaternion
 
 
 def slerp(q1, q2, t):
     dot_product = np.dot(q1, q2)
-
     if dot_product < 0.0:
         q2 = -q2
-
         dot_product = -dot_product
-
     if dot_product > 0.95:
         result = q1 + t * (q2 - q1)
-
     else:
         angle = np.arccos(dot_product)
-
         sin_angle = np.sin(angle)
-
         result = (np.sin((1.0 - t) * angle) * q1 + np.sin(t * angle) * q2) / sin_angle
-
     return result
 
 
 def angle_to_align_vectors(v1, v2):
     # Calculate the dot product of the two vectors
-
     dot_product = v1[0] * v2[0] + v1[1] * v2[1]
-
     # Calculate the cross product of the two vectors
-
     cross_product = v1[0] * v2[1] - v1[1] * v2[0]
-
     # Calculate the signed angle using the arctan2 function
-
     signed_angle = math.atan2(cross_product, dot_product)
     if abs(signed_angle) > math.pi - 1e-6:
         signed_angle = math.pi - signed_angle
@@ -113,17 +81,11 @@ def angle_to_align_vectors(v1, v2):
 
 def signed_angle_between_vectors(v1, v2):
     # Calculate the angle of each vector relative to the positive x-axis
-
     angle1 = math.atan2(v1[1], v1[0])
-
     angle2 = math.atan2(v2[1], v2[0])
-
     # Calculate the signed angle between the two vectors
-
     signed_angle = angle2 - angle1
-
     # Ensure the result is in the range [-pi, pi]
-
     if signed_angle > math.pi:
         signed_angle -= 2 * math.pi
 
@@ -131,13 +93,12 @@ def signed_angle_between_vectors(v1, v2):
         signed_angle += 2 * math.pi
 
     return math.degrees(signed_angle)
-def create_materials(mat_paths, scale,stage):
 
-    print("creating materials -=-=-=-=-=-")
-    mtl_shades= []
-    mtl_created_list = [] 
+
+def create_materials(mat_paths, scale, stage):
+    mtl_shades = []
+    mtl_created_list = []
     for mat_path in mat_paths:
-
         mat_name = mat_path.split("/")
         mat_name = mat_name[-1].split(".")[0]
         print(mat_name, " = ", mat_path)
@@ -148,9 +109,7 @@ def create_materials(mat_paths, scale,stage):
             mtl_name=mat_name,
             mtl_created_list=mtl_created_list,
         )
-        print(mtl_created_list)
         mtl_prim = stage.GetPrimAtPath(mtl_created_list[-1])
-        print(mtl_prim)
         omni.usd.create_material_input(
             mtl_prim,
             "project_uvw",
@@ -166,60 +125,7 @@ def create_materials(mat_paths, scale,stage):
         )
         mtl_shades.append(UsdShade.Material(mtl_prim))
 
-        # UsdShade.MaterialBindingAPI(obj_prim).Bind(
-        #     cube_mat_shade, UsdShade.Tokens.strongerThanDescendants
-        # )
-
-    print(mtl_shades)
     return mtl_shades
-
-def create_material_and_bind(mat_name, mat_path, prim_path, scale, stage):
-    # omni.kit.commands.execute('CreateMdlMaterialPrimCommand',
-    #     mtl_url='http://omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Masonry/Adobe_Brick.mdl',
-    #     mtl_name='Adobe_Brick',
-    #     mtl_path='/World/Looks/Adobe_Brick')
-    #
-    # omni.kit.commands.execute('BindMaterialCommand',
-    #     prim_path=prim_path,
-    #     material_path='/World/Looks/Adobe_Brick')
-
-    # omni.kit.commands.execute('ChangePrimVarCommand',
-    # 	prim_path='/World/Plane',
-    # 	primvar_name='doNotCastShadows',
-    # 	value=False,
-    # 	type_to_create_if_not_exist=<pxr.Sdf.ValueTypeName object at 0x7f81d01a1e90>)
-    obj_prim = stage.GetPrimAtPath(prim_path)
-    mtl_created_list = []
-    print(obj_prim)
-    print(mat_path)
-
-    omni.kit.commands.execute(
-        "CreateAndBindMdlMaterialFromLibrary",
-        mdl_name=mat_path,
-        mtl_name=mat_name,
-        mtl_created_list=mtl_created_list,
-    )
-    print(mtl_created_list)
-    mtl_prim = stage.GetPrimAtPath(mtl_created_list[0])
-    print(mtl_prim)
-    omni.usd.create_material_input(
-        mtl_prim,
-        "project_uvw",
-        True,
-        Sdf.ValueTypeNames.Bool,
-    )
-
-    omni.usd.create_material_input(
-        mtl_prim,
-        "texture_scale",
-        Gf.Vec2f(scale, scale),
-        Sdf.ValueTypeNames.Float2,
-    )
-    cube_mat_shade = UsdShade.Material(mtl_prim)
-
-    UsdShade.MaterialBindingAPI(obj_prim).Bind(
-        cube_mat_shade, UsdShade.Tokens.strongerThanDescendants
-    )
 
 
 def angle_between_vectors(v1, v2):
@@ -246,53 +152,20 @@ def list_to_vec3d(listvec):
     return Gf.Vec3d(float(listvec[0]), float(listvec[1]), float(listvec[2]))
 
 
-class RunningStats:
-    def __init__(self):
-        self.n = 0
-        self.mean = 0
-        self.M2 = 0
-
-    def update(self, x):
-        """
-        Update the running statistics with new data point x.
-
-        Parameters:
-            x (float): New data point.
-        """
-        self.n += 1
-        delta = x - self.mean
-        self.mean += delta / self.n
-        delta2 = x - self.mean
-        self.M2 += delta * delta2
-
-    @property
-    def variance(self):
-        """
-        Get the variance of the data seen so far.
-
-        Returns:
-            float: Variance.
-        """
-        if self.n < 2:
-            return float("nan")
-        return self.M2 / self.n
-
-    @property
-    def standard_deviation(self):
-        """
-        Get the standard deviation of the data seen so far.
-
-        Returns:
-            float: Standard deviation.
-        """
-        return self.variance**0.5
 
 
 class Environment(gym.Env):
     """
     Class that represents the world, agents, and, objects that can exist in an environment
     """
-    def set_curriculum_values(self,map_size, random_starting_orientation, num_obstacles, min_dist_between_objs):
+
+    def set_curriculum_values(
+        self,
+        map_size,
+        random_starting_orientation,
+        num_obstacles,
+        min_dist_between_objs,
+    ):
         self._num_obstacles = num_obstacles
         self._random_starting_orientation = random_starting_orientation
         self._size_of_map = map_size
@@ -324,8 +197,6 @@ class Environment(gym.Env):
         self.agent_alive = True
         self._collision_reset = False
 
-        # average tracking
-        self.stats = RunningStats()
 
         # Values for learning
         self._num_obstacles = 15
@@ -333,15 +204,6 @@ class Environment(gym.Env):
         self._size_of_map = 25
         self._minimum_distance_between_objects = 15
 
-        """
-
-        The following dictionary maps abstract actions from `self.action_space` to 
-
-        the direction we will walk in if that action is taken.
-
-        I.e. 0 corresponds to "right", 1 to "up" etc.
-
-        """
 
         velocity = 10  # 5
         self._velocity = velocity
@@ -381,7 +243,13 @@ class Environment(gym.Env):
             )
 
     def setup_objects_agents_goals(
-        self, world, id, cone_path=None, sensor_path=None, mat_path=None, obstacle_path=None
+        self,
+        world,
+        id,
+        cone_path=None,
+        sensor_path=None,
+        mat_path=None,
+        obstacle_path=None,
     ):
         # self._length = 1000
         self._world = world
@@ -393,10 +261,6 @@ class Environment(gym.Env):
         offset = self.env_id * 2500
 
         parent_path = f"/World/env_{self.env_id}"  # _{id}"
-
-        # print(obj._prim.GetAttributes())
-        # x =stage.GetPrimAtPath("/World/object")
-        # print(x.GetAttributes())
 
         omni.kit.commands.execute(
             "AddGroundPlaneCommand",
@@ -419,19 +283,15 @@ class Environment(gym.Env):
         self._world.step(render=True)
 
         self.ground_prim = stage.GetPrimAtPath(f"{parent_path}/GroundPlane")
-        self._materials = create_materials(mat_path, 0.1,stage)
+        self._materials = create_materials(mat_path, 0.1, stage)
         print(self._materials)
-        mat_index = random.randint(0, len(self._materials)-1)
+        mat_index = random.randint(0, len(self._materials) - 1)
         print(mat_index)
         UsdShade.MaterialBindingAPI(self.ground_prim).Bind(
             self._materials[mat_index], UsdShade.Tokens.strongerThanDescendants
         )
-        # create_material_and_bind(
-        #     "Grass_Countryside", mat_path, f"{parent_path}/GroundPlane", 0.01, stage
-        # )
 
         agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
-        # agent_loc[2] = 8
 
         self._agent = Agent(
             sensor_path,  # "/home/jon/Documents/Isaac_dreamer/sensors.json",
@@ -445,8 +305,6 @@ class Environment(gym.Env):
             visibility="invisible",
         )
 
-        usd_path = "/home/stuart/Downloads/cone.usd"
-        usd_path = "/home/jon/Documents/Isaac_dreamer/cone.usd"
         usd_path = cone_path
         self._goal_object = Object(
             goal_loc,
@@ -458,14 +316,11 @@ class Environment(gym.Env):
             usd_path=usd_path,
             instanceable=True,
         )
-        self._world.step(render=True)
-        self._world.step(render=True)
-        self._world.step(render=True)
-        self._world.step(render=True)
-        self._world.step(render=True)
-        self._world.step(render=True)
+        self.simulate_steps()
 
-        self.contactReportAPI = PhysxSchema.PhysxContactReportAPI.Apply(self._agent._prim)
+        self.contactReportAPI = PhysxSchema.PhysxContactReportAPI.Apply(
+            self._agent._prim
+        )
 
         self.contact_report_sub = (
             get_physx_simulation_interface().subscribe_contact_report_events(
@@ -478,42 +333,34 @@ class Environment(gym.Env):
         self._locations_to_avoid.append(agent_loc)
         if obstacle_path:
             for i in range(self._num_obstacles):
-                obs_loc = self.get_random_obstacle_loc(goal_loc=goal_loc,offset=self.env_id * 2500)
+                obs_loc = self.get_random_obstacle_loc(
+                    goal_loc=goal_loc, offset=self.env_id * 2500
+                )
                 self._locations_to_avoid.append(obs_loc)
-                self._obstacles.append( Object(
-                    obs_loc,
-                    rotation,
-                    [0.05, 0.05, 0.05],
-                    f"obstacle_{i}",
-                    parent_path,
-                    stage,
-                    usd_path=obstacle_path,
-                    instanceable=True,
-                ))
+                self._obstacles.append(
+                    Object(
+                        obs_loc,
+                        rotation,
+                        [0.05, 0.05, 0.05],
+                        f"obstacle_{i}",
+                        parent_path,
+                        stage,
+                        usd_path=obstacle_path,
+                        instanceable=True,
+                    )
+                )
 
     def on_contact_report_event(self, contact_headers, contact_data):
         for contact_header in contact_headers:
-            # instigator
-
             act0_path = str(PhysicsSchemaTools.intToSdfPath(contact_header.actor0))
-
-            # recipient
-
             act1_path = str(PhysicsSchemaTools.intToSdfPath(contact_header.actor1))
-            # print(act0_path, act1_path)
-
-            # the specific collision mesh that belongs to the Rigid Body
 
             cur_collider = str(
                 PhysicsSchemaTools.intToSdfPath(contact_header.collider0)
             )
-
-            # iterate over all contacts
-
             contact_data_offset = contact_header.contact_data_offset
 
             num_contact_data = contact_header.num_contact_data
-
             for index in range(
                 contact_data_offset, contact_data_offset + num_contact_data, 1
             ):
@@ -522,12 +369,8 @@ class Environment(gym.Env):
                 env_str = f"env_{self.id}"
                 if env_str in act1_path and env_str in act0_path:
                     if "obs" in act0_path or "obs" in act1_path:
-                        # print("THERE HAS BEEN A COLLISION in env ", self.id)
+                        self._collision_reset = True
 
-                        self._collision_reset =True
-                # print(act0_path, act1_path)
-
-                # print(cur_contact.__dir__())
     @property
     def action_space(self):
         space = self._action_space
@@ -543,15 +386,9 @@ class Environment(gym.Env):
         )
 
         return gym.spaces.Dict(spaces)
-    
 
-
-    # @property
-    # def action_space(self):
-    #     return self.action_space
 
     def _get_obs(self, dist):
-        # return {"image": np.zeroslike(self._size)}
 
         obs = self._agent.get_observations()[0]
         if len(obs) == 0:
@@ -563,9 +400,6 @@ class Environment(gym.Env):
         obs = obs[:, :, :-1]
 
         is_first = self._step == 0
-        # img = Image.fromarray(obs, 'RGB')  # 'L' means grayscale. For RGB, use 'RGB'
-        # img.save('/home/stuart/Desktop/image.png')
-        # dist =
 
         return {
             "image": obs,
@@ -576,7 +410,6 @@ class Environment(gym.Env):
 
     def _get_info(self):
         agent_pos = self._agent.get_translate()
-        # dist_to_target = self._goal_pos - agent_pos
         goal_pos = self._goal_object.get_translate()
         x_diff = abs(agent_pos[0] - goal_pos[0])
         y_diff = abs(agent_pos[1] - goal_pos[1])
@@ -593,16 +426,17 @@ class Environment(gym.Env):
         self._world.step(render=True)
         self._world.step(render=True)
         self._world.step(render=True)
-    def reset_obstacles(self,agent_loc, goal_loc):
+
+    def reset_obstacles(self, agent_loc, goal_loc):
         self._locations_to_avoid = []
         self._locations_to_avoid.append(goal_loc)
         self._locations_to_avoid.append(agent_loc)
         for obs in self._obstacles:
-
-            obs_loc = self.get_random_obstacle_loc(goal_loc=goal_loc,offset=self.env_id * 2500)
+            obs_loc = self.get_random_obstacle_loc(
+                goal_loc=goal_loc, offset=self.env_id * 2500
+            )
             self._locations_to_avoid.append(obs_loc)
             obs.change_start_and_reset(translate=obs_loc)
-
 
     def temp_force_look(self, random_ori=True):
         agent_point = self._agent.get_translate_vec()
@@ -611,8 +445,6 @@ class Environment(gym.Env):
         desired_direction = goal_point - agent_point
         desired_direction.Normalize()
 
-        # Define agent orientation as a quaternion
-        # For demonstration, this is a unit quaternion (no rotation).
         quat = self._agent.get_orientation_quat()
         quat.Normalize()
         quat = Gf.Quatd(quat)
@@ -631,35 +463,15 @@ class Environment(gym.Env):
         forward_direction_np = np.array([out[0], out[1], 0])
 
         desired_direction_np = np.array([desired_direction[0], desired_direction[1], 0])
-        # forward_direction_np = np.array(
-        #     [forward_direction[0], forward_direction[1], forward_direction[2]]
-        # )
-        # angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
-        # angle = signed_angle_between_vectors(
-        #     forward_direction_np[:2], desired_direction_np[:2]
-        # )
         if random_ori:
-            angle = random.uniform(0.,360.)
+            angle = random.uniform(0.0, 360.0)
         else:
             angle = angle_to_align_vectors(
                 forward_direction_np[:2], desired_direction_np[:2]
-        )
-        # print(
-        #     self.id,
-        #     " at angle ",
-        #     angle,
-        #     " ",
-        #     forward_direction_np,
-        #     "  ",
-        #     desired_direction_np,
-        # )
-        # random_rotation_angle = random.uniform(0, 2 * 3.14159)
+            )
         random_rotation_angle = math.radians(angle)
         rotation_quaternion = Gf.Quatd(random_rotation_angle, Gf.Vec3d(0, 0, 1))
         resulting_quaternion = rotation_quaternion * quat
-        # print("quat after rot ", resulting_quaternion, " quat before ", quat)
-
-        # Normalize the resulting quaternion (optional, but recommended)
 
         resulting_quaternion.Normalize()
         quat = Gf.Quatf(resulting_quaternion)
@@ -669,54 +481,9 @@ class Environment(gym.Env):
         axis_of_rotation = [0, 0, 1]  # Replace with your desired axis
 
         # Convert the angle from degrees to radians
-
-        angle_radians = np.deg2rad(angle_degrees)
-
-        # # Calculate half-angle
-        #
-        # half_angle = angle_radians  # / 2.0
-        #
-        # # Calculate the sin and cos components of the rotation quaternion
-        #
-        # cos_half_angle = np.cos(half_angle)
-        #
-        # sin_half_angle = np.sin(half_angle)
-        #
-        # # Create a quaternion representing the desired rotation
-        #
-        # rotation_quaternion = np.array(
-        #     [
-        #         cos_half_angle,
-        #         axis_of_rotation[0] * sin_half_angle,
-        #         axis_of_rotation[1] * sin_half_angle,
-        #         axis_of_rotation[2] * sin_half_angle,
-        #     ]
-        # )
-        #
-        # # Normalize the rotation quaternion
-        #
-        # rotation_quaternion /= np.linalg.norm(rotation_quaternion)
-        #
-        # # Quaternion multiplication (Hamilton product)
-        #
-        # w1, x1, y1, z1 = original_quaternion
-        #
-        # w2, x2, y2, z2 = rotation_quaternion
-        #
-        # result_quaternion = np.array(
-        #     [
-        #         w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
-        #         w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
-        #         w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
-        #         w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
-        #     ]
-        # )
-        # # Convert the angle from degrees to radians
-
         angle_radians = np.deg2rad(angle_degrees)
 
         # Calculate the sin and cos components of half the angle
-
         half_angle = angle_radians / 2.0
 
         cos_half_angle = np.cos(half_angle)
@@ -724,11 +491,9 @@ class Environment(gym.Env):
         sin_half_angle = np.sin(half_angle)
 
         # Normalize the axis of rotation
-
         axis_of_rotation /= np.linalg.norm(axis_of_rotation)
 
         # Create a quaternion representing the desired rotation
-
         rotation_quaternion = np.array(
             [
                 cos_half_angle,
@@ -739,13 +504,10 @@ class Environment(gym.Env):
         )
 
         # Ensure both quaternions are normalized
-
         original_quaternion /= np.linalg.norm(original_quaternion)
-
         rotation_quaternion /= np.linalg.norm(rotation_quaternion)
 
         # Quaternion multiplication (Hamilton product)
-
         result_quaternion = np.array(
             [
                 original_quaternion[0] * rotation_quaternion[0]
@@ -767,71 +529,11 @@ class Environment(gym.Env):
             ]
         )
         return result_quaternion
-        # self._agent.set_orient(result_quaternion)
 
-    def test_step(self,action):
-        # print("runiing test step")
+    def test_step(self, action):
         self.pre_step(action)
         self.simulate_steps()
         return self.post_step(action)
-
-
-        agent_pos = self._agent.get_translate()
-        agent_old_pos = self._agent._last_translate
-        goal_pos = self._goal_object.get_translate()
-        dist = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(goal_pos[:2]))
-        old_dist = np.linalg.norm(
-            np.asarray(agent_old_pos[:2]) - np.asarray(goal_pos[:2])
-        )
-        dist_since_previous_step = old_dist - dist
-
-        # update the running stats
-        self.stats.update(dist_since_previous_step)
-
-        # Define your points
-        agent_point = list_to_vec3d(agent_pos)  # self._agent.get_translate_vec()
-        goal_point = list_to_vec3d(goal_pos)  # self._goal_object.get_translate_vec()
-
-        # Compute desired direction
-        desired_direction = goal_point - agent_point
-        desired_direction.Normalize()
-
-        # Define agent orientation as a quaternion
-        # For demonstration, this is a unit quaternion (no rotation).
-        quat = self._agent.get_orientation_quat()
-
-        # Extract forward direction from the quaternion
-        # Assuming agent's initial forward direction is along z-axis (0, 0, 1)
-        forward_direction = rotate_vector_by_quaternion(Gf.Vec3f(1, 0, 0), quat)
-
-        # Convert Gf.Vec3f to numpy arrays for computation
-        desired_direction_np = np.array(
-            [desired_direction[0], desired_direction[1], desired_direction[2]]
-        )
-        forward_direction_np = np.array(
-            [forward_direction[0], forward_direction[1], forward_direction[2]]
-        )
-        angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
-
-        state_dist = -1
-        if angle < 45:
-            state_dist = dist
-
-        obs = self._get_obs(state_dist)
-        obs["is_terminated"] = False
-
-        info = self._get_info()
-        terminated = False
-        reward = 0
-
-        if dist < self.threshold:
-            print(f"agent in {self.id} has reached the goal")
-            reward += 1
-            # terminated = True
-        # print(obs)
-        # print (reward, terminated, info)
-        self._step +=1
-        return obs,reward, terminated, info
 
     def pre_step(self, action):
         # print(action)
@@ -840,9 +542,6 @@ class Environment(gym.Env):
 
         linear_veloc = unpack_action[:3]
         angular_veloc = unpack_action[3:]
-        # linear_veloc_gf = Gf.Vec3d(
-        #     float(linear_veloc[0]), float(linear_veloc[1]), float(linear_veloc[2])
-        # )
         linear_veloc_gf = list_to_vec3d(linear_veloc)
         rotation = Gf.Rotation(self._agent.get_orientation_quat())
         new_linear_veloc = rotation.TransformDir(
@@ -852,7 +551,7 @@ class Environment(gym.Env):
             new_linear_veloc[0],
             new_linear_veloc[1],
             # new_linear_veloc[2],
-            0.0
+            0.0,
         ]
         self.agent_alive = self._agent.step(new_linear_veloc, angular_veloc)
         # self.temp_force_look()
@@ -861,9 +560,11 @@ class Environment(gym.Env):
         self._step += 1
 
         agent_alive = self.agent_alive
-        # if self._collision_reset:
-        #     print("agent has collided with obstacle in env ", self.id)
-        self._done = (not agent_alive) or (self._length and self._step >= self._length) or (self._collision_reset)
+        self._done = (
+            (not agent_alive)
+            or (self._length and self._step >= self._length)
+            or (self._collision_reset)
+        )
 
         # ensure agent doesnt leave, if it does kill and reset
         # check if agent is at goal
@@ -883,11 +584,6 @@ class Environment(gym.Env):
             np.asarray(agent_old_pos[:2]) - np.asarray(goal_pos[:2])
         )
         dist_since_previous_step = old_dist - dist
-
-        # update the running stats
-        # self.stats.update(dist_since_previous_step)
-
-        # Define your points
         agent_point = list_to_vec3d(agent_pos)  # self._agent.get_translate_vec()
         goal_point = list_to_vec3d(goal_pos)  # self._goal_object.get_translate_vec()
 
@@ -917,93 +613,183 @@ class Environment(gym.Env):
             state_dist = dist
 
         obs = self._get_obs(state_dist)
-        reward = 0
         if self._collision_reset:
-            reward -=1
+            reward -= 1
         if dist < self.threshold:
-            # print(" WE ARE NOW TERMINATING ",dist,  "  ", self.threshold)
             reward += 1
             terminated = True
         obs["is_terminal"] = terminated
 
         return obs, reward, terminated, info
-        # ============== ANGLE REWARD
-        # angle_reward = 0  # 1e-20
-        # if angle < 45:
-        #     angle_reward = 1 / (angle + 1e-8)  # *10# .1 if looking direct
 
-        # reward += angle_reward
-        def scale_angle(angle_deg):
-            # Convert angle to a normalized value between 0 and 1
+    def get_valid_random_spawn(self, offset=0):
+        range = self._size_of_map  # 25  # 50#200
+        valid_start = False
+        agent_loc = [0, 0, 0]
+        goal_loc = [0, 0, 0]
+        while not valid_start:
+            agent_loc = [
+                np.random.uniform(-range, range),
+                np.random.uniform(-range, range),
+                4,
+            ]
+            goal_loc = [
+                np.random.uniform(-range, range),
+                np.random.uniform(-range, range),
+                2,
+            ]
+            agent_loc[0] += offset
+            goal_loc[0] += offset
 
-            normalized_value = angle_deg / 180.0
+            dist = np.linalg.norm(np.asarray(goal_loc[:2]) - np.asarray(agent_loc[:2]))
+            if dist > (self.threshold + 5):
+                valid_start = True
+                break
+        return agent_loc, goal_loc
 
-            # Scale the normalized value to the range between -1 and 1
+    def get_random_obstacle_loc(self, goal_loc=[0, 0, 0], offset=0):
+        range = self._size_of_map  # 35  # 50#200
+        valid_start = False
+        while not valid_start:
+            obstacle_loc = [
+                np.random.uniform(-range, range),
+                np.random.uniform(-range, range),
+                0,
+            ]
+            obstacle_loc[0] += offset
+            away_from_all = True
+            invalid_counter = 0
+            for loc in self._locations_to_avoid:
+                dist = np.linalg.norm(
+                    np.asarray(loc[:2]) - np.asarray(obstacle_loc[:2])
+                )
+                # print(dist, " ", self.threshold + 15)
 
-            scaled_value = 1 - (normalized_value * 2)
+                if dist < (self._minimum_distance_between_objects):
+                    valid_start = False
+                    invalid_counter += 1
+            if invalid_counter == 0:
+                valid_start = True
+                break
+        return obstacle_loc
 
-            return scaled_value
+    def reset(self):
 
-        # normalized_angle_reward = np.cos(np.deg2rad(np.asarray(angle_reward)))
-        normalized_angle_reward = scale_angle(angle)
-        # print(normalized_angle_reward, "   ,  ", angle)
-
-        # ======= DISTANCE REWARD
-        # scaled dist to target
-        # max 3.33 +-1
-        # min 0.2 +- 1
-        # if dist < 200:
-        # print(self.id, "  env at a dist ", dist)
-        def normalize_progress(progress_reward):
-            epsilon = 1e-10
-            self.stats.update(progress_reward)
-            if self.stats.standard_deviation < epsilon:
-                return progress_reward
-            normalized_reward = (progress_reward - self.stats.mean) / (
-                self.stats.standard_deviation + epsilon
-            )
-            return normalized_reward
-
-        # normalized_progress = normalize_progress(dist_since_previous_step)
-        normalized_progress = dist_since_previous_step / self._max_movement_per_step
-        # print(normalized_progress)
-        # print(dist_since_previous_step/self._max_movement_per_step)
-
-        # dist -= self.threshold - 1
-        offset_dist = dist - self.threshold - 1
-        if offset_dist <= 0:
-            offset_dist = 1
-        normalized_distance = 1 / (offset_dist + 1e-8)
-
-        # reward += (50/(dist+1e-8)) + dist_since_previous_step
-        w_distance = 0.1
-        w_angle = 0.4
-        w_progress = 0.40
-        w_penalty = 0.1
-        total_reward = (
-            w_distance * normalized_distance  # 0,1
-            + w_angle * normalized_angle_reward  # -1, 1
-            + w_progress * normalized_progress  # -1,1
+        mat_index = random.randint(0, len(self._materials) - 1)
+        # print(mat_index)
+        UsdShade.MaterialBindingAPI(self.ground_prim).Bind(
+            self._materials[mat_index], UsdShade.Tokens.strongerThanDescendants
         )
-        # w_penalty * self.get_step_penalty())
+        self._collision_reset = False
 
-        # ======= PENALTY REWARD
+        self.simulate_steps()
+        self._step = 0
 
-        total_reward -= w_penalty  # * self._ste)
+        agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
+        agent_loc[2] = 2.0
+        goal_loc[2] = 0.0
 
-        # ==== apply all rewards
-        reward += total_reward
-        # ====== FINAL RWARD
-        # max can get is 20
-        # threshold = 15
-        # dist += self.threshold + 1
-        if dist < self.threshold:
-            # print(" WE ARE NOW TERMINATING ",dist,  "  ", self.threshold)
-            reward += 10_000
-            terminated = True
-        obs["is_terminal"] = terminated
+        self._agent.change_start_and_reset(translate=agent_loc)
+        self._goal_object.change_start_and_reset(translate=goal_loc)
 
-        return obs, reward, terminated, info
+        self.simulate_steps()
+        quat = self.temp_force_look(random_ori=self._random_starting_orientation)
+        quat = Gf.Quatf(quat[0], quat[1], quat[2], quat[3])
+        self._agent.change_start_and_reset(orientation=quat)
+        self.simulate_steps()
+        info = self._get_info()
+        obs = self._get_obs(-1)
+        obs["is_terminal"] = self._step == 0
+        self._angle_reward_steps = 0
+
+        dist = np.linalg.norm(np.asarray(agent_loc[:2]) - np.asarray(goal_loc[:2]))
+        self.reset_obstacles(agent_loc, goal_loc)
+        # print(f" Agent {self.id} spawning at a dist of {dist}")
+        return obs
+
+    def render(self, *args, **kwargs):
+        return None
+
+
+    """
+
+class IsaacHandler:
+    def __init__(self, physics_dt, render_dt, simulation_app) -> None:
+        self.simulation_app = simulation_app
+
+
+        enable_extension('omni.kit.asset_converter')
+        self.simulation_app.update()
+        # self._world = World(
+        #     stage_units_in_meters=1.0,
+        #     physics_dt=physics_dt,
+        #     rendering_dt=render_dt,
+        # )
+        self._stage = omni.usd.get_context().get_stage()
+        # self._world.reset()
+        self._needs_reset = False
+
+        self.env = Environment("sim")
+
+    def setup(self):
+
+        self._appwindow = omni.appwindow.get_default_app_window()
+        self._world.add_physics_callback(
+            'AgentInteract', callback_fn=self.agent_interact
+        )
+
+        self.env.setup()
+
+
+    def step(self, render):
+        if self._needs_reset:
+            self._needs_reset = False
+            self.env.reset()
+        
+        # make the env step the environment
+        self.env.step()
+        # self.env._world.step(render=render)
+
+    def run(self):
+        while self.simulation_app.is_running():
+            render = True
+            self.step(render)
+            if not self._world.is_simulating():
+                self._needs_reset = True
+
+def create_material_and_bind(mat_name, mat_path, prim_path, scale, stage):
+    obj_prim = stage.GetPrimAtPath(prim_path)
+    mtl_created_list = []
+    print(obj_prim)
+    print(mat_path)
+
+    omni.kit.commands.execute(
+        "CreateAndBindMdlMaterialFromLibrary",
+        mdl_name=mat_path,
+        mtl_name=mat_name,
+        mtl_created_list=mtl_created_list,
+    )
+    print(mtl_created_list)
+    mtl_prim = stage.GetPrimAtPath(mtl_created_list[0])
+    print(mtl_prim)
+    omni.usd.create_material_input(
+        mtl_prim,
+        "project_uvw",
+        True,
+        Sdf.ValueTypeNames.Bool,
+    )
+
+    omni.usd.create_material_input(
+        mtl_prim,
+        "texture_scale",
+        Gf.Vec2f(scale, scale),
+        Sdf.ValueTypeNames.Float2,
+    )
+    cube_mat_shade = UsdShade.Material(mtl_prim)
+
+    UsdShade.MaterialBindingAPI(obj_prim).Bind(
+        cube_mat_shade, UsdShade.Tokens.strongerThanDescendants
+    )
 
     def step(self, action):
         # print("inside step the action is ", action)
@@ -1170,180 +956,4 @@ class Environment(gym.Env):
 
         return obs, reward, terminated, info
 
-    def get_valid_random_spawn(self, offset=0):
-        range = self._size_of_map # 25  # 50#200
-        valid_start = False
-        agent_loc = [0, 0, 0]
-        goal_loc = [0, 0, 0]
-        while not valid_start:
-            agent_loc = [
-                np.random.uniform(-range, range),
-                np.random.uniform(-range, range),
-                4,
-            ]
-            goal_loc = [
-                np.random.uniform(-range, range),
-                np.random.uniform(-range, range),
-                2,
-            ]
-            agent_loc[0] += offset
-            goal_loc[0] += offset
-
-            dist = np.linalg.norm(np.asarray(goal_loc[:2]) - np.asarray(agent_loc[:2]))
-            if dist > (self.threshold + 5):
-                valid_start = True
-                break
-        return agent_loc, goal_loc
-
-    def get_random_obstacle_loc(self,goal_loc = [0,0,0], offset=0):
-        range = self._size_of_map # 35  # 50#200
-        valid_start = False
-        agent_loc = [0, 0, 0]
-        while not valid_start:
-            obstacle_loc= [
-                np.random.uniform(-range, range),
-                np.random.uniform(-range, range),
-                0,
-            ]
-            obstacle_loc[0] += offset
-            away_from_all = True
-            invalid_counter = 0
-            for loc in self._locations_to_avoid:
-                dist = np.linalg.norm(np.asarray(loc[:2]) - np.asarray(obstacle_loc[:2]))
-                # print(dist, " ", self.threshold + 15)
-            
-                if dist < (self._minimum_distance_between_objects):
-                    valid_start = False
-                    invalid_counter+=1
-            if invalid_counter == 0:
-                valid_start = True
-                break
-        # print(f"{self.id} {obstacle_loc}")
-        return obstacle_loc 
-    def reset(self):
-        # self._world.reset()
-        # print("ressetting env ", self.id)
-
-        mat_index = random.randint(0, len(self._materials)-1)
-        # print(mat_index)
-        UsdShade.MaterialBindingAPI(self.ground_prim).Bind(
-            self._materials[mat_index], UsdShade.Tokens.strongerThanDescendants
-        )
-        self._collision_reset = False
-
-        self.simulate_steps()
-        self._step = 0
-
-        agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
-        agent_loc[2] = 2.0
-        goal_loc[2] = 0.0
-
-        self._agent.change_start_and_reset(translate=agent_loc)
-        self._goal_object.change_start_and_reset(translate=goal_loc)
-
-        self.simulate_steps()
-        quat = self.temp_force_look(random_ori=self._random_starting_orientation)
-        quat = Gf.Quatf(quat[0], quat[1], quat[2], quat[3])
-        self._agent.change_start_and_reset(orientation=quat)
-        self.simulate_steps()
-        info = self._get_info()
-        obs = self._get_obs(-1)
-        obs["is_terminal"] = self._step == 0
-        self._angle_reward_steps = 0
-
-        dist = np.linalg.norm(np.asarray(agent_loc[:2]) - np.asarray(goal_loc[:2]))
-        self.reset_obstacles(agent_loc,goal_loc)
-        # print(f" Agent {self.id} spawning at a dist of {dist}")
-        return obs
-
-    def render(self, *args, **kwargs):
-        return None
-
-    # def setup(self):
-    #     """
-    #     This method should setup the environemnt, models, and spawn all assets
-    #     Args: None
-    #     Returns: None
-    #     """
-    #     pass
-    #
-    # def action_space(self):
-    #     paso
-    #
-    # def observation_space(self):
-    #     pass
-    #
-    # def step(self):
-    #     #update objects
-    #
-    #
-    #     #update agents
-    #     for agent in self._agents:
-    #         #get observations from agent
-    #         obs = agent.getobs()
-    #         #__________________________ = model.get_action(obs)
-    #         linear_veloc, angular_veloc = 0,0
-    #         agent.step(linear_veloc, angular_veloc)
-    #
-    #
-    #
-    #
-    # def reset(self):
-    #     """
-    #     Resets all objects and agents in the environment
-    #     Args: None
-    #     Returns: None
-    #     """
-    #     for obj in self._objects:
-    #         obj.reset()
-    #     for agent in self._agents:
-    #         agent.reset()
-    #
-    #
-
-    """
-
-class IsaacHandler:
-    def __init__(self, physics_dt, render_dt, simulation_app) -> None:
-        self.simulation_app = simulation_app
-
-
-        enable_extension('omni.kit.asset_converter')
-        self.simulation_app.update()
-        # self._world = World(
-        #     stage_units_in_meters=1.0,
-        #     physics_dt=physics_dt,
-        #     rendering_dt=render_dt,
-        # )
-        self._stage = omni.usd.get_context().get_stage()
-        # self._world.reset()
-        self._needs_reset = False
-
-        self.env = Environment("sim")
-
-    def setup(self):
-
-        self._appwindow = omni.appwindow.get_default_app_window()
-        self._world.add_physics_callback(
-            'AgentInteract', callback_fn=self.agent_interact
-        )
-
-        self.env.setup()
-
-
-    def step(self, render):
-        if self._needs_reset:
-            self._needs_reset = False
-            self.env.reset()
-        
-        # make the env step the environment
-        self.env.step()
-        # self.env._world.step(render=render)
-
-    def run(self):
-        while self.simulation_app.is_running():
-            render = True
-            self.step(render)
-            if not self._world.is_simulating():
-                self._needs_reset = True
     """
