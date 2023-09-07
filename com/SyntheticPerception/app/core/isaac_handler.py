@@ -526,7 +526,7 @@ class IsaacHandler:
             for env in range(len(train_envs)):
                 train_envs[env].num_obstacles = 7
                 train_envs[env].random_starting_orientation = False
-                train_envs[env].size_of_map = 10
+                train_envs[env].size_of_map = 5
                 train_envs[env].minimum_distance_between_objects = 15
         state = None
         prefill = config.prefill
