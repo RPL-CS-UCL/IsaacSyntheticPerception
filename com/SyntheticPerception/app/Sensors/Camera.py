@@ -155,4 +155,6 @@ class DepthCamera:
 
         rgb_data = self.rgb_annot.get_data()
         depth = self.depth_annot.get_data()
+        # depth = 0
+        # depth = np.zeros((64,64,1))
         return rgb_data, depth

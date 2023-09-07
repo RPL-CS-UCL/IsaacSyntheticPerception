@@ -199,9 +199,9 @@ class Environment(gym.Env):
 
 
         # Values for learning
-        self._num_obstacles = 10
+        self._num_obstacles = 7
         self._random_starting_orientation = False
-        self._size_of_map = 35
+        self._size_of_map = 28
         self._minimum_distance_between_objects = 15
 
 
@@ -392,16 +392,16 @@ class Environment(gym.Env):
 
 
     def _get_obs(self, dist):
+        # print("here")
 
         obs, depth = self._agent.get_observations()[0]
         # print(obs)
         depth = depth.reshape(self._size+(1,))
-        # print(depth.dtype)
-        # depth = np.uint8(depth)
-
-        depth[depth==np.inf] = 320#1500#np.finfo(np.float32).max
-        x = depth
-        depth= (x-np.min(x))/(np.max(x)-np.min(x))
+        #
+        depth[depth==np.inf] = 400#1500#np.finfo(np.float32).max
+        depth_min = np.min(depth)
+        depth_max = np.max(depth)
+        depth= (depth-depth_min)/(depth_max-depth_min)
 
         # print(depth.max())
         # depth[depth == 0.0] = 1e-10
@@ -432,11 +432,11 @@ class Environment(gym.Env):
         }
 
     def _get_info(self):
-        agent_pos = self._agent.get_translate()
-        goal_pos = self._goal_object.get_translate()
-        x_diff = abs(agent_pos[0] - goal_pos[0])
-        y_diff = abs(agent_pos[1] - goal_pos[1])
-        dist = x_diff + y_diff
+        # agent_pos = self._agent.get_translate()
+        # goal_pos = self._goal_object.get_translate()
+        # x_diff = abs(agent_pos[0] - goal_pos[0])
+        # y_diff = abs(agent_pos[1] - goal_pos[1])
+        dist = 0#x_diff + y_diff
 
         return {"discount": np.float32(0.997), "dist_to_target": dist}
 
@@ -673,6 +673,7 @@ class Environment(gym.Env):
         range = self._size_of_map  # 35  # 50#200
         valid_start = False
         while not valid_start:
+            # print("in the while loop")
             obstacle_loc = [
                 np.random.uniform(-range, range),
                 np.random.uniform(-range, range),
