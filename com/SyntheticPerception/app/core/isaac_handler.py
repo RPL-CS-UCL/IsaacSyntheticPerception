@@ -521,9 +521,15 @@ class IsaacHandler:
         acts = train_envs[0].action_space
         config.num_actions = acts.n if hasattr(acts, "n") else acts.shape[0]
 
+        if config.curriculum_learning:
+            print("====CURRICULUM LEARNING====")
+            for env in range(len(train_envs)):
+                train_envs[env].num_obstacles = 7
+                train_envs[env].random_starting_orientation = False
+                train_envs[env].size_of_map = 10
+                train_envs[env].minimum_distance_between_objects = 15
         state = None
         prefill = config.prefill
-        # prefill = 0  
         print(f"Prefill dataset ({prefill} steps).")
         # print(acts)
         if hasattr(acts, "discrete"):
@@ -606,6 +612,7 @@ class IsaacHandler:
                     steps=config.eval_every,
                     state=state,
                 )
+                print("=======WE ARE HERE========", state)
                 torch.save(agent.state_dict(), logdir / "latest_model.pt")
             for env in train_envs + eval_envs:
                 try:

@@ -21,6 +21,7 @@ defaults:
   video_pred_log: True
   # output_path: '/home/stuart/Isaac_Stuff/Buzz_V3/IsaacSyntheticPerception/com/SyntheticPerception/app/experiments/'
   tag: 'testing'
+  curriculum_learning: True
 
   # Environment
   task: 'dmc_walker_walk'
@@ -29,7 +30,7 @@ defaults:
   action_repeat: 2
   time_limit: 1000
   grayscale: False
-  prefill: 6000 
+  prefill: 8000
   eval_noise: 0.0
   reward_EMA: True
 
@@ -228,9 +229,6 @@ isaac_sim:
   actor_layers: 5
   encoder: {mlp_keys: 'dist_to_target', cnn_keys: 'image|depth', cnn_depth: 96, mlp_layers: 5, mlp_units: 1024}
   decoder: {mlp_keys: 'dist_to_target', cnn_keys: 'image|depth', cnn_depth: 96, mlp_layers: 5, mlp_units: 1024}
-
-  break_speed: 100.0
-  time_limit: 36000
 
 debug:
   debug: True

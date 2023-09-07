@@ -158,19 +158,6 @@ class Environment(gym.Env):
     """
     Class that represents the world, agents, and, objects that can exist in an environment
     """
-
-    def set_curriculum_values(
-        self,
-        map_size,
-        random_starting_orientation,
-        num_obstacles,
-        min_dist_between_objs,
-    ):
-        self._num_obstacles = num_obstacles
-        self._random_starting_orientation = random_starting_orientation
-        self._size_of_map = map_size
-        self._minimum_distance_between_objects = min_dist_between_objs
-
     def __init__(self, action_repeat=1, size=(64, 64), seed=0, id=0) -> None:
         # self._world = World()
         self._step = 0
@@ -199,10 +186,17 @@ class Environment(gym.Env):
 
 
         # Values for learning
+        # self._num_obstacles = 5
+        # self._random_starting_orientation = False
+        # self._size_of_map = 25
+        # self._minimum_distance_between_objects = 15
         self._num_obstacles = 7
+        self._num_obstacles_limit = 15
         self._random_starting_orientation = False
         self._size_of_map = 28
+        self._map_limit = 50
         self._minimum_distance_between_objects = 15
+        self._distance_between_objects_limit = 15
 
 
         velocity = 10  # 5
@@ -224,6 +218,58 @@ class Environment(gym.Env):
             5: np.array([0, 0, 0, 0, 0, -1]),  # rotate left
         }
         self._world = None
+
+    @property
+    def num_osbtacles_limit(self):
+        return self._num_obstacles_limit
+
+    @property
+    def num_obstacles(self):
+        return self._num_obstacles
+
+    @num_obstacles.setter
+    def num_obstacles(self, value):
+        self._num_obstacles = value
+
+    @property
+    def random_starting_orientation(self):
+        return self._random_starting_orientation
+
+    @random_starting_orientation.setter
+    def random_starting_orientation(self, value):
+        self._random_starting_orientation = value
+
+    @property
+    def map_limit(self):
+        return self._map_limit
+
+    @property
+    def size_of_map(self):
+        return self._size_of_map
+
+    @size_of_map.setter
+    def size_of_map(self, value):
+        self._size_of_map = value
+
+    @property
+    def distance_between_objects_limit(self):
+        return self._distance_between_objects_limit
+
+    @property
+    def minimum_distance_between_objects(self):
+        return self._minimum_distance_between_objects
+
+    @minimum_distance_between_objects.setter
+    def minimum_distance_between_objects(self, value):
+        self._minimum_distance_between_objects = value
+
+    def get_curriculum_values(self):
+        return {
+            "obstacles": self.num_obstacles,
+            "random_start_orientation": self.random_starting_orientation,
+            "map_size": self.size_of_map,
+            "min_dist_between_objects": self.minimum_distance_between_objects
+        }
 
     def setup_light(self, skybox_path=None):
         self._world.reset()
