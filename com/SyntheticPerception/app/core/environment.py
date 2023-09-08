@@ -343,7 +343,7 @@ class Environment(gym.Env):
             sensor_path,  # "/home/jon/Documents/Isaac_dreamer/sensors.json",
             agent_loc,
             rotation,
-            [1.0, 1.0, 1.0],
+            [2.0, 2.0, 3.0],
             "AGENT",
             parent_path,
             stage,
@@ -382,6 +382,8 @@ class Environment(gym.Env):
                 obs_loc = self.get_random_obstacle_loc(
                     goal_loc=goal_loc, offset=self.env_id * 2500
                 )
+                if obs_loc is None:
+                    continue
                 self._locations_to_avoid.append(obs_loc)
                 self._obstacles.append(
                     Object(
@@ -504,6 +506,8 @@ class Environment(gym.Env):
             obs_loc = self.get_random_obstacle_loc(
                 goal_loc=goal_loc, offset=self.env_id * 2500
             )
+            if obs_loc is None:
+                continue
             self._locations_to_avoid.append(obs_loc)
             obs.change_start_and_reset(translate=obs_loc)
 
@@ -718,7 +722,10 @@ class Environment(gym.Env):
     def get_random_obstacle_loc(self, goal_loc=[0, 0, 0], offset=0):
         range = self._size_of_map  # 35  # 50#200
         valid_start = False
+        attempts = 0
         while not valid_start:
+            if attempts > 200:
+                return None
             # print("in the while loop")
             obstacle_loc = [
                 np.random.uniform(-range, range),
@@ -740,6 +747,7 @@ class Environment(gym.Env):
             if invalid_counter == 0:
                 valid_start = True
                 break
+            attempts +=1
         return obstacle_loc
 
     def reset(self):

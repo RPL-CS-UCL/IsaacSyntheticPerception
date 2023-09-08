@@ -11,7 +11,7 @@ defaults:
   parallel: False
   eval_every: 1e4
   eval_episode_num: 0
-  log_every: 1e4
+  log_every: 5000
   reset_every: 0
   device: 'cuda:0'
   compile: False

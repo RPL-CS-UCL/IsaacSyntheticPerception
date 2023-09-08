@@ -486,7 +486,7 @@ class IsaacHandler:
         directory = config.traindir
         train_eps = tools.load_episodes(directory, limit=config.dataset_size)
         directory = config.evaldir
-        eval_eps = tools.load_episodes(directory, limit=1)
+        #eval_eps = tools.load_episodes(directory, limit=1)
         make = lambda mode, id: dreamer_fns.make_env_seq(config, mode, id)
         train_envs = [make("train", id) for id in range(config.envs)]
 
@@ -505,8 +505,8 @@ class IsaacHandler:
                 obstacle_path = config.obstacle_path
             )
         train_envs[0].setup_light(skybox_path = config.skybox_path)
-        eval_envs = [make("eval", _ + len(train_envs)) for _ in range(1)]
-
+        #eval_envs = [make("eval", _ + len(train_envs)) for _ in range(1)]
+        eval_envs = []
         for i in range(len(eval_envs)):
             eval_envs[i].setup_objects_agents_goals(
                 world=world,
@@ -524,7 +524,7 @@ class IsaacHandler:
         if config.curriculum_learning:
             print("====CURRICULUM LEARNING====")
             for env in range(len(train_envs)):
-                train_envs[env].num_obstacles = 7
+                train_envs[env].num_obstacles = 0
                 train_envs[env].random_starting_orientation = False
                 train_envs[env].size_of_map = 5
                 train_envs[env].minimum_distance_between_objects = 15
