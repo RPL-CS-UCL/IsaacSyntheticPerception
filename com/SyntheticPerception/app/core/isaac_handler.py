@@ -486,7 +486,7 @@ class IsaacHandler:
         directory = config.traindir
         train_eps = tools.load_episodes(directory, limit=config.dataset_size)
         directory = config.evaldir
-        #eval_eps = tools.load_episodes(directory, limit=1)
+        eval_eps = tools.load_episodes(directory, limit=1)
         make = lambda mode, id: dreamer_fns.make_env_seq(config, mode, id)
         train_envs = [make("train", id) for id in range(config.envs)]
 
@@ -495,6 +495,15 @@ class IsaacHandler:
             physics_dt=1 / 60,
             rendering_dt=1 / 60,
         )
+
+        if config.curriculum_learning:
+            print("====CURRICULUM LEARNING====")
+            for env in range(len(train_envs)):
+                print("VALUES", train_envs[env].get_curriculum_values())
+                train_envs[env].set_curriculum_values(15,False,0,5)
+                print("NEW VALUES", train_envs[env].get_curriculum_values())
+        
+      
         for i in range(len(train_envs)):
             train_envs[i].setup_objects_agents_goals(
                 world=world,
@@ -502,10 +511,13 @@ class IsaacHandler:
                 cone_path=config.cone_asset,
                 sensor_path=config.sensor_asset,
                 mat_path =config.mat_path,
+                table_path=config.table_path,
+
                 obstacle_path = config.obstacle_path
             )
+     
         train_envs[0].setup_light(skybox_path = config.skybox_path)
-        #eval_envs = [make("eval", _ + len(train_envs)) for _ in range(1)]
+        eval_envs = [make("eval", _ + len(train_envs)) for _ in range(1)]
         eval_envs = []
         for i in range(len(eval_envs)):
             eval_envs[i].setup_objects_agents_goals(
@@ -513,7 +525,7 @@ class IsaacHandler:
                 id=i + len(train_envs) + 1,
                 cone_path=config.cone_asset,
                 sensor_path=config.sensor_asset,
-
+                table_path=config.table_path,
                 mat_path =config.mat_path
             )
         train_envs = [Damy(env) for env in train_envs]
@@ -521,13 +533,7 @@ class IsaacHandler:
         acts = train_envs[0].action_space
         config.num_actions = acts.n if hasattr(acts, "n") else acts.shape[0]
 
-        if config.curriculum_learning:
-            print("====CURRICULUM LEARNING====")
-            for env in range(len(train_envs)):
-                train_envs[env].num_obstacles = 0
-                train_envs[env].random_starting_orientation = False
-                train_envs[env].size_of_map = 5
-                train_envs[env].minimum_distance_between_objects = 15
+
         state = None
         prefill = config.prefill
         print(f"Prefill dataset ({prefill} steps).")

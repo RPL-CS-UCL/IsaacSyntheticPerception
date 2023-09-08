@@ -159,6 +159,7 @@ class Environment(gym.Env):
     Class that represents the world, agents, and, objects that can exist in an environment
     """
     def __init__(self, action_repeat=1, size=(64, 64), seed=0, id=0) -> None:
+        print(" INIT GETING CALLED ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^6")
         # self._world = World()
         self._step = 0
         self._objects = []
@@ -183,14 +184,15 @@ class Environment(gym.Env):
         self.env_id = id
         self.agent_alive = True
         self._collision_reset = False
-
+        self._interacted_with_object = False
 
         # Values for learning
         # self._num_obstacles = 5
         # self._random_starting_orientation = False
         # self._size_of_map = 25
         # self._minimum_distance_between_objects = 15
-        self._num_obstacles = 7
+        self._num_obstacles = 3
+        print("inisdie init", self._num_obstacles)
         self._num_obstacles_limit = 15
         self._random_starting_orientation = False
         self._size_of_map = 28
@@ -223,53 +225,72 @@ class Environment(gym.Env):
     def num_obstacles_limit(self):
         return self._num_obstacles_limit
 
-    @property
-    def num_obstacles(self):
-        return self._num_obstacles
+    """    @property
+        def num_obstacles(self):
+            return self._num_obstacles
 
-    @num_obstacles.setter
-    def num_obstacles(self, value):
-        self._num_obstacles = value
+        @num_obstacles.setter
+        def num_obstacles(self, value):
+            self._num_obstacles = value
+    """
+    def set_curriculum_values(
+        self,
+        map_size=None,
+        random_starting_orientation=None,
+        num_obstacles=None,
+        min_dist_between_objs=None,
+    ):
+        if map_size is not None:
+            self._size_of_map = map_size
+        if random_starting_orientation is not None:
+            self._random_starting_orientation = random_starting_orientation
+        if num_obstacles is not None:
+            self._num_obstacles = num_obstacles
+        if min_dist_between_objs is not None:
+            self._minimum_distance_between_objects = min_dist_between_objs
 
-    @property
-    def random_starting_orientation(self):
-        return self._random_starting_orientation
+    def get_curriculum_values(self):
+        return self._size_of_map, self._random_starting_orientation, self._num_obstacles, self._minimum_distance_between_objects
+   
+    # @property
+    # def random_starting_orientation(self):
+    #     return self._random_starting_orientation
 
-    @random_starting_orientation.setter
-    def random_starting_orientation(self, value):
-        self._random_starting_orientation = value
+    # @random_starting_orientation.setter
+    # def random_starting_orientation(self, value):
+    #     self._random_starting_orientation = value
 
     @property
     def map_limit(self):
         return self._map_limit
 
-    @property
-    def size_of_map(self):
-        return self._size_of_map
+    # @property
+    # def size_of_map(self):
+    #     return self._size_of_map
 
-    @size_of_map.setter
-    def size_of_map(self, value):
-        self._size_of_map = value
+    # @size_of_map.setter
+    # def size_of_map(self, value):
+    #     self._size_of_map = value
 
     @property
     def distance_between_objects_limit(self):
         return self._distance_between_objects_limit
 
-    @property
-    def minimum_distance_between_objects(self):
-        return self._minimum_distance_between_objects
+    # @property
+    # def minimum_distance_between_objects(self):
+    #     return self._minimum_distance_between_objects
 
-    @minimum_distance_between_objects.setter
-    def minimum_distance_between_objects(self, value):
-        self._minimum_distance_between_objects = value
+    # @minimum_distance_between_objects.setter
+    # def minimum_distance_between_objects(self, value):
+    #     self._minimum_distance_between_objects = value
 
-    def get_curriculum_values(self):
-        return {
-            "obstacles": self.num_obstacles,
-            "random_start_orientation": self.random_starting_orientation,
-            "map_size": self.size_of_map,
-            "min_dist_between_objects": self.minimum_distance_between_objects
-        }
+    # def get_curriculum_values(self):
+    #     return {
+    #         "obstacles": self.num_obstacles,
+    #         "random_start_orientation": self.random_starting_orientation,
+    #         "map_size": self.size_of_map,
+    #         "min_dist_between_objects": self.minimum_distance_between_objects
+    #     }
 
     def setup_light(self, skybox_path=None):
         self._world.reset()
@@ -295,8 +316,10 @@ class Environment(gym.Env):
         cone_path=None,
         sensor_path=None,
         mat_path=None,
+        table_path=None,
         obstacle_path=None,
     ):
+        print(" ========== we are spawning ", self._num_obstacles)
         # self._length = 1000
         self._world = world
         self.env_id = id
@@ -355,14 +378,35 @@ class Environment(gym.Env):
         self._goal_object = Object(
             goal_loc,
             rotation,
-            [0.1, 0.1, 0.1],
+            [0.05, 0.05, 0.05],
             "goal",
             parent_path,
             stage,
-            usd_path=usd_path,
-            instanceable=True,
+            usd_path=table_path,
+            instanceable=False,
         )
         self.simulate_steps()
+        self._obstacles = []
+        self._locations_to_avoid = []
+        self._locations_to_avoid.append(goal_loc)
+        self._locations_to_avoid.append(agent_loc)
+        interaction_obj_loc = self.get_random_obstacle_loc(
+                    spawn_dist=self.threshold+3, offset=self.env_id * 2500
+                )
+        if interaction_obj_loc:
+        
+            self._interaction_obj= Object(
+                interaction_obj_loc,
+                rotation,
+                [0.05, 0.05, 0.05],
+                "interaction_obj",
+                parent_path,
+                stage,
+                usd_path=obstacle_path,
+                instanceable=True,
+                disable_gravity=False
+            )
+
 
         self.contactReportAPI = PhysxSchema.PhysxContactReportAPI.Apply(
             self._agent._prim
@@ -377,10 +421,12 @@ class Environment(gym.Env):
         self._locations_to_avoid = []
         self._locations_to_avoid.append(goal_loc)
         self._locations_to_avoid.append(agent_loc)
+        self._locations_to_avoid.append(interaction_obj_loc)
+        print(goal_loc, agent_loc, interaction_obj_loc)
         if obstacle_path:
             for i in range(self._num_obstacles):
                 obs_loc = self.get_random_obstacle_loc(
-                    goal_loc=goal_loc, offset=self.env_id * 2500
+                     offset=self.env_id * 2500
                 )
                 if obs_loc is None:
                     continue
@@ -393,8 +439,8 @@ class Environment(gym.Env):
                         f"obstacle_{i}",
                         parent_path,
                         stage,
-                        usd_path=obstacle_path,
-                        instanceable=True,
+                        usd_path=cone_path,
+                        instanceable=False,
                     )
                 )
 
@@ -418,6 +464,10 @@ class Environment(gym.Env):
                 if env_str in act1_path and env_str in act0_path:
                     if "obs" in act0_path or "obs" in act1_path:
                         self._collision_reset = True
+                    if "goal" in act0_path or "goal" in act1_path:
+                        self._collision_reset = True
+                    if "interaction" in act0_path or "interaction" in act1_path:
+                        self._interacted_with_object = True
                         # print(env_str, " collided on step ", self._step)
 
     @property
@@ -433,13 +483,16 @@ class Environment(gym.Env):
         spaces["dist_to_target"] = gym.spaces.Box(
             -np.inf, np.inf, (1,), dtype=np.float32
         )
+        spaces["dist_to_object"] = gym.spaces.Box(
+            -np.inf, np.inf, (1,), dtype=np.float32
+        )
 
         spaces["depth"] = gym.spaces.Box(0.0,np.inf , self._size + (1,), dtype=np.float32)
 
         return gym.spaces.Dict(spaces)
 
 
-    def _get_obs(self, dist):
+    def _get_obs(self, dist,dist_to_obj):
         # print("here")
 
         obs, depth = self._agent.get_observations()[0]
@@ -464,6 +517,7 @@ class Environment(gym.Env):
                 "image": np.zeros((64, 64, 3),dtype=np.float32),
                 "depth": np.ones((64,64,1),dtype=np.float32),
                 "dist_to_target": np.float32([dist]),
+                "dist_to_object": np.float32([dist_to_obj]),
             }
 
         obs = obs[:, :, :-1]
@@ -475,6 +529,8 @@ class Environment(gym.Env):
             "image": obs,
             "depth" : depth,
             "dist_to_target": np.float32([dist]),
+            "dist_to_object": np.float32([dist_to_obj]),
+
             "is_terminal": False,
             "is_first": is_first,
         }
@@ -498,22 +554,23 @@ class Environment(gym.Env):
         self._world.step(render=True)
         self._world.step(render=True)
 
-    def reset_obstacles(self, agent_loc, goal_loc):
+    def reset_obstacles(self, agent_loc, goal_loc,interaction_obj_loc):
         self._locations_to_avoid = []
         self._locations_to_avoid.append(goal_loc)
         self._locations_to_avoid.append(agent_loc)
+        self._locations_to_avoid.append(interaction_obj_loc)
         for obs in self._obstacles:
             obs_loc = self.get_random_obstacle_loc(
-                goal_loc=goal_loc, offset=self.env_id * 2500
+                 offset=self.env_id * 2500
             )
             if obs_loc is None:
                 continue
             self._locations_to_avoid.append(obs_loc)
             obs.change_start_and_reset(translate=obs_loc)
 
-    def temp_force_look(self, random_ori=True):
+    def temp_force_look(self,point_to_look_at, random_ori=True):
         agent_point = self._agent.get_translate_vec()
-        goal_point = self._goal_object.get_translate_vec()
+        goal_point = point_to_look_at#self._goal_object.get_translate_vec()
         # Compute desired direction
         desired_direction = goal_point - agent_point
         desired_direction.Normalize()
@@ -683,13 +740,18 @@ class Environment(gym.Env):
         state_dist = -1
         if angle < 45:
             state_dist = dist
-
-        obs = self._get_obs(state_dist)
+        interaction_obj_pos = self._interaction_obj.get_translate()
+        dist_to_obj = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(interaction_obj_pos[:2]))
+        dist_obj_to_goal = np.linalg.norm(np.asarray(goal_pos[:2]) - np.asarray(interaction_obj_pos[:2]))
+        obs = self._get_obs(state_dist,dist_to_obj)
         if self._collision_reset:
             reward -= 1
-        if dist < self.threshold:
-            reward += 1
+        if dist_obj_to_goal < self.threshold+5:
+            reward += 10
             terminated = True
+
+        if self._interacted_with_object:
+            reward+=0.001
         obs["is_terminal"] = terminated
 
         return obs, reward, terminated, info
@@ -719,10 +781,15 @@ class Environment(gym.Env):
                 break
         return agent_loc, goal_loc
 
-    def get_random_obstacle_loc(self, goal_loc=[0, 0, 0], offset=0):
+    def get_random_obstacle_loc(self, spawn_dist=None, offset=0):
         range = self._size_of_map  # 35  # 50#200
         valid_start = False
         attempts = 0
+        
+        if spawn_dist is None:
+            spawn_dist = self._minimum_distance_between_objects
+
+
         while not valid_start:
             if attempts > 200:
                 return None
@@ -741,7 +808,7 @@ class Environment(gym.Env):
                 )
                 # print(dist, " ", self.threshold + 15)
 
-                if dist < (self._minimum_distance_between_objects):
+                if dist < (spawn_dist):
                     valid_start = False
                     invalid_counter += 1
             if invalid_counter == 0:
@@ -768,19 +835,29 @@ class Environment(gym.Env):
 
         self._agent.change_start_and_reset(translate=agent_loc)
         self._goal_object.change_start_and_reset(translate=goal_loc)
+        self._locations_to_avoid = []
+        self._locations_to_avoid.append(goal_loc)
+        self._locations_to_avoid.append(agent_loc)
+        interaction_obj_loc = self.get_random_obstacle_loc(
+                   spawn_dist=self.threshold+4, offset=self.env_id * 2500
+                )
+        self._interaction_obj.change_start_and_reset(translate=interaction_obj_loc)
+
 
         self.simulate_steps()
-        quat = self.temp_force_look(random_ori=self._random_starting_orientation)
+        quat = self.temp_force_look(self._interaction_obj.get_translate_vec(),random_ori=self._random_starting_orientation)
         quat = Gf.Quatf(quat[0], quat[1], quat[2], quat[3])
         self._agent.change_start_and_reset(orientation=quat)
         self.simulate_steps()
         info = self._get_info()
-        obs = self._get_obs(-1)
+        obs = self._get_obs(-1,-1)
         obs["is_terminal"] = self._step == 0
         self._angle_reward_steps = 0
 
         dist = np.linalg.norm(np.asarray(agent_loc[:2]) - np.asarray(goal_loc[:2]))
-        self.reset_obstacles(agent_loc, goal_loc)
+        
+
+        self.reset_obstacles(agent_loc, goal_loc,interaction_obj_loc)
 
         for loc in self._locations_to_avoid:
             dist = np.linalg.norm(
@@ -789,6 +866,8 @@ class Environment(gym.Env):
             # print(f" Agent {self.id} spawning at a dist of {dist}")
 
         self._collision_reset = False
+        self._interacted_with_object = False
+
         return obs
 
     def render(self, *args, **kwargs):

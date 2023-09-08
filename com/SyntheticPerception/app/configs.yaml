@@ -20,7 +20,7 @@ defaults:
   expl_gifs: False
   video_pred_log: True
   # output_path: '/home/stuart/Isaac_Stuff/Buzz_V3/IsaacSyntheticPerception/com/SyntheticPerception/app/experiments/'
-  tag: 'testing'
+  tag: 'testing_NAMO'
   curriculum_learning: True
 
   # Environment
