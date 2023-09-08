@@ -391,7 +391,7 @@ class Environment(gym.Env):
         self._locations_to_avoid.append(goal_loc)
         self._locations_to_avoid.append(agent_loc)
         interaction_obj_loc = self.get_random_obstacle_loc(
-                    spawn_dist=self.threshold+3, offset=self.env_id * 2500
+                    spawn_dist=self.threshold+8, offset=self.env_id * 2500
                 )
         if interaction_obj_loc:
         
@@ -746,6 +746,7 @@ class Environment(gym.Env):
         obs = self._get_obs(state_dist,dist_to_obj)
         if self._collision_reset:
             reward -= 1
+        # self.threshold = 10
         if dist_obj_to_goal < self.threshold+5:
             reward += 10
             terminated = True

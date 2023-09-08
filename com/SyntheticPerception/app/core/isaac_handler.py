@@ -500,7 +500,7 @@ class IsaacHandler:
             print("====CURRICULUM LEARNING====")
             for env in range(len(train_envs)):
                 print("VALUES", train_envs[env].get_curriculum_values())
-                train_envs[env].set_curriculum_values(15,False,0,5)
+                train_envs[env].set_curriculum_values(18,False,0,5)
                 print("NEW VALUES", train_envs[env].get_curriculum_values())
         
       
