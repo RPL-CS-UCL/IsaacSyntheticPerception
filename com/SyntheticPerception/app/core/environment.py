@@ -220,7 +220,7 @@ class Environment(gym.Env):
         self._world = None
 
     @property
-    def num_osbtacles_limit(self):
+    def num_obstacles_limit(self):
         return self._num_obstacles_limit
 
     @property
