@@ -32,7 +32,7 @@ import math
 import random
 from scipy.spatial.transform import Rotation
 from pxr import UsdShade, Sdf
-
+import cv2
 
 def rotate_quaternion_by_angle(original_quaternion, angle_degrees, axis_of_rotation):
     angle_radians = np.deg2rad(angle_degrees)
@@ -143,14 +143,12 @@ def rotate_vector_by_quaternion(vec, quat):
     rotated_quat = quat * vec_quat * quat.GetInverse()
     return rotated_quat.GetImaginary()
 
-
 def vec3d_to_list(gfvec):
     return [gfvec[0], gfvec[1], gfvec[2]]
 
 
 def list_to_vec3d(listvec):
     return Gf.Vec3d(float(listvec[0]), float(listvec[1]), float(listvec[2]))
-
 
 
 
@@ -163,6 +161,7 @@ class Environment(gym.Env):
         # self._world = World()
         self._step = 0
         self._objects = []
+        self._obstacles = []
         self._agents = []
 
         self.id = id
@@ -170,6 +169,7 @@ class Environment(gym.Env):
         self._goal = None
         self._step = 0
         self._length = 500  # 1000
+        self._max_length = 2000
         self._angle_reward_steps = 0
 
         physics_dt = 1 / 60
@@ -179,29 +179,33 @@ class Environment(gym.Env):
         self._action_repeat = action_repeat
         self.reward_range = [-np.inf, np.inf]
         self._action_space = spaces.Discrete(6)
-        self.threshold = 10
+        self.threshold = 0.8
 
         self.env_id = id
         self.agent_alive = True
         self._collision_reset = False
         self._interacted_with_object = False
+        self._goal_achieved = False
 
         # Values for learning
-        # self._num_obstacles = 5
-        # self._random_starting_orientation = False
-        # self._size_of_map = 25
-        # self._minimum_distance_between_objects = 15
-        self._num_obstacles = 3
-        print("inisdie init", self._num_obstacles)
+        self._first_time = True
+        self._num_obstacles = 0
         self._num_obstacles_limit = 15
         self._random_starting_orientation = False
-        self._size_of_map = 28
-        self._map_limit = 50
-        self._minimum_distance_between_objects = 15
-        self._distance_between_objects_limit = 15
+        self._size_of_map = 2
+        self._map_limit = 44
+        self._minimum_distance_between_objects = 1
+        self._distance_between_objects_limit = 10
+        self.min_dist_between_inter_and_goal = 0.5
+        self._min_dist_between_inter_and_goal_limit = 10
+        self.max_dist_between_inter_and_goal = 2
+        self._max_dist_between_inter_and_goal_limit = 10
+        self.min_dist_between_inter_and_agent = 0.5
+        self._min_dist_between_inter_and_agent_limit = 10
+        self.max_dist_between_inter_and_agent = 2
+        self._max_dist_between_inter_and_agent_limit = 10
 
-
-        velocity = 10  # 5
+        velocity = 0.5 # 5
         self._velocity = velocity
         self._max_movement_per_step = self._velocity * 1 / 10
         diag_veloc = velocity * math.sqrt(2) / 2
@@ -221,24 +225,38 @@ class Environment(gym.Env):
         }
         self._world = None
 
-    @property
-    def num_obstacles_limit(self):
-        return self._num_obstacles_limit
+    def set_velocity(self, velocity, episode_length):
+        self._length = episode_length
+        self._action_to_direction = {
+                # linear
+                0: np.array([velocity, 0, 0, 0, 0, 0]),  # forward
+                1: np.array([-velocity, 0, 0, 0, 0, 0]),  # back
+                2: np.array([0, velocity, 0, 0, 0, 0]),  # left
+                3: np.array([0, -velocity, 0, 0, 0, 0]),  # right
+                # 4: np.array([diag_veloc, diag_veloc, 0, 0, 0, 0]),  # forward
+                # 5: np.array([-diag_veloc, -diag_veloc, 0, 0, 0, 0]),  # back
+                # 6: np.array([diag_veloc, -diag_veloc, 0, 0, 0, 0]),  # left
+                # 7: np.array([-diag_veloc, diag_veloc, 0, 0, 0, 0]),  # right
+                # angular
+                4: np.array([0, 0, 0, 0, 0, 1]),  # rotate right
+                5: np.array([0, 0, 0, 0, 0, -1]),  # rotate left
+        }
+    def reset_velocity(self):
+        self.set_velocity(self._velocity, 500)        
 
-    """    @property
-        def num_obstacles(self):
-            return self._num_obstacles
-
-        @num_obstacles.setter
-        def num_obstacles(self, value):
-            self._num_obstacles = value
-    """
     def set_curriculum_values(
         self,
         map_size=None,
         random_starting_orientation=None,
         num_obstacles=None,
         min_dist_between_objs=None,
+        episode_length=None,
+        reward_first_time=None
+        # min_dist_between_inter_and_goal=None,
+        # max_dist_between_inter_and_goal=None,
+        # min_dist_between_inter_and_agent=None,
+        # max_dist_between_inter_and_agent=None
+        
     ):
         if map_size is not None:
             self._size_of_map = map_size
@@ -248,49 +266,69 @@ class Environment(gym.Env):
             self._num_obstacles = num_obstacles
         if min_dist_between_objs is not None:
             self._minimum_distance_between_objects = min_dist_between_objs
+        if episode_length is not None:
+            self._length = episode_length
+        if reward_first_time is not None:
+            self._first_time = reward_first_time
+        # if min_dist_between_inter_and_goal is not None:
+        #     self.min_dist_between_inter_and_goal = min_dist_between_inter_and_goal
+        # if max_dist_between_inter_and_goal is not None:
+        #     self.max_dist_between_inter_and_goal = max_dist_between_inter_and_goal
+        # if min_dist_between_inter_and_agent is not None:
+        #     self.min_dist_between_inter_and_agent = min_dist_between_inter_and_agent
+        # if max_dist_between_inter_and_agent is not None:
+        #     self.max_dist_between_inter_and_agent = max_dist_between_inter_and_agent
 
     def get_curriculum_values(self):
-        return self._size_of_map, self._random_starting_orientation, self._num_obstacles, self._minimum_distance_between_objects
+        curriculum_values = (self._size_of_map,
+                            self._random_starting_orientation,
+                            self._num_obstacles,
+                            self._minimum_distance_between_objects,
+                            self._length,
+                            self._first_time
+                            # self.min_dist_between_inter_and_goal,
+                            # self.max_dist_between_inter_and_goal,
+                            # self.min_dist_between_inter_and_agent,
+                            # self.max_dist_between_inter_and_agent
+        )    
+        return curriculum_values 
    
-    # @property
-    # def random_starting_orientation(self):
-    #     return self._random_starting_orientation
-
-    # @random_starting_orientation.setter
-    # def random_starting_orientation(self, value):
-    #     self._random_starting_orientation = value
-
     @property
     def map_limit(self):
         return self._map_limit
-
-    # @property
-    # def size_of_map(self):
-    #     return self._size_of_map
-
-    # @size_of_map.setter
-    # def size_of_map(self, value):
-    #     self._size_of_map = value
+    
+    @property
+    def num_obstacles_limit(self):
+        return self._num_obstacles_limit
 
     @property
     def distance_between_objects_limit(self):
         return self._distance_between_objects_limit
-
+    
+    @property
+    def max_length(self):
+        return self._max_length
+    
+    @property
+    def reward_first_time(self):
+        return self._first_time
+    
     # @property
-    # def minimum_distance_between_objects(self):
-    #     return self._minimum_distance_between_objects
+    # def min_dist_between_inter_and_goal_limit(self):
+    #     return self._min_dist_between_inter_and_goal_limit
+    
+    # @property
+    # def max_dist_between_inter_and_goal_limit(self):
+    #     return self._max_dist_between_inter_and_goal_limit
+    
+    # @property
+    # def min_dist_between_inter_and_agent_limit(self):
+    #     return self._min_dist_between_inter_and_agent_limit
+    
+    # @property
+    # def max_dist_between_inter_and_agent_limit(self):
+    #     return self._max_dist_between_inter_and_agent_limit
 
-    # @minimum_distance_between_objects.setter
-    # def minimum_distance_between_objects(self, value):
-    #     self._minimum_distance_between_objects = value
-
-    # def get_curriculum_values(self):
-    #     return {
-    #         "obstacles": self.num_obstacles,
-    #         "random_start_orientation": self.random_starting_orientation,
-    #         "map_size": self.size_of_map,
-    #         "min_dist_between_objects": self.minimum_distance_between_objects
-    #     }
 
     def setup_light(self, skybox_path=None):
         self._world.reset()
@@ -309,6 +347,43 @@ class Environment(gym.Env):
                 select_new_prim=True,
             )
 
+    def curriculum_coords_check(self, n, d, s):
+        """
+        n = number of objects
+        d = minimum dist
+        s = size of map
+        """
+        if n > (s * s) // (d * d):
+            return True 
+        else:
+            return False
+
+
+    def generate_points(self, n, d, s, offset=0):
+        """
+        n = number of objects
+        d = minimum dist
+        s = size of map
+        """
+        if n > (s * s) // (d * d):
+            raise ValueError("Cannot generate all points with the given constraints.")
+        points = set()
+        def generate_point():
+                while True:
+                    x = random.uniform(-s, s)
+                    y = random.uniform(-s, s)
+                    grid_x = int(x // d)
+                    grid_y = int(y // d)
+                    if (grid_x, grid_y) not in points:
+                        points.add((grid_x, grid_y))
+                        yield (x, y) 
+        point_generator = generate_point()
+        while len(points) < n:
+            x, y = next(point_generator)
+            points.add((int(x // d), int(y // d)))
+
+        return [[(x * d)+offset, y * d, 0] for x, y in points]
+
     def setup_objects_agents_goals(
         self,
         world,
@@ -318,6 +393,8 @@ class Environment(gym.Env):
         mat_path=None,
         table_path=None,
         obstacle_path=None,
+        interaction_object=None,
+        target_object=None
     ):
         print(" ========== we are spawning ", self._num_obstacles)
         # self._length = 1000
@@ -329,6 +406,7 @@ class Environment(gym.Env):
         stage = omni.usd.get_context().get_stage()
         offset = self.env_id * 2500
 
+        generate_points = self.generate_points(self._num_obstacles+3, self._minimum_distance_between_objects, self._size_of_map, offset=self.env_id * 2500)
         parent_path = f"/World/env_{self.env_id}"  # _{id}"
 
         omni.kit.commands.execute(
@@ -360,13 +438,16 @@ class Environment(gym.Env):
             self._materials[mat_index], UsdShade.Tokens.strongerThanDescendants
         )
 
-        agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
+        # agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
+        agent_loc = generate_points[0]
+        goal_loc = generate_points[1]
+        print("trying to get valid agent and goal loc", agent_loc, goal_loc)
 
         self._agent = Agent(
             sensor_path,  # "/home/jon/Documents/Isaac_dreamer/sensors.json",
             agent_loc,
             rotation,
-            [2.0, 2.0, 3.0],
+            [0.3, 0.3, 0.7],
             "AGENT",
             parent_path,
             stage,
@@ -374,11 +455,15 @@ class Environment(gym.Env):
             visibility="invisible",
         )
 
+        self.target_image = target_object
+        self.interaction_image = interaction_object
+        
+
         usd_path = cone_path
         self._goal_object = Object(
             goal_loc,
             rotation,
-            [0.05, 0.05, 0.05],
+            [0.01, 0.01, 0.01],
             "goal",
             parent_path,
             stage,
@@ -386,19 +471,20 @@ class Environment(gym.Env):
             instanceable=False,
         )
         self.simulate_steps()
-        self._obstacles = []
-        self._locations_to_avoid = []
-        self._locations_to_avoid.append(goal_loc)
-        self._locations_to_avoid.append(agent_loc)
-        interaction_obj_loc = self.get_random_obstacle_loc(
-                    spawn_dist=self.threshold+8, offset=self.env_id * 2500
-                )
+        # self._obstacles = []
+        # self._locations_to_avoid = []
+        # self._locations_to_avoid.append(goal_loc)
+        # self._locations_to_avoid.append(agent_loc)
+        # interaction_obj_loc = self.get_random_loc_interaction_object(goal_loc,agent_loc, offset=self.env_id * 2500
+        #     )
+        interaction_obj_loc = generate_points[2]
+        print("interaction obj loc ", interaction_obj_loc)
         if interaction_obj_loc:
         
             self._interaction_obj= Object(
                 interaction_obj_loc,
                 rotation,
-                [0.05, 0.05, 0.05],
+                [0.007, 0.007, 0.007],
                 "interaction_obj",
                 parent_path,
                 stage,
@@ -411,31 +497,38 @@ class Environment(gym.Env):
         self.contactReportAPI = PhysxSchema.PhysxContactReportAPI.Apply(
             self._agent._prim
         )
+        self.contactReportAPI2 = PhysxSchema.PhysxContactReportAPI.Apply(
+            self._interaction_obj._prim
+        )
 
         self.contact_report_sub = (
             get_physx_simulation_interface().subscribe_contact_report_events(
                 self.on_contact_report_event
             )
         )
-        self._obstacles = []
-        self._locations_to_avoid = []
-        self._locations_to_avoid.append(goal_loc)
-        self._locations_to_avoid.append(agent_loc)
-        self._locations_to_avoid.append(interaction_obj_loc)
-        print(goal_loc, agent_loc, interaction_obj_loc)
+        # self._obstacles = []
+        # self._locations_to_avoid = []
+        # self._locations_to_avoid.append(goal_loc)
+        # self._locations_to_avoid.append(agent_loc)
+        # self._locations_to_avoid.append(interaction_obj_loc)
+        # print(goal_loc, agent_loc, interaction_obj_loc)
+        self._obstacle_parent_path = parent_path
+        self._stage = stage
+        self._cone_path = cone_path
         if obstacle_path:
             for i in range(self._num_obstacles):
-                obs_loc = self.get_random_obstacle_loc(
-                     offset=self.env_id * 2500
-                )
+                # obs_loc = self.get_random_obstacle_loc(
+                #     offset=self.env_id * 2500
+                # )
+                obs_loc = generate_points[3+i]
                 if obs_loc is None:
                     continue
-                self._locations_to_avoid.append(obs_loc)
+                #self._locations_to_avoid.append(obs_loc)
                 self._obstacles.append(
                     Object(
                         obs_loc,
                         rotation,
-                        [0.05, 0.05, 0.05],
+                        [0.01, 0.01, 0.01],
                         f"obstacle_{i}",
                         parent_path,
                         stage,
@@ -448,27 +541,49 @@ class Environment(gym.Env):
         for contact_header in contact_headers:
             act0_path = str(PhysicsSchemaTools.intToSdfPath(contact_header.actor0))
             act1_path = str(PhysicsSchemaTools.intToSdfPath(contact_header.actor1))
+            if "AGENT"  in act0_path or "AGENT"  in act1_path: 
 
-            cur_collider = str(
+                cur_collider = str(
+                    PhysicsSchemaTools.intToSdfPath(contact_header.collider0)
+                )
+                contact_data_offset = contact_header.contact_data_offset
+
+                num_contact_data = contact_header.num_contact_data
+                for index in range(
+                    contact_data_offset, contact_data_offset + num_contact_data, 1
+                ):
+                    cur_contact = contact_data[index]
+                    # print("collision")
+                    env_str = f"env_{self.id}"
+                    if env_str in act1_path and env_str in act0_path:
+                        if "obs" in act0_path or "obs" in act1_path:
+                            self._collision_reset = True
+                        if "goal" in act0_path or "goal" in act1_path:
+                            self._collision_reset = True
+                        if "interaction" in act0_path or "interaction" in act1_path:
+                            self._interacted_with_object = True
+                            # print(env_str, " collided on step ", self._step)
+            elif "AGENT" not in act0_path and "AGENT" not in act1_path:
+                cur_collider = str(
                 PhysicsSchemaTools.intToSdfPath(contact_header.collider0)
-            )
-            contact_data_offset = contact_header.contact_data_offset
+                )
+                contact_data_offset = contact_header.contact_data_offset
 
-            num_contact_data = contact_header.num_contact_data
-            for index in range(
-                contact_data_offset, contact_data_offset + num_contact_data, 1
-            ):
-                cur_contact = contact_data[index]
-                # print("collision")
-                env_str = f"env_{self.id}"
-                if env_str in act1_path and env_str in act0_path:
-                    if "obs" in act0_path or "obs" in act1_path:
-                        self._collision_reset = True
-                    if "goal" in act0_path or "goal" in act1_path:
-                        self._collision_reset = True
-                    if "interaction" in act0_path or "interaction" in act1_path:
-                        self._interacted_with_object = True
-                        # print(env_str, " collided on step ", self._step)
+                num_contact_data = contact_header.num_contact_data
+                for index in range(
+                    contact_data_offset, contact_data_offset + num_contact_data, 1
+                ):
+                    cur_contact = contact_data[index]
+                    # print("collision")
+                    env_str = f"env_{self.id}"
+                    if env_str in act1_path and env_str in act0_path:
+                        if "goal" in act0_path or "goal" in act1_path:
+                            #print("interaction object colliding with goal")
+                            # self._collision_reset = True
+                            self._goal_achieved = True
+                            print("act0_path", act0_path)
+                            print("act1_path", act1_path)
+
 
     @property
     def action_space(self):
@@ -480,6 +595,8 @@ class Environment(gym.Env):
     def observation_space(self):
         spaces = {}
         spaces["image"] = gym.spaces.Box(0, 255, self._size + (3,), dtype=np.float32)
+        spaces["target"] = gym.spaces.Box(0, 255, self._size + (3,), dtype=np.float32)
+        spaces["interaction"] = gym.spaces.Box(0, 255, self._size + (3,), dtype=np.float32)
         spaces["dist_to_target"] = gym.spaces.Box(
             -np.inf, np.inf, (1,), dtype=np.float32
         )
@@ -490,37 +607,95 @@ class Environment(gym.Env):
         spaces["depth"] = gym.spaces.Box(0.0,np.inf , self._size + (1,), dtype=np.float32)
 
         return gym.spaces.Dict(spaces)
+    def _add_gaus_noise(self, arr, max_val):
+        mean = 0
+        stddev = 0.5  # You can adjust this value to control the noise level
 
+ 
 
-    def _get_obs(self, dist,dist_to_obj):
+        noise = np.random.normal(mean, stddev, arr.shape)
+        noisy_array = arr + noise
+
+ 
+
+        noisy_array = np.clip(noisy_array, 0, max_val)
+        return noisy_array
+
+ 
+
+    def _add_color_noise(self, image):
+        mean = 0  # Mean for Gaussian noise
+        stddev = 0.05  # Standard deviation for Gaussian noise
+        speckle_intensity = 0.05  # Intensity of speckle noise
+
+ 
+
+        # Generate Gaussian noise
+        gaussian_noise = np.random.normal(mean, stddev, image.shape).astype(np.uint8)
+
+ 
+
+        # Apply Gaussian noise to the image
+        noisy_image = cv2.add(image, gaussian_noise)
+
+ 
+
+        # # Generate speckle noise
+        # speckle_noise = np.random.randn(*image.shape) * speckle_intensity
+        #
+        # # Apply speckle noise to the image
+        # noisy_image = noisy_image + noisy_image * speckle_noise
+        #
+        # # Clip the values to ensure they are within a valid range (0-255)
+        noisy_image = np.clip(noisy_image, 0, 255).astype(np.uint8)
+        return noisy_image
+
+ 
+
+    def _get_obs(self,  dist,dist_to_obj):
         # print("here")
+
+ 
 
         obs, depth = self._agent.get_observations()[0]
         # print(obs)
-        depth = depth.reshape(self._size+(1,))
-        #
-        depth[depth==np.inf] = 400#1500#np.finfo(np.float32).max
-        depth_min = np.min(depth)
-        depth_max = np.max(depth)
-        depth= (depth-depth_min)/(depth_max-depth_min)
+        depth = depth.reshape(self._size + (1,))
 
-        # print(depth.max())
-        # depth[depth == 0.0] = 1e-10
+ 
+        # if self._step > 500:
+        #     print("HERE STOP NOW")
+        #     np.save("/home/stuart/Desktop/microwave.npy", obs)
+        # #
+        depth[depth > 10] = 10  # 400#1500#np.finfo(np.float32).max
+        depth = self._add_gaus_noise(depth, 10)
+        # depth_min = np.min(depth)
+        # depth_max = np.max(depth)
+        # depth= (depth-depth_min)/(depth_max-depth_min)
+        obs = self._add_color_noise(obs)
+        # print(np.max(obs))
 
-        # print(depth)
-        # print(depth)
-        # print(depth.shape)
-        # print(depth.min())
-        # print(np.unique(np.isnan(depth)))
+ 
+
+        # np.save("/home/jon/Desktop/isaac_depth.npy", image)
+        if dist > 10:
+            dist = -1
+        if dist_to_obj > 10:
+            dist_to_obj = -1
         if len(obs) == 0:
             return {
-                "image": np.zeros((64, 64, 3),dtype=np.float32),
-                "depth": np.ones((64,64,1),dtype=np.float32),
+                "image": np.zeros((64, 64, 3), dtype=np.float32),
+                "depth": np.ones((64, 64, 1), dtype=np.float32),
+                "target": np.zeros((64, 64, 3), dtype=np.float32),
+                "interaction": np.zeros((64, 64, 3), dtype=np.float32),
                 "dist_to_target": np.float32([dist]),
                 "dist_to_object": np.float32([dist_to_obj]),
             }
 
+ 
+
         obs = obs[:, :, :-1]
+
+ 
 
         obs = np.float32(obs)
         is_first = self._step == 0
@@ -528,9 +703,10 @@ class Environment(gym.Env):
         return {
             "image": obs,
             "depth" : depth,
+            "target": np.float32(self.target_image),
+            "interaction": np.float32(self.interaction_image),
             "dist_to_target": np.float32([dist]),
             "dist_to_object": np.float32([dist_to_obj]),
-
             "is_terminal": False,
             "is_first": is_first,
         }
@@ -554,19 +730,31 @@ class Environment(gym.Env):
         self._world.step(render=True)
         self._world.step(render=True)
 
-    def reset_obstacles(self, agent_loc, goal_loc,interaction_obj_loc):
-        self._locations_to_avoid = []
-        self._locations_to_avoid.append(goal_loc)
-        self._locations_to_avoid.append(agent_loc)
-        self._locations_to_avoid.append(interaction_obj_loc)
-        for obs in self._obstacles:
-            obs_loc = self.get_random_obstacle_loc(
-                 offset=self.env_id * 2500
-            )
+    def reset_obstacles(self,generate_points):# agent_loc, goal_loc,interaction_obj_loc):
+        # self._locations_to_avoid = []
+        # self._locations_to_avoid.append(goal_loc)
+        # self._locations_to_avoid.append(agent_loc)
+        # self._locations_to_avoid.append(interaction_obj_loc)
+        if len(self._obstacles) < self._num_obstacles:
+              for i in range(len(self._obstacles), self._num_obstacles):
+                self._obstacles.append(
+                        Object(
+                            [0,0,0],
+                            [0,0,0,0],
+                            [0.007, 0.007, 0.007],
+                            f"obstacle_{i}",
+                            self._obstacle_parent_path,
+                            self._stage,
+                            usd_path=self._cone_path,
+                            instanceable=False,
+                        ))
+        for i,obs in enumerate(self._obstacles):
+            obs_loc = generate_points[3+i]
             if obs_loc is None:
                 continue
-            self._locations_to_avoid.append(obs_loc)
+            # self._locations_to_avoid.append(obs_loc)
             obs.change_start_and_reset(translate=obs_loc)
+    
 
     def temp_force_look(self,point_to_look_at, random_ori=True):
         agent_point = self._agent.get_translate_vec()
@@ -685,6 +873,37 @@ class Environment(gym.Env):
         ]
         self.agent_alive = self._agent.step(new_linear_veloc, angular_veloc)
         # self.temp_force_look()
+    
+    def get_angle_and_dist_to_ob(self, pos):
+        agent_pos = self._agent.get_translate()
+ 
+        goal_pos =pos
+        dist = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(goal_pos[:2]))
+      
+        agent_point = list_to_vec3d(agent_pos)  # self._agent.get_translate_vec()
+        goal_point = list_to_vec3d(goal_pos)  # self._goal_object.get_translate_vec()
+
+        # Compute desired direction
+        desired_direction = goal_point - agent_point
+        desired_direction.Normalize()
+
+        # Define agent orientation as a quaternion
+        # For demonstration, this is a unit quaternion (no rotation).
+        quat = self._agent.get_orientation_quat()
+
+        # Extract forward direction from the quaternion
+        # Assuming agent's initial forward direction is along z-axis (0, 0, 1)
+        forward_direction = rotate_vector_by_quaternion(Gf.Vec3f(1, 0, 0), quat)
+
+        # Convert Gf.Vec3f to numpy arrays for computation
+        desired_direction_np = np.array(
+            [desired_direction[0], desired_direction[1], desired_direction[2]]
+        )
+        forward_direction_np = np.array(
+            [forward_direction[0], forward_direction[1], forward_direction[2]]
+        )
+        angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
+        return angle, dist
 
     def post_step(self, action):
         self._step += 1
@@ -705,10 +924,10 @@ class Environment(gym.Env):
         # set reward as dist to goal
         reward = 0
 
-        agent_pos = self._agent.get_translate()
-        agent_old_pos = self._agent._last_translate
+        #agent_pos = self._agent.get_translate()
+        #agent_old_pos = self._agent._last_translate
         goal_pos = self._goal_object.get_translate()
-        dist = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(goal_pos[:2]))
+        """dist = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(goal_pos[:2]))
         old_dist = np.linalg.norm(
             np.asarray(agent_old_pos[:2]) - np.asarray(goal_pos[:2])
         )
@@ -735,23 +954,38 @@ class Environment(gym.Env):
         forward_direction_np = np.array(
             [forward_direction[0], forward_direction[1], forward_direction[2]]
         )
-        angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))
-
-        state_dist = -1
+        angle = abs(angle_between_vectors(desired_direction_np, forward_direction_np))"""
+        angle, dist = self.get_angle_and_dist_to_ob(goal_pos)
+        
+        # old angle
+        dist_agent_to_goal = -1
         if angle < 45:
-            state_dist = dist
+            dist_agent_to_goal = dist
+
         interaction_obj_pos = self._interaction_obj.get_translate()
-        dist_to_obj = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(interaction_obj_pos[:2]))
+        angle_to_interaction, dist_agent_to_obj = self.get_angle_and_dist_to_ob(interaction_obj_pos)
+        
+        #dist_agent_to_obj = np.linalg.norm(np.asarray(agent_pos[:2]) - np.asarray(interaction_obj_pos[:2]))
         dist_obj_to_goal = np.linalg.norm(np.asarray(goal_pos[:2]) - np.asarray(interaction_obj_pos[:2]))
-        obs = self._get_obs(state_dist,dist_to_obj)
+
+        # dist from agent to ineraction 
+        if angle_to_interaction > 45:
+            dist_agent_to_obj = -1
+
+        obs = self._get_obs(dist_agent_to_goal,dist_agent_to_obj)
         if self._collision_reset:
             reward -= 1
         # self.threshold = 10
-        if dist_obj_to_goal < self.threshold+5:
+
+        if dist_obj_to_goal < self.threshold or self._goal_achieved:
+            print("giving reward of 10")
             reward += 10
             terminated = True
 
         if self._interacted_with_object:
+            if self._first_time:
+                reward+=0.5
+                self._first_time = False
             reward+=0.001
         obs["is_terminal"] = terminated
 
@@ -792,7 +1026,8 @@ class Environment(gym.Env):
 
 
         while not valid_start:
-            if attempts > 200:
+            if attempts > 1_000_000:
+                print(" too many attempts giving up")
                 return None
             # print("in the while loop")
             obstacle_loc = [
@@ -804,19 +1039,118 @@ class Environment(gym.Env):
             away_from_all = True
             invalid_counter = 0
             for loc in self._locations_to_avoid:
+                # 
                 dist = np.linalg.norm(
                     np.asarray(loc[:2]) - np.asarray(obstacle_loc[:2])
                 )
                 # print(dist, " ", self.threshold + 15)
-
+                # print("dist and spawn_dist: ", dist, spawn_dist)
                 if dist < (spawn_dist):
                     valid_start = False
                     invalid_counter += 1
-            if invalid_counter == 0:
-                valid_start = True
-                break
             attempts +=1
         return obstacle_loc
+
+    # def get_random_obstacle_loc(self, ref_pos1, ref_pos2, offset=0):
+    #     range = self._size_of_map
+    #     attempts = 0
+
+    #     while True:
+    #         # print("=====we're here=====")
+    #         if attempts > 1_000_000:
+    #             print(" too many attempts giving up")
+    #             return None
+
+    #         obstacle_loc = [
+    #             np.random.uniform(-range, range) + offset,
+    #             np.random.uniform(-range, range),
+    #             0,
+    #         ]
+            
+    #         for obstacle in range(len(self._obstacles)):       
+    #             dist_ref1 = np.linalg.norm(np.asarray(ref_pos1[:2]) - np.asarray(obstacle_loc[:2]))
+    #             dist_ref2 = np.linalg.norm(np.asarray(ref_pos2[:2]) - np.asarray(obstacle_loc[:2]))
+    #             if (self._minimum_distance_between_objects <= dist_ref1 <= self._distance_between_objects_limit) and (self._minimum_distance_between_objects <= dist_ref2 <= self._distance_between_objects_limit):
+    #                 self._obstacles.append(obstacle_loc)
+    #                 return obstacle_loc
+
+    #         attempts += 1
+            
+
+    #     return None
+
+    
+    # def get_random_loc_interaction_object(self, goal_pos,agent_pos, offset=0):
+    #     range = self._size_of_map  # 35  # 50#200
+    #     valid_start = False
+    #     attempts = 0
+    #     print(range, self.min_dist_between_inter_and_goal, self.max_dist_between_inter_and_goal)
+
+    #     while not valid_start:
+    #         if attempts > 1_000_000:
+    #             print("stuck here")
+    #             print(" too many attempts giving up")
+    #             return None
+    #         # print("in the while loop")
+    #         interaction_loc = [
+    #             np.random.uniform(-range, range),
+    #             np.random.uniform(-range, range),
+    #             0,
+    #         ]
+    #         interaction_loc[0] += offset
+    #         away_from_all = True
+    #         invalid_counter = 0
+            
+    #         dist = np.linalg.norm(
+    #                 np.asarray(goal_pos[:2]) - np.asarray(interaction_loc[:2])
+    #             )
+    #         agent_dist = np.linalg.norm(
+    #                 np.asarray(agent_pos[:2]) - np.asarray(interaction_loc[:2])
+    #             )
+
+    #         if dist >= self.min_dist_between_inter_and_goal and dist <= self.max_dist_between_inter_and_goal:
+    #             if agent_dist >= self.min_dist_between_inter_and_agent and agent_dist <= self.max_dist_between_inter_and_agent:
+    #                 return interaction_loc
+    #         attempts +=1
+    #     return None
+
+    def get_random_loc_interaction_object(self, goal_pos, agent_pos, offset=0):
+        range = self._size_of_map
+        valid_start = False
+        attempts = 0
+        
+        # Adaptive increase in distance thresholds after every 'threshold_increase_interval' attempts
+        threshold_increase_interval = 100_000
+        adaptive_increase = 5  # Adjust this value based on how much you want to increase each time
+        
+        while not valid_start:
+            if attempts > 1_000_000:
+                print("stuck here")
+                print(" too many attempts giving up")
+                return None
+
+            interaction_loc = np.array([
+                np.random.uniform(-range, range) + offset,
+                np.random.uniform(-range, range),
+                0,
+            ])
+
+            dist_to_goal = np.linalg.norm(goal_pos[:2] - interaction_loc[:2])
+            dist_to_agent = np.linalg.norm(agent_pos[:2] - interaction_loc[:2])
+
+            # Adaptive adjustments
+            current_min_dist_inter_goal = self.min_dist_between_inter_and_goal - (attempts // threshold_increase_interval) * adaptive_increase
+            current_max_dist_inter_goal = self.max_dist_between_inter_and_goal + (attempts // threshold_increase_interval) * adaptive_increase
+            current_min_dist_inter_agent = self.min_dist_between_inter_and_agent - (attempts // threshold_increase_interval) * adaptive_increase
+            current_max_dist_inter_agent = self.max_dist_between_inter_and_agent + (attempts // threshold_increase_interval) * adaptive_increase
+
+            if current_min_dist_inter_goal <= dist_to_goal <= current_max_dist_inter_goal and current_min_dist_inter_agent <= dist_to_agent <= current_max_dist_inter_agent:
+                return interaction_loc.tolist()
+
+            attempts += 1
+
+        return None
+
 
     def reset(self):
 
@@ -829,19 +1163,22 @@ class Environment(gym.Env):
 
         self.simulate_steps()
         self._step = 0
-
-        agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
-        agent_loc[2] = 2.0
+        generate_points = self.generate_points(self._num_obstacles+3, self._minimum_distance_between_objects, self._size_of_map, offset=self.env_id * 2500)
+        agent_loc = generate_points[0]
+        goal_loc= generate_points[1]
+        interaction_obj_loc = generate_points[2]
+        #agent_loc, goal_loc = self.get_valid_random_spawn(offset=self.env_id * 2500)
+        agent_loc[2] = 0.5
         goal_loc[2] = 0.0
 
         self._agent.change_start_and_reset(translate=agent_loc)
         self._goal_object.change_start_and_reset(translate=goal_loc)
-        self._locations_to_avoid = []
-        self._locations_to_avoid.append(goal_loc)
-        self._locations_to_avoid.append(agent_loc)
-        interaction_obj_loc = self.get_random_obstacle_loc(
-                   spawn_dist=self.threshold+4, offset=self.env_id * 2500
-                )
+        # self._locations_to_avoid = []
+        # self._locations_to_avoid.append(goal_loc)
+        # self._locations_to_avoid.append(agent_loc)
+        # interaction_obj_loc = self.get_random_loc_interaction_object(
+        #            goal_loc, agent_loc,offset=self.env_id * 2500
+        #         )
         self._interaction_obj.change_start_and_reset(translate=interaction_obj_loc)
 
 
@@ -858,16 +1195,18 @@ class Environment(gym.Env):
         dist = np.linalg.norm(np.asarray(agent_loc[:2]) - np.asarray(goal_loc[:2]))
         
 
-        self.reset_obstacles(agent_loc, goal_loc,interaction_obj_loc)
+        self.reset_obstacles(generate_points)
 
-        for loc in self._locations_to_avoid:
-            dist = np.linalg.norm(
-                np.asarray(loc[:2]) - np.asarray(agent_loc[:2])
-            )
-            # print(f" Agent {self.id} spawning at a dist of {dist}")
+        # for loc in self._locations_to_avoid:
+        #     dist = np.linalg.norm(
+        #         np.asarray(loc[:2]) - np.asarray(agent_loc[:2])
+        #     )
+        #     # print(f" Agent {self.id} spawning at a dist of {dist}")
 
         self._collision_reset = False
         self._interacted_with_object = False
+        self._goal_achieved = False
+        self._first_time = True
 
         return obs
 

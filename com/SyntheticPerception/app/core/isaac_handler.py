@@ -500,10 +500,18 @@ class IsaacHandler:
             print("====CURRICULUM LEARNING====")
             for env in range(len(train_envs)):
                 print("VALUES", train_envs[env].get_curriculum_values())
-                train_envs[env].set_curriculum_values(18,False,0,5)
+                # map size, random_orientation, obstacles, min dist between objects
+                train_envs[env].set_curriculum_values(2,False,0,1)
                 print("NEW VALUES", train_envs[env].get_curriculum_values())
         
-      
+        # interaction object
+        interaction_object = np.load("/home/stuart/Desktop/target.npy")
+        interaction_object = interaction_object[:,:,:-1]
+        print("INTER OBJECT SHAPE", interaction_object.shape)
+        # target object
+        target_object = np.load("/home/stuart/Desktop/microwave.npy")
+        target_object = target_object[:,:,:-1]
+        print("TARGET OBJECT SHAPE", target_object.shape)
         for i in range(len(train_envs)):
             train_envs[i].setup_objects_agents_goals(
                 world=world,
@@ -512,8 +520,9 @@ class IsaacHandler:
                 sensor_path=config.sensor_asset,
                 mat_path =config.mat_path,
                 table_path=config.table_path,
-
-                obstacle_path = config.obstacle_path
+                obstacle_path = config.obstacle_path,
+                interaction_object=interaction_object,
+                target_object=target_object
             )
      
         train_envs[0].setup_light(skybox_path = config.skybox_path)
@@ -557,9 +566,13 @@ class IsaacHandler:
             return {"action": action, "logprob": logprob}, None
 
         # sort out this while loop
+        self.start_time = time.time()
         while self.simulation_app.is_running():
             render = True
             # self.step(render)
+            for env in range(len(train_envs)):
+                print("Setting velocity")
+                train_envs[env].set_velocity(5.0, 100)
             state = tools.simulate_multi(
                 random_agent,
                 train_envs,
@@ -570,6 +583,9 @@ class IsaacHandler:
                 steps=prefill,
             )
             logger.step += prefill * config.action_repeat
+            for env in range(len(train_envs)):
+                print("Re-setting velocity")
+                train_envs[env].reset_velocity()
             print(f"Logger: ({logger.step} steps).")
 
             print("Simulate agent.")
@@ -605,7 +621,7 @@ class IsaacHandler:
                     if config.video_pred_log:
                         video_pred = agent._wm.video_pred(next(eval_dataset))
                         logger.video("eval_openl", to_np(video_pred))
-                self.start_time = time.time()
+                # self.start_time = time.time()
                 print("Start training.")
                 state = tools.simulate_multi(
                     agent,
@@ -618,7 +634,7 @@ class IsaacHandler:
                     steps=config.eval_every,
                     state=state,
                 )
-                print("=======WE ARE HERE========", state)
+                # print("=======WE ARE HERE========", state)
                 torch.save(agent.state_dict(), logdir / "latest_model.pt")
             for env in train_envs + eval_envs:
                 try:

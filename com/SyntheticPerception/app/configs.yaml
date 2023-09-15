@@ -30,7 +30,7 @@ defaults:
   action_repeat: 2
   time_limit: 1000
   grayscale: False
-  prefill: 8000
+  prefill: 6000
   eval_noise: 0.0
   reward_EMA: True
 
@@ -227,8 +227,8 @@ isaac_sim:
   cont_layers: 5
   value_layers: 5
   actor_layers: 5
-  encoder: {mlp_keys: 'dist_to_target', cnn_keys: 'image|depth', cnn_depth: 96, mlp_layers: 5, mlp_units: 1024}
-  decoder: {mlp_keys: 'dist_to_target', cnn_keys: 'image|depth', cnn_depth: 96, mlp_layers: 5, mlp_units: 1024}
+  encoder: {mlp_keys: 'dist_to_target', cnn_keys: 'image|depth|target|interaction', cnn_depth: 96, mlp_layers: 5, mlp_units: 1024}
+  decoder: {mlp_keys: 'dist_to_target', cnn_keys: 'image|depth|target|interaction', cnn_depth: 96, mlp_layers: 5, mlp_units: 1024}
 
 debug:
   debug: True
