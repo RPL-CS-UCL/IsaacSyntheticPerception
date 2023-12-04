@@ -16,7 +16,7 @@ import carb
 
 
 class MeshGen:
-    def __init__(self, map_size, map_scale, regions_map, save_path) -> None:
+    def __init__(self, map_size, map_scale, regions_map, save_path, heightmap=None) -> None:
         pass
         self._size = map_size
         self._scale = map_scale
@@ -42,6 +42,8 @@ class MeshGen:
         self.final_mesh_paths_dict = {}
         self.region_to_path = {}
 
+        self.preload_hm = heightmap
+
 
     async def convert(self, in_file, out_file, load_materials=False):
         # This import causes conflicts when global
@@ -55,7 +57,7 @@ class MeshGen:
         converter_context.ignore_animation = True
         converter_context.ignore_cameras = True
         converter_context.single_mesh = True
-        converter_context.smooth_normals = True
+        converter_context.smooth_normals = False #True
         # converter_context.preview_surface = False
         # converter_context.support_point_instancer = False
         # converter_context.embed_mdl_in_usd = False
@@ -117,18 +119,37 @@ class MeshGen:
                 # write_triangle_uvs=True,
                 print_progress=False,
             )
+    def add_grain_noise(self,heightmap, intensity=0.1):
+        """
+        Add grain noise to a 2D numpy heightmap.
+
+        :param heightmap: 2D numpy array representing the heightmap.
+        :param intensity: Intensity of the noise; default is 0.1.
+        :return: Heightmap with added noise.
+        """
+        noise = np.random.normal(0, intensity, heightmap.shape)
+        noisy_heightmap = heightmap + noise
+
+        # Optionally, clip the values to maintain the original data range
+        # For example, for a heightmap with values ranging from 0 to 1:
+        # noisy_heightmap = np.clip(noisy_heightmap, 0, 1)
+
+        return noisy_heightmap
 
     def _create_noise_map(self):
 
-        scale = 5#250.0
+        scale = 1#250.0
         print(f'{self._o} Creating Noise Map for terrain heights.')
         # self._noise_map_xy = generate_fractal_noise_2d(
         #     self._map_shape, (8, 8), 5
         # )
-
-        self._noise_map_xy = generate_perlin_noise_2d(
-            self._map_shape, (8, 8) 
-        )
+        if self.preload_hm is not None:
+            self._noise_map_xy = self.preload_hm
+        else:
+            self._noise_map_xy = generate_perlin_noise_2d(
+                self._map_shape, (8, 8) 
+            )
+        self._noise_map_xy = self.add_grain_noise(self._noise_map_xy)
         x = np.linspace(
             0,
             self._size * self._scale,

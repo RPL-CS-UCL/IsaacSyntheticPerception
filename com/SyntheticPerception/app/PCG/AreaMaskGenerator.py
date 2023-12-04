@@ -156,7 +156,46 @@ class WorldHandler:
 
         # for i in self.objects:
         #     print(i)
+    def pad_to_square(self,arr):
+        """
+        Pad a 2D numpy array with zeros to make it square.
+        
+        :param arr: 2D numpy array
+        :return: Square 2D numpy array
+        """
+        rows, cols = arr.shape
+        if rows == cols:
+            return arr  # Already square, no padding needed
 
+        # Determine the size to pad to (the larger of rows or cols)
+        size = max(rows, cols)
+
+        # Calculate padding sizes
+        pad_rows = size - rows
+        pad_cols = size - cols
+
+        # Pad the array
+        return np.pad(arr, ((0, pad_rows), (0, pad_cols)), mode='constant')
+
+    def pad_to_multiple_of_eight(self,arr):
+        """
+        Pad a 2D numpy array so that its dimensions are multiples of 8.
+        
+        :param arr: 2D numpy array
+        :return: Padded 2D numpy array
+        """
+        height, width = arr.shape
+        pad_height = (-height) % 8  # Padding needed to make height a multiple of 8
+        pad_width = (-width) % 8    # Padding needed to make width a multiple of 8
+
+        # Calculate padding for top/bottom and left/right
+        pad_top = pad_height // 2
+        pad_bottom = pad_height - pad_top
+        pad_left = pad_width // 2
+        pad_right = pad_width - pad_left
+
+        # Apply padding and return the result
+        return np.pad(arr, ((pad_top, pad_bottom), (pad_left, pad_right)), mode='constant', constant_values=0)
     def _read_world(self):
         # print("here")
         self.objects_to_spawn = {}
@@ -166,6 +205,35 @@ class WorldHandler:
             data = json.load(infile)
         if data != None:
             n = data['size']
+
+
+            # lets check if there is a preloaded heightmap and mask
+            preload_hm = data.get("heightmap",None)
+            preload_mask = data.get("mask",None)
+            ignore_gen = False
+            use_preloaded_mask = False
+            if preload_hm:
+                ignore_gen = True
+                preload_hm = np.load(preload_hm)
+                preload_hm = self.pad_to_square(preload_hm)
+            else:
+                preload_hm = None
+
+            if preload_mask:
+
+                preload_mask = np.load(preload_mask)
+
+                preload_mask = self.pad_to_square(preload_mask)
+                if preload_hm is None:
+                    preload_mask = self.pad_to_multiple_of_eight(preload_mask)
+
+                print(len(preload_mask))
+                use_preloaded_mask = True
+
+                n = len(preload_mask)
+                print(n)
+
+
             arr = np.zeros((n, n))
             total_arr = np.zeros((n, n))
             regions = data['regions']
@@ -180,15 +248,16 @@ class WorldHandler:
                     regions[region_id]['material_scale'],
                 )
                 # print("terrrain info key type ", type(region_id))
-                new_arr = PerlinNoise.generate_region2(
-                    seed=int(region_id),
-                    shape=(n, n),
-                    threshold=float(regions[region_id]['threshold']),
-                    show_plot=False,
-                    region_value=int(region_id),
-                )
+                if not ignore_gen:
+                    new_arr = PerlinNoise.generate_region2(
+                        seed=int(region_id),
+                        shape=(n, n),
+                        threshold=float(regions[region_id]['threshold']),
+                        show_plot=False,
+                        region_value=int(region_id),
+                    )
 
-                arr = append_to_area(arr, new_arr, int(region_id))
+                    arr = append_to_area(arr, new_arr, int(region_id))
                 total_arr = arr
                 # handle objects in the zone
                 objs = regions[region_id]['objects']
@@ -208,20 +277,22 @@ class WorldHandler:
                         zones[zone_id]['material_path'],
                         zones[zone_id]['material_scale'],
                     )
-                    new_arr = PerlinNoise.generate_region2(
-                        seed=int(zone_id),
-                        shape=(n, n),
-                        threshold=float(zones[zone_id]['threshold']),
-                        show_plot=False,
-                        region_value=int(zone_id),
-                    )
 
-                    zone_to_save = append_inside_area(
-                        arr, new_arr, int(zone_id)
-                    )
+                    if not ignore_gen:
+                        new_arr = PerlinNoise.generate_region2(
+                            seed=int(zone_id),
+                            shape=(n, n),
+                            threshold=float(zones[zone_id]['threshold']),
+                            show_plot=False,
+                            region_value=int(zone_id),
+                        )
 
-                    # print("zone == ", zone_id, "  ", zone_id)
-                    total_arr = zone_to_save
+                        zone_to_save = append_inside_area(
+                            arr, new_arr, int(zone_id)
+                        )
+
+                        # print("zone == ", zone_id, "  ", zone_id)
+                        total_arr = zone_to_save
                     objs = zones[zone_id]['objects']
 
                     objs_per_region[zone_id] = []
@@ -232,6 +303,8 @@ class WorldHandler:
 
                             objs_per_region[zone_id].append(object_prim)
 
+            if ignore_gen or use_preloaded_mask:
+                total_arr = preload_mask
             for key in objs_per_region:
                 obs = objs_per_region[key]
                 if len(obs) > 0:
@@ -244,7 +317,7 @@ class WorldHandler:
                             999,
                         )
                         self.objects_to_spawn[obj.unique_id] = coords
-            return total_arr, n, terrain_info
+            return total_arr, n, terrain_info, preload_hm
 
 
 def generate_world_from_file(world_path, object_path):
@@ -254,11 +327,11 @@ def generate_world_from_file(world_path, object_path):
     world._read_objects()
     print("reading world")
     res = world._read_world()
-    mesh_scale = 10
+    mesh_scale = 1#10
 
     terrain_mesh_paths = []
     if res:
-        region_map, map_size, terrain_info = res
+        region_map, map_size, terrain_info, preload_hm = res
         # print(" ------- ")
         # print(map_size, 10, region_map.shape)
         # print(set(region_map.flatten()))
@@ -266,7 +339,7 @@ def generate_world_from_file(world_path, object_path):
         # print(dict(zip(unique, counts)))
         # return None
         m_path = tempfile.gettempdir()#'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG'
-        meshGen = MeshGen(map_size, mesh_scale, region_map, m_path)
+        meshGen = MeshGen(map_size, mesh_scale, region_map, m_path, heightmap=preload_hm)
         meshGen.generate_terrain_mesh()
 
         regs = list(np.unique(region_map))

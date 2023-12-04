@@ -65,7 +65,7 @@ import omni.kit.asset_converter
 import carb
 from omni.kit.window.popup_dialog.dialog import PopupDialog
 from .core.objects import Object
-from .core.rig import Rig
+# from .core.rig import Rig
 
 
 class SelectedPrim:

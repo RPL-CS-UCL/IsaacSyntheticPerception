@@ -9,9 +9,9 @@ import json
 from omni.physx import get_physx_simulation_interface
 from pxr import Sdf
 from omni.isaac.core.utils.stage import get_stage_units
-from Sensors.LIDAR import Lidar
-from Sensors.IMU import IMUSensor
-from Sensors.Camera import DepthCamera
+from ..Sensors.LIDAR import Lidar
+from ..Sensors.IMU import IMUSensor
+from ..Sensors.Camera import DepthCamera
 from pxr import PhysicsSchemaTools, PhysxSchema, UsdPhysics
 from pxr import (
     UsdGeom,

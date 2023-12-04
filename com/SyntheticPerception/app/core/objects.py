@@ -13,7 +13,7 @@ from pxr import (
     UsdPhysics,
     Semantics,
 )  # pxr usd imports used to create cube
-from core.physxutils import setRigidBody
+from .physxutils import setRigidBody
 import numpy as np
 
 

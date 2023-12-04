@@ -226,6 +226,7 @@ class WorldManager:
             )
 
     def create_terrains(self, terrain_info):
+        print("trying to create terrains")
 
         # create the parent
 
@@ -298,11 +299,14 @@ class WorldManager:
             # new_rotation_order=Gf.Vec3i(0, 1, 2),
             time_code=Usd.TimeCode(),
             had_transform_at_key=False,
+
         )
+        print("terrains finished")
 
     def spawn_all(self, obs_to_spawn, object_dict, height_map, normals):
         self.t_normals = normals
         length = len(obs_to_spawn)
+        print("trying to spawn ", length)
         counter = 1
         for key in obs_to_spawn:
 
@@ -323,7 +327,7 @@ class WorldManager:
                 allow_rot=obj.allow_y_rot,
             )
             print("spawned, now we wait till stage loads")
-            update_stage()
+            # update_stage()
             # print("some time should have passed")
             # return
             counter += 1
@@ -342,6 +346,7 @@ class WorldManager:
         self.occupancy = np.zeros((len(height_map),len(height_map)))
         self.create_terrains(terrain_info)
         meshGen.clean_up_files()
+        print("Files all cleaned up, now ready to move to next step")
 
         return obs_to_spawn, object_dict, height_map, meshGen.normals
 
@@ -389,8 +394,11 @@ class WorldManager:
         ) =self.generate_world_generator(
             world_path, obj_path
         )
-
+        print("now going to spawn all objects, skipping for now")
         self.spawn_all(obs_to_spawn, object_dict, height_map, normals)
-        update_stage()
+        # update_stage()
+        print("stage updated")
         stage = omni.usd.get_context().get_stage()
+
         self.__add_semantics_to_all2(stage)
+        print("semantics added")
