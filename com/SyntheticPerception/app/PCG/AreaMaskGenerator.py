@@ -327,7 +327,7 @@ def generate_world_from_file(world_path, object_path):
     world._read_objects()
     print("reading world")
     res = world._read_world()
-    mesh_scale = 1#10
+    mesh_scale = 100#10
 
     terrain_mesh_paths = []
     if res:

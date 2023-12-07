@@ -5,6 +5,7 @@ from PIL import Image, ImageTk, ImageDraw
 import hashlib
 import numpy as np
 
+from PIL import ImageChops
 class HeightmapEditor:
     def __init__(self, root):
         self.root = root
@@ -29,10 +30,10 @@ class HeightmapEditor:
         save_btn = tk.Button(root, text="Save Edited Heightmap", command=self.save_image)
         save_btn.pack(side=tk.TOP)
 
-        zoom_in_btn = tk.Button(root, text="Zoom In", command=lambda: self.zoom(1.2))
+        zoom_in_btn = tk.Button(root, text="Zoom In", command=lambda: self.zoom(0.2))
         zoom_in_btn.pack(side=tk.TOP)
 
-        zoom_out_btn = tk.Button(root, text="Zoom Out", command=lambda: self.zoom(0.8))
+        zoom_out_btn = tk.Button(root, text="Zoom Out", command=lambda: self.zoom(-0.2))
         zoom_out_btn.pack(side=tk.TOP)
 
         self.id_entry = ttk.Entry(root, width=10)
@@ -47,28 +48,45 @@ class HeightmapEditor:
         self.parent_child_dict = {}
 
         # Setup mouse events for drawing and panning
-        self.canvas.bind("<ButtonPress-1>", self.start_draw)
-        self.canvas.bind("<B1-Motion>", self.draw)
-        self.canvas.bind("<ButtonRelease-1>", self.end_draw)
-        self.canvas.bind("<ButtonPress-2>", self.start_pan)
-        self.canvas.bind("<B2-Motion>", self.pan)
-        self.canvas.bind("<ButtonRelease-2>", self.end_pan)
+        # self.canvas.bind("<ButtonPress-1>", self.start_draw)
+        # self.canvas.bind("<B1-Motion>", self.draw)
+        # self.canvas.bind("<ButtonRelease-1>", self.end_draw)
+
+        self.canvas.bind("<ButtonPress-3>", self.start_pan)
+        self.canvas.bind("<B3-Motion>", self.pan)
+        self.canvas.bind("<ButtonRelease-3>", self.end_pan)
+
+        self.canvas.bind("<Button-1>", self.add_point)
+        self.canvas.bind("<Double-Button-1>", self.finish_drawing)
+        # self.control_pressed = False
+        #
+        # # Bind Control key events
+        # self.root.bind("<Control>", self.on_control_press)
+        # self.root.bind("<Control-Release>", self.on_control_release)
 
         self.original_image = None
+        self.original_image_tosave = None
         self.image = None
         self.tk_image = None
         self.scale = 1.0
         self.region_id = 1
         self.regions = {}  # Dictionary to store regions
+        self.original_regions = {}
 
         self.is_panning = False
         self.pan_start_x = 0
         self.pan_start_y = 0
 
+    # def on_control_press(self, event):
+    #     self.control_pressed = True
+    #
+    # def on_control_release(self, event):
+    #     self.control_pressed = False
     def load_heightmap(self):
         file_path = filedialog.askopenfilename()
         if file_path:
-            self.original_image = Image.open(file_path).convert("I")
+            self.original_image = Image.open(file_path)
+            self.original_image_tosave = Image.open(file_path).convert("I")
             self.scale = 1.0
             self.image = self.original_image.copy()
             self.tk_image = ImageTk.PhotoImage(self.image)
@@ -76,6 +94,26 @@ class HeightmapEditor:
             self.canvas.config(scrollregion=self.canvas.bbox('all'))
             self.regions.clear()
             self.region_id = 1
+
+    def add_point(self, event):
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        if not hasattr(self, 'current_region') or not self.current_region:
+            self.current_region = [(x, y)]
+            self.region_id = int(self.id_entry.get() or self.region_id)
+        else:
+            self.canvas.create_line(self.current_region[-1][0], self.current_region[-1][1], x, y)
+            self.current_region.append((x, y))
+
+    def finish_drawing(self, event):
+        if hasattr(self, 'current_region') and self.current_region:
+            # Close the polygon
+            self.canvas.create_line(self.current_region[-1][0], self.current_region[-1][1], self.current_region[0][0], self.current_region[0][1])
+            if self.region_id not in self.original_regions:
+                self.original_regions[self.region_id] = []
+            self.original_regions[self.region_id].append([(x / self.scale, y / self.scale) for x, y in self.current_region])
+            self.region_id += 1
+            self.redraw_image()
+            self.current_region = []
 
     def undo_last_region(self):
         if self.regions:
@@ -90,10 +128,9 @@ class HeightmapEditor:
     def save_image(self):
 
         arr = self.create_region_array()
+        print(f" these are the values in the region array: {np.unique(arr)}")
         np.save("/home/jon/Desktop/hm_mask.npy", np.array(arr))
         np.save("/home/jon/Desktop/hm_sv.npy", np.array(self.original_image.convert('I')))
-        print(np.array(self.image.convert('L')).shape)
-        print(np.array(arr).shape)
 
         self.update_canvas_with_new_image()
         return
@@ -106,48 +143,34 @@ class HeightmapEditor:
 
     def zoom(self, scale_factor):
         if self.original_image:
-            self.scale *= scale_factor
-            new_size = (int(self.original_image.width * self.scale), int(self.original_image.height * self.scale))
-            self.image = self.original_image.resize(new_size, Image.ANTIALIAS)
-            self.tk_image = ImageTk.PhotoImage(self.image)
-            self.canvas.create_image(0, 0, anchor='nw', image=self.tk_image)
-            self.canvas.config(scrollregion=self.canvas.bbox('all'))
+            self.scale += scale_factor
+            # new_size = (int(self.original_image.width * self.scale), int(self.original_image.height * self.scale))
+            # self.image = self.original_image.resize(new_size, Image.ANTIALIAS)
+            # self.tk_image = ImageTk.PhotoImage(self.image)
+            # self.canvas.create_image(0, 0, anchor='nw', image=self.tk_image)
+            # self.canvas.config(scrollregion=self.canvas.bbox('all'))
             self.redraw_image()
 
-    def start_draw(self, event):
-        if self.is_panning:
-            return
-        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
-        self.start_x, self.start_y = self.canvas_to_image(x, y)
-        self.current_region = [(self.start_x, self.start_y)]
-        self.region_id = int(self.id_entry.get() or self.region_id)
-        self.color = self.generate_color(self.region_id)
+    def regions_overlap(self, region1, region2):
+        """Check if two regions overlap."""
+        mask1 = self.create_mask(region1).convert('1')
+        mask2 = self.create_mask(region2).convert('1')
 
-    def draw(self, event):
-        if self.is_panning:
-            return
-        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
-        img_x, img_y = self.canvas_to_image(x, y)
-        self.canvas.create_line(self.start_x * self.scale, self.start_y * self.scale, img_x * self.scale, img_y * self.scale, fill=self.rgb_to_hex(self.color))
-        self.start_x, self.start_y = img_x, img_y
-        self.current_region.append((self.start_x, self.start_y))
+        # Use ImageChops to find the overlap
+        intersection = ImageChops.logical_and(mask1, mask2)
+        return intersection.getbbox() is not None
 
-    def end_draw(self, event):
-        if self.is_panning or not self.current_region:
-            return
-        self.current_region.append((self.current_region[0][0], self.current_region[0][1]))  # Close the loop
-        self.regions[self.region_id] = self.current_region
-        self.fill_region(self.current_region, self.color)
-        self.region_id += 1
-        parent_id = int(self.parent_id_entry.get() or -1)
-        if parent_id == -1:
-            self.parent_child_dict[self.region_id] = []
-        else:
-            if parent_id not in self.parent_child_dict:
-                self.parent_child_dict[parent_id] = []
-            self.parent_child_dict[parent_id].append(self.region_id)
+    def create_mask(self, region):
+        """Create a mask for a given region."""
+        mask = Image.new('L', self.original_image.size, 0)
+        ImageDraw.Draw(mask).polygon(region, outline=1, fill=1)
+        return mask
 
+    def merge_regions(self, region1, region2):
+        """Merge two regions."""
+        return region1 + region2  # Simple concatenation; may need a more complex approach
     def start_pan(self, event):
+        # print("starting to pan")
         self.is_panning = True
         self.canvas.scan_mark(event.x, event.y)
 
@@ -159,19 +182,71 @@ class HeightmapEditor:
 
     def fill_region(self, region, color):
         draw = ImageDraw.Draw(self.image)
-        scaled_region = [(x * self.scale, y * self.scale) for x, y in region]
+        scaled_region = [(x , y ) for x, y in region]
         draw.polygon(scaled_region, fill=self.rgb_to_hex(color))
         self.tk_image = ImageTk.PhotoImage(self.image)
         self.canvas.create_image(0, 0, anchor='nw', image=self.tk_image)
 
     def redraw_image(self):
-        self.image = self.original_image.resize((int(self.original_image.width * self.scale), int(self.original_image.height * self.scale)), Image.ANTIALIAS)
-        for region_id, region in self.regions.items():
-            self.fill_region(region, self.generate_color(region_id))
+        # Resize the image based on the current scale
+        self.image = self.original_image.resize((int(self.original_image.width * self.scale),
+                                                 int(self.original_image.height * self.scale)),
+                                                 Image.ANTIALIAS)
+
+        # Clear existing drawings on the canvas
+        self.canvas.delete("all")
+
+        # Update the canvas with the resized image
         self.tk_image = ImageTk.PhotoImage(self.image)
         self.canvas.create_image(0, 0, anchor='nw', image=self.tk_image)
 
+        # Get the current scroll position
+        # xview = self.canvas.xview()[0]
+        # yview = self.canvas.yview()[0]
+        # scroll_x = int(xview * self.canvas.cget("width"))
+        # scroll_y = int(yview * self.canvas.cget("height"))
+
+        # xview = self.canvas.xview()
+        # yview = self.canvas.yview()
+        # x_pos =((xview[1]-xview[0])/2)
+        # y_pos =((yview[1]-yview[0])/2)
+        # scroll_x = int(xview[0] * self.original_image.width * self.scale)
+        # scroll_y = int(yview[0] * self.original_image.height * self.scale)
+        # Iterate over each original region and redraw it scaled
+        for region_id, original_regions in self.original_regions.items():
+            for original_region in original_regions:
+                scaled_region = [((x * self.scale) , (y * self.scale) ) for x, y in original_region]
+                self.fill_region(scaled_region, self.generate_color(region_id))
+
+        # Update the scroll region
+        self.canvas.config(scrollregion=self.canvas.bbox('all'))
+
+    def start_draw(self, event):
+        if self.is_panning:
+            return
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+
+        self.current_region = [(x, y)]
+        self.region_id = int(self.id_entry.get() or self.region_id)
+
+    def draw(self, event):
+        if self.is_panning:
+            return
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+
+        self.canvas.create_line(self.current_region[-1][0], self.current_region[-1][1], x, y)
+        self.current_region.append((x, y))
+
+    def end_draw(self, event):
+
+        if self.region_id not in self.original_regions:
+            self.original_regions[self.region_id] = []
+        # print(self.original_regions[self.region_id])
+        self.original_regions[self.region_id].append([(x / self.scale, y / self.scale) for x, y in self.current_region])
+        self.region_id += 1
+        self.redraw_image()
     def canvas_to_image(self, canvas_x, canvas_y):
+        # Adjust these coordinates according to the current zoom level
         return int(canvas_x / self.scale), int(canvas_y / self.scale)
 
     def generate_color(self, id):
@@ -185,16 +260,18 @@ class HeightmapEditor:
         # Initialize a 2D array with zeros
         width, height = self.original_image.size
         region_array = [[0 for _ in range(width)] for _ in range(height)]
-
+        print(f"There are {len(self.regions)} regions")
         # Create a mask for each region and assign the region ID to the pixels
-        for region_id, region in self.regions.items():
-            mask = Image.new('L', (width, height), 0)
-            ImageDraw.Draw(mask).polygon(region, outline=1, fill=1)
-            mask_array = list(mask.getdata())
-            for y in range(height):
-                for x in range(width):
-                    if mask_array[y * width + x]:
-                        region_array[y][x] = region_id
+        for region_id, regions in self.original_regions.items():
+            print("trying to savev region_id ", region_id)
+            for region in regions:
+                mask = Image.new('L', (width, height), 0)
+                ImageDraw.Draw(mask).polygon(region, outline=1, fill=1)
+                mask_array = list(mask.getdata())
+                for y in range(height):
+                    for x in range(width):
+                        if mask_array[y * width + x]:
+                            region_array[y][x] = region_id
 
         return region_array
     def draw_image_from_array(self, region_array):

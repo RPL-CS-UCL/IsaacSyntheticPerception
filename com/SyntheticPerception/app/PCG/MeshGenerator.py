@@ -204,6 +204,10 @@ class MeshGen:
         self._mesh.triangles = o3d.utility.Vector3iVector(
             np.array(self._faces)
         )
+        print(np.asarray(self._mesh.triangles)[0])
+        print("vert pos")
+        print(np.asarray(self._mesh.vertices)[int(np.asarray(self._mesh.triangles)[0][0])])
+
         self._mesh.paint_uniform_color([1, 0.706, 0])
 
         self._mesh.compute_vertex_normals()
@@ -218,7 +222,8 @@ class MeshGen:
 
             ind = np.unravel_index(i, (l, l))
             self._points2[ind] = self._mesh.vertices[i][2]
-
+        self.np_tris =np.asarray(self._mesh.triangles) 
+        self.np_verts =np.asarray(self._mesh.vertices) 
 
 
         N = len(materials)
