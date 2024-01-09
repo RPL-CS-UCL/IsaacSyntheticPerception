@@ -10,7 +10,10 @@ import colorsys
 import asyncio
 import omni.kit.asset_converter
 import carb
-
+import time
+import concurrent.futures
+import mesh_module
+# mesh_module.compute_base_mesh()
 # 0.001
 # enable project uvw coordinates
 
@@ -20,7 +23,7 @@ class MeshGen:
         pass
         self._size = map_size
         self._scale = map_scale
-        self._scale = 1
+        # self._scale = 1
         # REMOVE THIS NEXT LINE``
         l = self._size * self._scale
         self._map_shape = (self._size * self._scale, self._size * self._scale)
@@ -44,6 +47,9 @@ class MeshGen:
 
         self.preload_hm = heightmap
 
+    def _log(self,msg):
+        print(f"[{time.time()}]{self._o}{msg}")
+
 
     async def convert(self, in_file, out_file, load_materials=False):
         # This import causes conflicts when global
@@ -57,7 +63,7 @@ class MeshGen:
         converter_context.ignore_animation = True
         converter_context.ignore_cameras = True
         converter_context.single_mesh = True
-        converter_context.smooth_normals = False #True
+        converter_context.smooth_normals = True#False #True
         # converter_context.preview_surface = False
         # converter_context.support_point_instancer = False
         # converter_context.embed_mdl_in_usd = False
@@ -78,11 +84,11 @@ class MeshGen:
 
     def cnv(self):
 
-        print(f'{self._o} Converting .obj files to .usd')
+        self._log('Converting .obj files to .usd')
         for file_path in self._files_to_clean:
             new_path = file_path.replace('.obj', '.usd')
             self.final_mesh_paths.append(new_path)
-            print(f'{self._o} Trying to convert {file_path} to {new_path}')
+            self._log(f'Trying to convert {file_path} to {new_path}')
 
             status = asyncio.get_event_loop().run_until_complete(
                 self.convert(file_path, new_path)
@@ -90,9 +96,18 @@ class MeshGen:
 
 
     def generate_terrain_mesh(self):
+        self._log(f"Generating terrain mesh.")
+
+        self._log(f"Creating noise map.")
         self._create_noise_map()
+
+        self._log(f"Computing base mesh and seperating to different regions and zone meshes.")
         self._compute_base_mesh()
+
+        self._log(f"Saving meshes to temp.")
         self._save_meshes()
+
+        self._log(f"Converting meshes to usd.")
         self.cnv()
 
     def clean_up_files(self):
@@ -105,7 +120,7 @@ class MeshGen:
 
     def _save_meshes(self):
 
-        print(f'{self._o} Saving meshes to folder {self._save_path}.')
+        self._log(f'Saving meshes to folder {self._save_path}.')
         for i, key in enumerate(list(self.meshes_dict.keys())):
             self._files_to_clean.append(f'{self._save_path}/mesh_{i}.obj')
             self._files_to_clean.append(f'{self._save_path}/mesh_{i}.usd')
@@ -119,7 +134,7 @@ class MeshGen:
                 # write_triangle_uvs=True,
                 print_progress=False,
             )
-    def add_grain_noise(self,heightmap, intensity=0.1):
+    def add_grain_noise(self,heightmap, intensity=0.02):
         """
         Add grain noise to a 2D numpy heightmap.
 
@@ -139,30 +154,39 @@ class MeshGen:
     def _create_noise_map(self):
 
         scale = 1#250.0
-        print(f'{self._o} Creating Noise Map for terrain heights.')
         # self._noise_map_xy = generate_fractal_noise_2d(
         #     self._map_shape, (8, 8), 5
         # )
         if self.preload_hm is not None:
             self._noise_map_xy = self.preload_hm
+            self._log(f"Using a preloaded noisemap")
         else:
+
+            self._log(f'Creating Noise Map for terrain heights.')
+            self._map_shape = (self._size * self._scale, self._size * self._scale)
             self._noise_map_xy = generate_perlin_noise_2d(
-                self._map_shape, (8, 8) 
+                self._map_shape, (8, 8)
             )
+
+            # self._noise_map_xy = generate_fractal_noise_2d(
+            #     self._map_shape, (8, 8), 5
+            # )
         self._noise_map_xy = self.add_grain_noise(self._noise_map_xy)
         x = np.linspace(
             0,
+            self._size,# * self._scale,
             self._size * self._scale,
-            self._size * self._scale,
-            dtype=np.int32,
+            dtype=np.float32,#int32,
         )
         y = np.linspace(
             0,
+            self._size,# * self._scale,
             self._size * self._scale,
-            self._size * self._scale,
-            dtype=np.int32,
+            dtype=np.float32,#np.int32,
         )
+        self._log(f"Map of size {x.shape}, {y.shape} created.")
 
+        scale = 3
         self._noise_map_xy *= scale 
         noise_flat = self._noise_map_xy.flatten()
         X, Y = np.meshgrid(x, y)
@@ -170,33 +194,58 @@ class MeshGen:
         self._points = np.column_stack(
                 (X.ravel(),Y.ravel(), noise_flat) # was abs::with
         )
+    def assign_face(self, i, face, subdivisions):
+        j = i // 2 // subdivisions
+        res_ind = int(self._regions_map[j, i // 2 % subdivisions])
+        self.meshes_dict[res_ind].triangles.append(face)
 
     def _compute_base_mesh(self):
 
-        subdivisions = (self._size * self._scale) - 1
+        # subdivisions = (self._size * self._scale) - 1
         materials = list(np.unique(self._regions_map))
-        print(f"There are {len(materials)},   {materials}")
-
+        # self._log(f"Creating {len(materials)} meshes for each terrain type.")
+        #
         self.meshes_dict = {}
         for key in materials:
             self.meshes_dict[int(key)] = o3d.geometry.TriangleMesh()
-        print(f'{self._o} Computing the base mesh.')
+        # self._log(f'Computing the base mesh (assigning tris and verts).')
         self._faces = []
-        
-        for j in range(subdivisions):
-            for i in range(subdivisions):
-                index = j * (subdivisions + 1) + i
-                face1 = [index, index + 1, index + subdivisions + 2]
-                face2 = [
-                    index,
-                    index + subdivisions + 2,
-                    index + subdivisions + 1,
-                ]
-                self._faces.append(face1)
-                self._faces.append(face2)
-                res_ind = int(self._regions_map[j,i])
-                self.meshes_dict[res_ind].triangles.append(face1)
-                self.meshes_dict[res_ind].triangles.append(face2)
+        # 
+        # for j in range(subdivisions):
+        #     for i in range(subdivisions):
+        #         index = j * (subdivisions + 1) + i
+        #
+        #         face1 = [index, index + 1, index + subdivisions + 2]
+        #         face2 = [
+        #             index,
+        #             index + subdivisions + 2,
+        #             index + subdivisions + 1,
+        #         ]
+        #         self._faces.append(face1)
+        #         self._faces.append(face2)
+        #         res_ind = int(self._regions_map[j,i])
+        #         self.meshes_dict[res_ind].triangles.append(face1)
+        #         self.meshes_dict[res_ind].triangles.append(face2)
+        #
+        #     # print(f" {index} / {subdivisions*subdivisions}")
+
+        self._log(f'Computing the base mesh (assigning tris and verts).')
+        meshes_dict = mesh_module.compute_base_mesh(self._size, self._scale, self._regions_map)
+        # print(meshes_dict)
+        # for key, val in meshes_dict:
+        #     print(key)
+        print("got out")
+        for key, value in meshes_dict.items():
+            # print(f"Key: {key}")
+            self._faces += value
+            print(type(value))
+            self.meshes_dict[int(key)].triangles = o3d.utility.Vector3iVector(np.array(value))
+        print("now we show the faces")
+        # print(self._faces)
+
+
+
+        # self._faces[:len(all_faces)] = all_faces
 
         self._mesh = o3d.geometry.TriangleMesh()
         self._mesh.vertices = o3d.utility.Vector3dVector(self._points)
@@ -204,9 +253,6 @@ class MeshGen:
         self._mesh.triangles = o3d.utility.Vector3iVector(
             np.array(self._faces)
         )
-        print(np.asarray(self._mesh.triangles)[0])
-        print("vert pos")
-        print(np.asarray(self._mesh.vertices)[int(np.asarray(self._mesh.triangles)[0][0])])
 
         self._mesh.paint_uniform_color([1, 0.706, 0])
 
@@ -218,10 +264,10 @@ class MeshGen:
         self.normals = self._mesh.triangle_normals
 
         l = self._scale * self._size
-        for i in range(len(self._mesh.vertices)):
-
-            ind = np.unravel_index(i, (l, l))
-            self._points2[ind] = self._mesh.vertices[i][2]
+        # for i in range(len(self._mesh.vertices)):
+        #
+        #     ind = np.unravel_index(i, (l, l))
+        #     self._points2[ind] = self._mesh.vertices[i][2]
         self.np_tris =np.asarray(self._mesh.triangles) 
         self.np_verts =np.asarray(self._mesh.vertices) 
 
@@ -244,5 +290,5 @@ class MeshGen:
             self.meshes_dict[key] = self.meshes_dict[
                 key
             ].compute_triangle_normals()
-            print(np.array(self.meshes_dict[key].triangle_normals))
+        print("should have made all these by now")
 

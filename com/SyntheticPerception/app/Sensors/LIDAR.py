@@ -25,7 +25,11 @@ from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.dynamic_control import _dynamic_control
 
 from pxr import Sdf
-
+import rospy
+from std_msgs.msg import String
+from sensor_msgs.msg import PointCloud2
+import std_msgs.msg
+import sensor_msgs.point_cloud2 as pcl2
 
 class Lidar:
     def __init__(
@@ -98,6 +102,7 @@ class Lidar:
 
     def init_sensor(self, parent):
         print(f'init the lidar {parent}')
+
         # self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
         _, self.__lidar_prim = omni.kit.commands.execute(
             'RangeSensorCreateLidar',
@@ -124,6 +129,9 @@ class Lidar:
         print(f'lidar path should be {self.__lidar_path}')
         self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
 
+        rospy.init_node('lidarnode',anonymous=True)
+        # self.pub = rospy.Publisher('isaac_sim_cloud',PointCloud2, queue_size=10)
+
     # def sample_sensor(self):
     #     self.get_pc_and_semantic()
     def sample_sensor(self):
@@ -131,12 +139,45 @@ class Lidar:
         self.get_pc_and_semantic()
 
         self.sample_count += 1
+    def array_to_pointcloud2(self,cloud_arr, stamp=None, frame_id=None):
+        '''Converts a numpy record array to a sensor_msgs.msg.PointCloud2.
+        '''
+
+        cloud_msg = PointCloud2()
+
+        if stamp is not None:
+            cloud_msg.header.stamp = stamp
+        if frame_id is not None:
+            cloud_msg.header.frame_id = frame_id
+        cloud_msg.height = cloud_arr.shape[0]
+        cloud_msg.width = cloud_arr.shape[1]
+        cloud_msg.fields = dtype_to_fields(cloud_arr.dtype)
+        cloud_msg.is_bigendian = False # assumption
+        cloud_msg.point_step = cloud_arr.dtype.itemsize
+        cloud_msg.row_step = cloud_msg.point_step*cloud_arr.shape[1]
+        cloud_msg.is_dense = all([np.isfinite(cloud_arr[fname]).all() for fname in cloud_arr.dtype.names])
+        cloud_msg.data = cloud_arr.tostring()
+        return cloud_msg 
 
     def get_pc_and_semantic(self, save_path='/home/jon/Documents/temp/a'):
         pointcloud = self.__lidarInterface.get_point_cloud_data(
             self.__lidar_path
         )
         semantics = self.__lidarInterface.get_semantic_data(self.__lidar_path)
+        # all_hit = self.__lidarInterface.get_prim_data(self.__lidar_path)
+        print(semantics)
+        #
+        # header = std_msgs.msg.Header()
+        # header.stamp = rospy.Time.now()
+        # header.frame_id = 'map'
+        # pointcloud= np.array(pointcloud).reshape(-1, 3)
+        # print(pointcloud.shape)
+        # pc_msg= pcl2.create_cloud_xyz32(header,pointcloud)
+        #
+        # self.pub.publish(pc_msg)
+        # all_hit_unique =set(all_hit)
+        # for obj in all_hit_unique:
+        #     print(obj.__dir__())
         # print(semantics)
 
         np.save(f"{self.save_path}velodyne/{self.sample_count}.npy",pointcloud)
@@ -164,3 +205,4 @@ class Lidar:
                     new_sems.append(sem[seq_id][point_id])
 
         return np.array(new_points), np.array(new_sems)
+

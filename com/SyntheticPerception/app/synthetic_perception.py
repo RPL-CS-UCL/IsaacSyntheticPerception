@@ -19,7 +19,7 @@ from pxr import (
 )  # pxr usd imports used to create cube
 
 from pxr import Usd, Gf
-from .PCG import AreaMaskGenerator
+# from .PCG import AreaMaskGenerator
 from omni.isaac.examples.base_sample import BaseSample
 from omni.isaac.core.utils.semantics import get_semantics
 import omni

@@ -1,4 +1,5 @@
 
+import cv2
 import tkinter as tk
 from tkinter import filedialog, colorchooser, simpledialog, ttk
 from PIL import Image, ImageTk, ImageDraw
@@ -125,10 +126,40 @@ class HeightmapEditor:
         self.regions.clear()
         self.redraw_image()
 
+    def find_first_last_99(self, arr):
+        first_index = None
+        last_index = None
+
+        for i, row in enumerate(arr):
+            for j, value in enumerate(row):
+                if value == 99:
+                    last_index = (i, j)
+                    if first_index is None:
+                        first_index = (i, j)
+
+        print("first: ", first_index)
+        print("last: ", last_index)
+        return (abs(last_index[1] - first_index[1]))
     def save_image(self):
 
         arr = self.create_region_array()
+        # the horizontal 5 metre line should be there by now with an id of 99.  
+        num_pixels_in_5_metres = self.find_first_last_99(arr)
+        print("there are this many pixels in 5 metres: ", num_pixels_in_5_metres)
+        ratio = int(10*5/num_pixels_in_5_metres)
+        arr = np.array(arr)
+        arr[arr == 99] = 0
+        if ratio> 10*5:
+            ratio = 1
+
+        arr =cv2.resize(
+            np.array(arr),
+            dsize=(len(arr)* ratio, len(arr)*ratio),
+            interpolation=cv2.INTER_NEAREST
+        )
+
         print(f" these are the values in the region array: {np.unique(arr)}")
+        print(arr.shape)
         np.save("/home/jon/Desktop/hm_mask.npy", np.array(arr))
         np.save("/home/jon/Desktop/hm_sv.npy", np.array(self.original_image.convert('I')))
 

@@ -23,6 +23,7 @@ from omni.isaac.core.utils.stage import (
 
 from pxr import UsdShade, Sdf
 import math
+import time
 
 
 
@@ -31,6 +32,9 @@ class WorldManager:
         self.__undefined_class_string = "NAN"
         self.occupancy = []
         self._o = "[World generator] "
+
+    def _log(self,msg):
+        print(f"[{time.time()}]{self._o}{msg}")
 
     def add_semantic(self, p, prim_class):
         """Adds semantic to prim"""
@@ -51,6 +55,7 @@ class WorldManager:
 
     def __add_semantics_to_all2(self, stage):
         """Add semantic information to all prims on stage based on parent xform"""
+        self._log(f"Adding semantics to all objects.")
         prim_class = self.__undefined_class_string
         completed_classes = []
         for prim_ref in stage.Traverse():
@@ -124,6 +129,10 @@ class WorldManager:
         random_rotation = 0
         if allow_rot:
             random_rotation = random.uniform(0, 360)
+        
+        x/=10
+        y/=10
+        z/=10
 
 
         # omni.kit.commands.execute('CreatePayloadCommand',
@@ -185,10 +194,8 @@ class WorldManager:
         c3 = (x1-x3)*(yp-y3)-(y1-y3)*(xp-x3)
         if (c1<0 and c2<0 and c3<0) or (c1>0 and c2>0 and c3>0):
             return True
-            print("The point is in the triangle.")
         else:
             return False
-            print("The point is outside the triangle.")
     def point_in_triangle2(self,pt, A, B, C):
         """
         Check if point pt lies inside the triangle defined by vertices A, B, C
@@ -313,7 +320,7 @@ class WorldManager:
 
         # Angle of rotation (dot product and arccos)
         angle = np.arccos(np.dot(vertical_normal, target_normal))
-        print(axis,angle)
+        # print(axis,angle)
 # Convert to quaternion
         quaternion = self.axis_angle_to_quaternion(axis, angle)
 
@@ -322,7 +329,7 @@ class WorldManager:
         euler_deg = []
         for rad in euler_angles:
             euler_deg.append(math.degrees(rad))
-        print("Euler Angles:", euler_deg)
+        # print("Euler Angles:", euler_deg)
         return euler_deg
 
     def axis_angle_to_quaternion(self,axis, angle):
@@ -369,6 +376,7 @@ class WorldManager:
         scale=1,
         object_scale_delta=0,
         allow_rot=True,
+        ignore_ground_normals=False
     ):
 
         for i, n in enumerate(coll):
@@ -421,7 +429,7 @@ class WorldManager:
             down= (closest_y, closest_x-1,0) 
             possible_inds = [[up, right], [right, down], [down,left],[left,up]]
 
-            z = float(height_map[int(round(y_ind/10))][int(round(x_ind/10))])# / mesh_height_modifier   # was abs
+            # z = float(height_map[int(round(y_ind/10))][int(round(x_ind/10))])# / mesh_height_modifier   # was abs
             for inds in possible_inds:
                 vert1 = inds[0]
                 vert1= (vert1[1],vert1[0], height_map[vert1[0]][vert1[1]])
@@ -431,16 +439,14 @@ class WorldManager:
 
                 c = (closest[1],closest[0],height_map[closest[0]][closest[1]])
                 if self.point_in_triangle3((x,y),c,vert1,vert2):
-                    print("THIS POINT IS IN THIS TRIANGLE HERE")
-                    print(f" x, {x}, y{y}, v1, {vert1}, v2 {vert2}, c {c}, zbefore, {z}")
-                    z = self.calculate_height(x,y,c,vert1,vert2 ) 
+                    # z = self.calculate_height(x,y,c,vert1,vert2 ) 
 
-                    print(f" now its {z}")
+                    # print(f" now its {z}")
                     x1,y1,z1, = vert1[1], vert1[0], vert1[2]
                     x2,y2,z2, = vert2[1], vert2[0], vert2[2]
                     x3,y3,z3, =closest[1],closest[0],c[2]
-                    z = (z3*(x-x1)*(y-y2) + z1*(x-x2)*(y-y3) + z2*(x-x3)*(y-y1) - z2*(x-x1)*(y-y3) - z3*(x-x2)*(y-y1) - z1*(x-x3)*(y-y2))/(  (x-x1)*(y-y2) +   (x-x2)*(y-y3) +   (x-x3)*(y-y1) -   (x-x1)*(y-y3) -   (x-x2)*(y-y1) -   (x-x3)*(y-y2))
-                    print(f" now its {z}")
+                    # z = (z3*(x-x1)*(y-y2) + z1*(x-x2)*(y-y3) + z2*(x-x3)*(y-y1) - z2*(x-x1)*(y-y3) - z3*(x-x2)*(y-y1) - z1*(x-x3)*(y-y2))/(  (x-x1)*(y-y2) +   (x-x2)*(y-y3) +   (x-x3)*(y-y1) -   (x-x1)*(y-y3) -   (x-x2)*(y-y1) -   (x-x3)*(y-y2))
+                    # print(f" now its {z}")
 
                     z = self.interpolate_z(x,y,c,vert1,vert2 ) -0.1
                     normal = self.calculate_normal(vert1,vert2,c)
@@ -449,12 +455,12 @@ class WorldManager:
                     euler_deg[1] = max(euler_deg[1], 5)
                     break
                 else:
-                    print(" =============== this triangle was not detected ")
+                    # print(" =============== this triangle was not detected ")
                     z = 150
 
-                    print(f" now its {z}")
+                    # print(f" now its {z}")
 
-            print("test out ",self.interpolate_z(2077.2607421875, 261.5051574707031,  (2077, 261, 0.0030516041970591323),  (2078, 262, 0.12388602059223004),  (2077, 262, 0.12202789148699979)))
+            # print("test out ",self.interpolate_z(2077.2607421875, 261.5051574707031,  (2077, 261, 0.0030516041970591323),  (2078, 262, 0.12388602059223004),  (2077, 262, 0.12202789148699979)))
 
 
 
@@ -468,6 +474,8 @@ class WorldManager:
             if self.occupancy[int(y_ind/10)][int(x_ind/10)] != 0:
                 # print("skipping oj spawn")
                 continue
+            if ignore_ground_normals:
+                euler_deg = [0,0,0]
 
             self.occupancy[int(y_ind/10)][int(x_ind/10)]= 1 
             _p_name = f'{p_name}_{i}'
@@ -487,7 +495,7 @@ class WorldManager:
             )
 
     def create_terrains(self, terrain_info):
-        print("trying to create terrains")
+        self._log("Trying to create terrains.")
 
         # create the parent
 
@@ -562,18 +570,24 @@ class WorldManager:
             had_transform_at_key=False,
 
         )
-        print("terrains finished")
+        self._log("Terrains finished")
 
     def spawn_all(self, obs_to_spawn, object_dict, height_map, normals):
+        self._log(f"Attempting to spawn all objects.")
         self.t_normals = normals
         length = len(obs_to_spawn)
-        print("trying to spawn ", length)
         counter = 1
         for key in obs_to_spawn:
 
             obj = object_dict[key]
             path = object_dict[key].usd_path
-            print(f"{self._o} Spawning {len(obs_to_spawn[key])} of {path}. {counter} / {length}")
+
+            # ignore any rotations to try and align the object with the ground
+
+            ignore_ground_normals = object_dict[key].ignore_ground_normals
+            # if hasattr(object_dict[key],"ignore_ground_normals"):
+            #     object_dict[key].ignore_ground_normals = True
+
             class_name = obj.class_name
             if class_name == '':
                 class_name = obj.unique_id
@@ -586,8 +600,10 @@ class WorldManager:
                 scale=obj.object_scale,
                 object_scale_delta=obj.object_scale_delta,
                 allow_rot=obj.allow_y_rot,
+                ignore_ground_normals=ignore_ground_normals
             )
-            print("spawned, now we wait till stage loads")
+
+            self._log(f"Objects should now be spawned.")
             # update_stage()
             # print("some time should have passed")
             # return
@@ -596,18 +612,22 @@ class WorldManager:
     def generate_world_generator(self, obj_path, world_path):
 
 
-        print("Tring to generator worldf rom file")
+        self._log(f"Tring to generator world from file.")
         (
             obs_to_spawn,
             object_dict,
             terrain_info,
             meshGen,
         ) =generate_world_from_file(obj_path, world_path)
+
         height_map = meshGen._points2
+
         self.occupancy = np.zeros((len(height_map),len(height_map)))
+
         self.create_terrains(terrain_info)
+
         meshGen.clean_up_files()
-        print("Files all cleaned up, now ready to move to next step")
+        self._log(f"Temp files all cleaned up, now ready to move to next step")
 
         return obs_to_spawn, object_dict, height_map, meshGen.normals
 
@@ -647,6 +667,7 @@ class WorldManager:
 
     def create_world(self,  world_path, obj_path):
 
+        self._log(f"Starting world gen process.")
         (
             obs_to_spawn,
             object_dict,
@@ -655,11 +676,11 @@ class WorldManager:
         ) =self.generate_world_generator(
             world_path, obj_path
         )
-        print("now going to spawn all objects, skipping for now")
+        self._log(f"Terrain mesh generated and imported.")
+        self._log(f"Attempting to spawn all objects.")
         self.spawn_all(obs_to_spawn, object_dict, height_map, normals)
         # update_stage()
-        print("stage updated")
         stage = omni.usd.get_context().get_stage()
 
         self.__add_semantics_to_all2(stage)
-        print("semantics added")
+        self._log("Semantics added.,")

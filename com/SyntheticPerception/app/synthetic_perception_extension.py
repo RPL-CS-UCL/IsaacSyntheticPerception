@@ -38,6 +38,7 @@ from omni.isaac.ui import (
 from omni.isaac.core import SimulationContext
 from .PCG.WorldGenerator import WorldManager
 
+from .PCG.MeshGenerator import MeshGen
 
 from .synthetic_perception import SyntheticPerception
 import omni
@@ -50,11 +51,11 @@ from omni.isaac.core.utils.stage import (
     update_stage_async,
 )
 from omni.isaac.core.utils.prims import define_prim, delete_prim
+import numpy as np
 
-from .PCG.MeshGenerator import MeshGen
 
 # from .Utils.EnvDataTool.EnvCreator import EnvTool
-import open3d as o3d
+# import open3d as o3d
 import os
 from perlin_numpy import generate_perlin_noise_2d, generate_fractal_noise_2d
 from sklearn.preprocessing import normalize
@@ -66,6 +67,9 @@ import carb
 from omni.kit.window.popup_dialog.dialog import PopupDialog
 from .core.objects import Object
 # from .core.rig import Rig
+# from omni.isaac.core.utils import ray_cast
+
+from omni.isaac.core.utils.collisions import ray_cast
 
 
 class SelectedPrim:
@@ -218,6 +222,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 return
             asyncio.ensure_future(init_rig_and_waypoints())
 
+            # self.sample.init_sensor_rig_from_file(
+            #     self.build_sensor_rig_ui_values["RigPath"],
+            #     self.build_sensor_rig_ui_values["OutputSavePath"],
+            # )
             stage = omni.usd.get_context().get_stage()
             parent = stage.GetPrimAtPath("/_WAYPOINTS_")
 
@@ -358,6 +366,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             print(self.testrig._rb.__dir__())
 
         def testobject():
+            s_rot = Gf.Rotation(Gf.Vec3d(1, 0.0, 0.0), 90)
+            s_quat = s_rot.GetQuat()
+            s_quat_array = np.array([s_quat.GetReal(), s_quat.GetImaginary()[0], s_quat.GetImaginary()[1], s_quat.GetImaginary()[2]])
+            res = ray_cast(np.array([10,10,10]),s_quat_array,np.array([0,0,0]), 10000)
+            print(res)
+            return
             print("testing")
             pos = [0, 0, 0]
             rotation = [0, 0, 0,0]
@@ -785,7 +799,14 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             errors.append("No world path environment file was specified.")
         if ".json" not in self._world_path:
             errors.append("World path does not contain .json exntension.")
+        
+        # if we are here we have been given a path
+        # prevent isaac adding the odd "file://" 
+        if "file://" in self._object_path:
+            self._object_path = self._object_path.split("://")[-1]
 
+        if "file://" in self._world_path:
+            self._world_path= self._world_path.split("://")[-1]
         # Check if both files exist
         if not self._check_file_exists(self._object_path):
             errors.append("Object path file specified does not exist.")

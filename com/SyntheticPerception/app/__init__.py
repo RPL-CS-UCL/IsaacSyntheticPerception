@@ -21,11 +21,15 @@ from .synthetic_perception import SyntheticPerception
 from .synthetic_perception_extension import SyntheticPerceptionExtension
 
 # from .sensors import Lidar
-from gym.envs.registration import register
+# from gym.envs.registration import register
 
 
-register(
-    id='isaac-v0',
-    entry_point='core.environment:Environment',
-    max_episode_steps=300,
-)
+# register(
+#     id='isaac-v0',
+#     entry_point='core.environment:Environment',
+#     max_episode_steps=300,
+# )
+#from .mesh_module import compute_base_mesh
+
+#__all__ = ["compute_base_mesh"]
+

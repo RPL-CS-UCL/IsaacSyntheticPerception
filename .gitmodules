@@ -2,3 +2,6 @@
 	path = com/SyntheticPerception/app/dreamer
 	url = git@github.com:RPL-CS-UCL/dreamerv3.git
 
+[submodule "com/SyntheticPerception/app/com/SyntheticPerception/app/Open3D"]
+	path = com/SyntheticPerception/app/com/SyntheticPerception/app/Open3D
+	url = https://github.com/isl-org/Open3D.git

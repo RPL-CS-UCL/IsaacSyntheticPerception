@@ -2,6 +2,7 @@
 This module handles area and point generation.
 """
 from .MeshGenerator import MeshGen
+
 # import omni.kit.commands
 import json
 import numpy as np
@@ -13,6 +14,7 @@ from . import PerlinNoise
 import matplotlib.pyplot as plt
 from typing import Tuple
 
+import time
 from pxr import Usd, Sdf, Gf
 
 
@@ -51,11 +53,11 @@ def append_to_area(
 
 def show_plot(area):
     cvals = [0, 1, 2, 3, 4]
-    colors = ['lightgreen', 'green', 'yellow', 'brown', 'red']
+    colors = ["lightgreen", "green", "yellow", "brown", "red"]
 
     norm = plt.Normalize(min(cvals), max(cvals))
     tuples = list(zip(map(norm, cvals), colors))
-    cmap = matplotlib.colors.LinearSegmentedColormap.from_list('', tuples)
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", tuples)
     plt.imshow(area, cmap=cmap, norm=norm)
     plt.colorbar()
     plt.show()
@@ -68,16 +70,21 @@ def fill_area(
     object_value: int,
 ) -> Tuple[npt.NDArray[np.float64], list]:
     # Generate points and fill the area with objects using Poisson
+    print("beggining bridson sampling with area ", area.shape, " and poisson size of ", size)
+
     points = PoissonDisk.Bridson_sampling(
-        width=area.shape[0], height=area.shape[1], radius=size, k=30
-    )
+        width=area.shape[0]-1, height=area.shape[1]-1, radius=size, k=15
+    )#30
+    # print("We have now generated all the points. we will now iter and only keep points that are in the region.", len(points),)
     new_points = []
-    for p in points:
+    for i,p in enumerate(points):
         x_int = int(p[0])
         y_int = int(p[1])
         if area[y_int][x_int] == region_value:
             # area[y_int][x_int] = object_value
             new_points.append(p)
+        # print(i)
+    # print("done loop")
 
     return area, new_points
 
@@ -129,19 +136,26 @@ class WorldHandler:
         self._world_path = world_path
         self.objects_to_spawn = {}
         self._WORLD_TO_POISSON_SCALE = 1.6
+        self._o = "[WorldHandler]"
+
+    def _log(self,msg):
+        print(f"[{time.ctime()}]{self._o}{msg}")
 
     def _read_objects(self):
-        with open(self._object_path, 'r+') as infile:
+        with open(self._object_path, "r+") as infile:
             data = json.load(infile)
             # print(data)
             for key in data:
-                scale = data[key]['object_scale']
-                scale_delta = data[key]['object_scale_delta']
-                y_rot = data[key]['allow_y_rot']
+                scale = data[key]["object_scale"]
+                scale_delta = data[key]["object_scale_delta"]
+                y_rot = data[key]["allow_y_rot"]
                 u_id = key
-                usd_path = data[key]['usd_path']
-                class_name = data[key]['class_name']
-                poisson_size = data[key]['poisson_size']
+                usd_path = data[key]["usd_path"]
+                class_name = data[key]["class_name"]
+                poisson_size = data[key]["poisson_size"]
+                ignore_ground_normals = False
+                if "ignore_ground_normals" in data[key]:
+                    ignore_ground_normals = True
                 tmp = ObjectPrim(
                     scale,
                     scale_delta,
@@ -151,15 +165,17 @@ class WorldHandler:
                     class_name,
                     poisson_size,
                 )
+                tmp.ignore_ground_normals = ignore_ground_normals
                 # self.objects.append(tmp)
                 self.objects_dict[u_id] = tmp
 
         # for i in self.objects:
         #     print(i)
-    def pad_to_square(self,arr):
+
+    def pad_to_square(self, arr):
         """
         Pad a 2D numpy array with zeros to make it square.
-        
+
         :param arr: 2D numpy array
         :return: Square 2D numpy array
         """
@@ -175,18 +191,18 @@ class WorldHandler:
         pad_cols = size - cols
 
         # Pad the array
-        return np.pad(arr, ((0, pad_rows), (0, pad_cols)), mode='constant')
+        return np.pad(arr, ((0, pad_rows), (0, pad_cols)), mode="constant")
 
-    def pad_to_multiple_of_eight(self,arr):
+    def pad_to_multiple_of_eight(self, arr):
         """
         Pad a 2D numpy array so that its dimensions are multiples of 8.
-        
+
         :param arr: 2D numpy array
         :return: Padded 2D numpy array
         """
         height, width = arr.shape
         pad_height = (-height) % 8  # Padding needed to make height a multiple of 8
-        pad_width = (-width) % 8    # Padding needed to make width a multiple of 8
+        pad_width = (-width) % 8  # Padding needed to make width a multiple of 8
 
         # Calculate padding for top/bottom and left/right
         pad_top = pad_height // 2
@@ -195,21 +211,26 @@ class WorldHandler:
         pad_right = pad_width - pad_left
 
         # Apply padding and return the result
-        return np.pad(arr, ((pad_top, pad_bottom), (pad_left, pad_right)), mode='constant', constant_values=0)
+        return np.pad(
+            arr,
+            ((pad_top, pad_bottom), (pad_left, pad_right)),
+            mode="constant",
+            constant_values=0,
+        )
+
     def _read_world(self):
         # print("here")
         self.objects_to_spawn = {}
         data = None
         objs_per_region = {}
-        with open(self._world_path, 'r+') as infile:
+        with open(self._world_path, "r+") as infile:
             data = json.load(infile)
         if data != None:
-            n = data['size']
-
+            n = data["size"]
 
             # lets check if there is a preloaded heightmap and mask
-            preload_hm = data.get("heightmap",None)
-            preload_mask = data.get("mask",None)
+            preload_hm = data.get("heightmap", None)
+            preload_mask = data.get("mask", None)
             ignore_gen = False
             use_preloaded_mask = False
             if preload_hm:
@@ -220,39 +241,37 @@ class WorldHandler:
                 preload_hm = None
 
             if preload_mask:
-
                 preload_mask = np.load(preload_mask)
 
                 preload_mask = self.pad_to_square(preload_mask)
                 if preload_hm is None:
                     preload_mask = self.pad_to_multiple_of_eight(preload_mask)
 
-                print(len(preload_mask))
                 use_preloaded_mask = True
+                ignore_gen = True
 
                 n = len(preload_mask)
-                print(n)
-
 
             arr = np.zeros((n, n))
+            self._log(f"Size of arr: {arr.shape}")
             total_arr = np.zeros((n, n))
-            regions = data['regions']
+            regions = data["regions"]
             terrain_info = {}
             # print( " == ", np.unique(total_arr))
             for region_id in regions:
                 region_id = str(region_id)
 
                 terrain_info[region_id] = TerrainPrim(
-                    '',
-                    regions[region_id]['material_path'],
-                    regions[region_id]['material_scale'],
+                    "",
+                    regions[region_id]["material_path"],
+                    regions[region_id]["material_scale"],
                 )
                 # print("terrrain info key type ", type(region_id))
                 if not ignore_gen:
                     new_arr = PerlinNoise.generate_region2(
                         seed=int(region_id),
                         shape=(n, n),
-                        threshold=float(regions[region_id]['threshold']),
+                        threshold=float(regions[region_id]["threshold"]),
                         show_plot=False,
                         region_value=int(region_id),
                     )
@@ -260,7 +279,7 @@ class WorldHandler:
                     arr = append_to_area(arr, new_arr, int(region_id))
                 total_arr = arr
                 # handle objects in the zone
-                objs = regions[region_id]['objects']
+                objs = regions[region_id]["objects"]
                 objs_per_region[region_id] = []
                 if len(objs) > 0:
                     for obj_uid in objs:
@@ -269,31 +288,28 @@ class WorldHandler:
                         objs_per_region[region_id].append(object_prim)
 
                 # now we need to deal with sub zones
-                zones = regions[region_id]['zones']
+                zones = regions[region_id]["zones"]
                 for zone_id in zones:
-
                     terrain_info[str(zone_id)] = TerrainPrim(
-                        '',
-                        zones[zone_id]['material_path'],
-                        zones[zone_id]['material_scale'],
+                        "",
+                        zones[zone_id]["material_path"],
+                        zones[zone_id]["material_scale"],
                     )
 
                     if not ignore_gen:
                         new_arr = PerlinNoise.generate_region2(
                             seed=int(zone_id),
                             shape=(n, n),
-                            threshold=float(zones[zone_id]['threshold']),
+                            threshold=float(zones[zone_id]["threshold"]),
                             show_plot=False,
                             region_value=int(zone_id),
                         )
 
-                        zone_to_save = append_inside_area(
-                            arr, new_arr, int(zone_id)
-                        )
+                        zone_to_save = append_inside_area(arr, new_arr, int(zone_id))
 
                         # print("zone == ", zone_id, "  ", zone_id)
                         total_arr = zone_to_save
-                    objs = zones[zone_id]['objects']
+                    objs = zones[zone_id]["objects"]
 
                     objs_per_region[zone_id] = []
                     if len(objs) > 0:
@@ -305,29 +321,35 @@ class WorldHandler:
 
             if ignore_gen or use_preloaded_mask:
                 total_arr = preload_mask
+            self._log(f"Performing poisson disc sampling for object placement.")
             for key in objs_per_region:
+
+                self._log(f"Sampling for {key}.")
+
                 obs = objs_per_region[key]
-                if len(obs) > 0:
+                if len(obs) > 0 and np.isin(int(key), total_arr):
                     for obj in obs:
-                        print(f"{key} has poisson of size {obj.poisson_size} which ends up being {obj.poisson_size / self._WORLD_TO_POISSON_SCALE}")
-                        area, coords = fill_area(
-                            total_arr,
-                            obj.poisson_size / self._WORLD_TO_POISSON_SCALE,
-                            int(key),
-                            999,
-                        )
-                        self.objects_to_spawn[obj.unique_id] = coords
+                        print("shouldnt  get here")
+                        # area, coords = fill_area(
+                        #     total_arr,
+                        #     obj.poisson_size / self._WORLD_TO_POISSON_SCALE,
+                        #     int(key),
+                        #     999,
+                        # )
+                        # if obj.unique_id not in self.objects_to_spawn:
+                        #     self.objects_to_spawn[obj.unique_id] = coords
+                        # else:
+                        #
+                        #     self.objects_to_spawn[obj.unique_id]  =self.objects_to_spawn[obj.unique_id] + coords
             return total_arr, n, terrain_info, preload_hm
 
 
 def generate_world_from_file(world_path, object_path):
-    print("creating world handler")
     world = WorldHandler(world_path, object_path)
-    print("reading objects")
+    print(f"[{time.time()}][AreaMaskGenerator] Reading objects and world from file.")
     world._read_objects()
-    print("reading world")
     res = world._read_world()
-    mesh_scale = 100#10
+    mesh_scale = 1  # 10
 
     terrain_mesh_paths = []
     if res:
@@ -338,19 +360,27 @@ def generate_world_from_file(world_path, object_path):
         # unique, counts = np.unique(region_map, return_counts=True)
         # print(dict(zip(unique, counts)))
         # return None
-        m_path = tempfile.gettempdir()#'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG'
-        meshGen = MeshGen(map_size, mesh_scale, region_map, m_path, heightmap=preload_hm)
+        m_path = (
+            tempfile.gettempdir()
+        )  #'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG'
+        meshGen = MeshGen(
+            map_size, mesh_scale, region_map, m_path, heightmap=preload_hm
+        )
+
         meshGen.generate_terrain_mesh()
 
+        print(
+            f"[{time.time()}][AreaMaskGenerator] Saving mesh paths."
+        )
         regs = list(np.unique(region_map))
         for key in terrain_info:
             print(key)
             if float(key) in regs:
-                terrain_info[
-                    str(key)
-                ].mesh_path = meshGen.final_mesh_paths_dict[int(key)]
+                terrain_info[str(key)].mesh_path = meshGen.final_mesh_paths_dict[
+                    int(key)
+                ]
         print(
-            f'[AreaMaskGenerator] All terrain infos updated. Passing data back to main sample to genereate objects and load the terrain in.'
+            f"[{time.time()}][AreaMaskGenerator] All terrain infos updated. Passing data back to main sample to genereate objects and load the terrain in."
         )
 
         return (
