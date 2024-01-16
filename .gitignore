@@ -133,3 +133,6 @@ dmypy.json
 
 # ignore expermiment folder
 /com/SyntheticPerception/app/experiments
+/com/SyntheticPerception/app/pybind11
+/com/SyntheticPerception/app/Open3D
+/com/SyntheticPerception/app/build
