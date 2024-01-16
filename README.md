@@ -16,6 +16,18 @@ The major advantage of this system is that data can be generated for specific us
 
 ## Installations
 
+
+Before using you will first need to build Open3D
+
+After building open3d make a empty build folder in app.
+
+in build folder
+```
+cmake ..
+make
+
+```
+
 ```
 ./python.sh -m pip install faiss-gpu, opencv-python, scikit-image, timm, fast_pytorch_keymeans, pytorch_metric_learning, kornia
 ```
