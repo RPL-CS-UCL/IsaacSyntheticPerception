@@ -136,3 +136,4 @@ dmypy.json
 /com/SyntheticPerception/app/pybind11
 /com/SyntheticPerception/app/Open3D
 /com/SyntheticPerception/app/build
+/com/SyntheticPerception/app/__build
