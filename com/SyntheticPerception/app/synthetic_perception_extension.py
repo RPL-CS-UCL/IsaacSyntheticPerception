@@ -66,6 +66,7 @@ import omni.kit.asset_converter
 import carb
 from omni.kit.window.popup_dialog.dialog import PopupDialog
 from .core.objects import Object
+
 # from .core.rig import Rig
 # from omni.isaac.core.utils import ray_cast
 
@@ -222,18 +223,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 return
             asyncio.ensure_future(init_rig_and_waypoints())
 
-            # self.sample.init_sensor_rig_from_file(
-            #     self.build_sensor_rig_ui_values["RigPath"],
-            #     self.build_sensor_rig_ui_values["OutputSavePath"],
-            # )
             stage = omni.usd.get_context().get_stage()
             parent = stage.GetPrimAtPath("/_WAYPOINTS_")
 
             if not parent:
-                # parent = XFormPrim(
-                #     name="_WAYPOINTS_",
-                #     prim_path = "/"
-                # )
                 parent = define_prim("/_WAYPOINTS_", "Xform")
             cube_prim = stage.GetPrimAtPath("/_WAYPOINTS_/w_01")
             if not cube_prim:
@@ -368,13 +361,22 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         def testobject():
             s_rot = Gf.Rotation(Gf.Vec3d(1, 0.0, 0.0), 90)
             s_quat = s_rot.GetQuat()
-            s_quat_array = np.array([s_quat.GetReal(), s_quat.GetImaginary()[0], s_quat.GetImaginary()[1], s_quat.GetImaginary()[2]])
-            res = ray_cast(np.array([10,10,10]),s_quat_array,np.array([0,0,0]), 10000)
+            s_quat_array = np.array(
+                [
+                    s_quat.GetReal(),
+                    s_quat.GetImaginary()[0],
+                    s_quat.GetImaginary()[1],
+                    s_quat.GetImaginary()[2],
+                ]
+            )
+            res = ray_cast(
+                np.array([10, 10, 10]), s_quat_array, np.array([0, 0, 0]), 10000
+            )
             print(res)
             return
             print("testing")
             pos = [0, 0, 0]
-            rotation = [0, 0, 0,0]
+            rotation = [0, 0, 0, 0]
             usd_path = "/home/jon/Documents/IsaacContent/ov-vegetation3dpack-01.100.1.0.linux-x86_64-ent-package/Trees/Black_Oak.usd"
 
             stage = self.usd_context.get_stage()
@@ -405,7 +407,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 stage,
                 disable_gravity=True,
                 visibility="invisible",
-
             )
             # self.testrig= Rig(pos,rotation,scale, "RIG",parent_path, stage,rig_file_path="/home/jon/Downloads/sensors.json")
 
@@ -775,20 +776,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             return False
 
     def _run_world_creation(self):
-        # (
-        #     obs_to_spawn,
-        #     object_dict,
-        #     height_map,
-        # ) = self.sample.generate_world_generator(
-        #     'C:\\Users\\jonem\\Desktop\\worlddata2.json',
-        #     'C:\\Users\\jonem\\Desktop\\new_objects_save.json',
-        # )
-        #
-        # asyncio.ensure_future(self.sample._on_load_world_async())
-        # asyncio.ensure_future(
-        #     self.sample.spawn_all(obs_to_spawn, object_dict, height_map)
-        # )
-        # return
         errors = []
 
         if self._object_path == "":
@@ -799,14 +786,14 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             errors.append("No world path environment file was specified.")
         if ".json" not in self._world_path:
             errors.append("World path does not contain .json exntension.")
-        
+
         # if we are here we have been given a path
-        # prevent isaac adding the odd "file://" 
+        # prevent isaac adding the odd "file://"
         if "file://" in self._object_path:
             self._object_path = self._object_path.split("://")[-1]
 
         if "file://" in self._world_path:
-            self._world_path= self._world_path.split("://")[-1]
+            self._world_path = self._world_path.split("://")[-1]
         # Check if both files exist
         if not self._check_file_exists(self._object_path):
             errors.append("Object path file specified does not exist.")
@@ -831,20 +818,6 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
 
         return
 
-        # (
-        #     obs_to_spawn,
-        #     object_dict,
-        #     height_map,
-        #    normals
-        # ) = self.sample.generate_world_generator(
-        #     self._world_path, self._object_path
-        # )
-        # print("Starting obj spawn")
-        # asyncio.ensure_future(self.sample._on_load_world_async())
-        # asyncio.ensure_future(
-        #     self.sample.spawn_all(obs_to_spawn, object_dict, height_map, normals)
-        # )
-
     def build_pcg_env_ui(self, frame):
         def open_world_creator():
             pass
@@ -864,19 +837,28 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                 self.world_gen_ui_elements["ObjectsPath"] = StringField(
                     "Objects Path",
                     "None",
+                    default_value="/home/jon/Documents/buzz_backup/new_objects_save (copy).json",
                     read_only=False,
                     use_folder_picker=True,
                     item_filter_fn=self._true,
                     on_value_changed_fn=self._update_object_path,
                 )
 
+                self._object_path = (
+                    "/home/jon/Documents/buzz_backup/new_objects_save (copy).json"
+                )
+
                 self.world_gen_ui_elements["WorldPath"] = StringField(
                     "World Path",
                     "None",
+                    default_value="/home/jon/Documents/buzz_backup/worlddata4 (copy).json",
                     read_only=False,
                     use_folder_picker=True,
                     item_filter_fn=self._true,
                     on_value_changed_fn=self._update_world_path,
+                )
+                self._world_path = (
+                    "/home/jon/Documents/buzz_backup/worlddata4 (copy).json"
                 )
                 self.world_gen_ui_elements["SAVE"] = Button(
                     "Initialize world generation",
@@ -890,239 +872,3 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     on_click_fn=self.init_semantics_in_scene,
                 )
 
-    # async def material_test(self):
-    #
-    #     shape = (256, 256)
-    #     threshold = 0.5
-    #     region_value = 1
-    #     # Convert to pymeshlab mesh
-    #     l = shape[0] * 10   # 2560
-    #     data = generate_perlin_noise_2d(shape, (8, 8))
-    #     data = (data - np.min(data)) / (np.max(data) - np.min(data))
-    #     data[data < threshold] = 0
-    #     data[data >= threshold] = region_value
-    #     mGen = MeshGen(
-    #         256,
-    #         10,
-    #         data,
-    #         'C:/Users/jonem/Documents/Kit/apps/Isaac-Sim/exts/IsaacSyntheticPerception/com/SyntheticPerception/app/PCG',
-    #     )
-    #     mGen.generate_terrain_mesh()
-    #     return
-    #     # asyncio.ensure_future(self.sample.init_world())
-    #     print(' =========================== ')
-    #     mat_path = 'http://omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Natural/Dirt.mdl'
-    #     prim_path = '/World/mesh_1'
-    #     mat = '/World/Looks/Dirt'
-    #
-    #     stage = omni.usd.get_context().get_stage()
-    #     obj_prim = stage.GetPrimAtPath(prim_path)
-    #     mat_name = 'Dirt'
-    #     # omni.kit.commands.execute(
-    #     #     'CreateMdlMaterialPrimCommand',
-    #     #     mtl_url=mat_path,
-    #     #     mtl_name=f'{mat_name}',
-    #     #     mtl_path=f'/World/Looks/{mat_name}',
-    #     # )
-    #
-    #     # omni.kit.commands.execute(
-    #     #     'CreateMdlMaterialPrimCommand',
-    #     #     mtl_url=mat_path,
-    #     #     mtl_name=f'{mat_name}',
-    #     #     mtl_path=f'/World/Looks/{mat_name}',
-    #     # )
-    #     #
-    #     # # update_stage()
-    #     # _ = omni.kit.commands.execute(
-    #     #     'BindMaterialCommand',
-    #     #     prim_path=prim_path,
-    #     #     material_path=f'/World/Looks/{mat_name}',
-    #     # )
-    #     mtl_created_list = []
-    #
-    #     omni.kit.commands.execute(
-    #         'CreateAndBindMdlMaterialFromLibrary',
-    #         mdl_name=mat_path,
-    #         mtl_name=mat_name,
-    #         mtl_created_list=mtl_created_list,
-    #     )
-    #
-    #     mtl_prim = stage.GetPrimAtPath(mtl_created_list[0])
-    #
-    #     omni.usd.create_material_input(
-    #         mtl_prim,
-    #         'project_uvw',
-    #         True,
-    #         Sdf.ValueTypeNames.Bool,
-    #     )
-    #
-    #     omni.usd.create_material_input(
-    #         mtl_prim,
-    #         'texture_scale',
-    #         Gf.Vec2f(0.001, 0.001),
-    #         Sdf.ValueTypeNames.Float2,
-    #     )
-    #     cube_mat_shade = UsdShade.Material(mtl_prim)
-    #
-    #     UsdShade.MaterialBindingAPI(obj_prim).Bind(
-    #         cube_mat_shade, UsdShade.Tokens.strongerThanDescendants
-    #     )
-    #     return
-    #
-    #     # Set material inputs, these can be determined by looking at the .mdl file
-    #
-    #     # or by selecting the Shader attached to the Material in the stage window and looking at the details panel
-    #
-    #     print('wait')
-    #     await update_stage_async()
-    #     print('continue')
-    #     update_stage()
-    #     while is_stage_loading():
-    #         await update_stage_async()
-    #
-    #     stage = omni.usd.get_context().get_stage()
-    #     p = stage.GetPrimAtPath(f'{mat}/Shader')
-    #     not_set = False
-    #
-    #     omni.kit.commands.execute(
-    #         'SelectPrims',
-    #         old_selected_paths=['/World'],
-    #         new_selected_paths=['/World/Looks/Dirt'],
-    #         expand_in_stage=True,
-    #     )
-    #
-    #     omni.kit.commands.execute(
-    #         'SelectPrims',
-    #         old_selected_paths=['/World'],
-    #         new_selected_paths=['/World/Looks/Dirt'],
-    #         expand_in_stage=True,
-    #     )
-    #
-    #     print('wait')
-    #     await update_stage_async()
-    #     print('continue')
-    #     update_stage()
-    #     while is_stage_loading():
-    #         await update_stage_async()
-    #     # while not not_set:
-    #     #     try:
-    #     #         material_attributes = p.GetAttributes()
-    #     #         p.GetAttribute('inputs:project_uvw').Set(True)
-    #     #         not_set = True
-    #     #         print("success: ", _)
-    #     #     except:
-    #     #
-    #     #         print("failure: ", _)
-    #     #         await update_stage_async()
-    #     #
-    #
-    #     material_attributes = p.GetAttributes()
-    #     p.GetAttribute('inputs:project_uvw').Set(True)
-    #     p.GetAttribute('inputs:texture_scale').Set((0.001, 0.001))
-    #
-    #     omni.kit.commands.execute(
-    #         'SelectPrims',
-    #         old_selected_paths=['/World'],
-    #         new_selected_paths=['/World/Looks/Dirt'],
-    #         expand_in_stage=True,
-    #     )
-    #
-    #     omni.kit.commands.execute(
-    #         'SelectPrims',
-    #         old_selected_paths=['/World'],
-    #         new_selected_paths=['/World/Looks/Dirt'],
-    #         expand_in_stage=True,
-    #     )
-
-    # def build_task_controls_ui(self, frame):
-    #     with frame:
-    #         with ui.VStack(spacing=5):
-    #             # Update the Frame Title
-    #             frame.title = 'Sensor Controls'
-    #             frame.visible = True
-    #
-    #             self.add_button_title(
-    #                 'Attach Sys To Scene', 'Attach', self._loadtest
-    #             )
-    #             self.add_button_title(
-    #                 'Init waypoints & attach', 'Attach', self._testRigWaypoint
-    #             )
-    #
-    #             # self.add_button('veloc', self._save_lidar_info_event)
-    #             # self.task_ui_elements['veloc'].enabled = True
-    #
-    #             self.add_button('sample sensors', self._on_sample_sensors)
-    #             self.task_ui_elements['sample sensors'].enabled = True
-    #             # self.add_string_field("test", self._empty_func)
-    #
-    #             self.add_button('init_world', self.ui_init_world)
-    #             self.task_ui_elements['init_world'].enabled = True
-    #
-    #             self.add_button(
-    #                 'load_sensors', self.test_load_sensors_from_file
-    #             )
-    #             self.task_ui_elements['load_sensors'].enabled = True
-    #             # OTHER UI NEEDED
-    #             # load sensor rig
-    #             # ^ let the above handle waypoints and everything
-    #
-    #             # self.add_button('init_semantics', self.ui_init_semantics)
-    #             # self.task_ui_elements['init_semantics'].enabled = True
-    #             # self.add_button('area gen test', self._empty_func)
-    #             # self.task_ui_elements['area gen test'].enabled = True
-
-    # def build_sensor_ui(self, frame):
-    #     with frame:
-    #         with ui.VStack(spacing=5):
-    #             # Update the Frame Title
-    #             frame.title = 'Sensors'
-    #             frame.visible = True
-    #             self.task_ui_elements['movement_mode'] = dropdown_builder(
-    #                 items=['Waypoints', 'Manual', 'Linear'],
-    #                 on_clicked_fn=self._rebuild_update,
-    #             )
-    #             self.task_ui_elements['movement_speed'] = int_builder(
-    #                 'move speed'
-    #             )
-
-    # def add_button(self, label, on_clicked_fn):
-    #     """Adds a button to the task frame"""
-    #     dict = {
-    #         'label': label,
-    #         'type': 'button',
-    #         'text': label,
-    #         'tooltip': label,
-    #         'on_clicked_fn': on_clicked_fn,
-    #     }
-    #
-    #     self.task_ui_elements[label] = btn_builder(**dict)
-    #     self.task_ui_elements[label].enabled = False
-
-    # async def ini(self):
-    #     await asyncio.ensure_future(self.sample.init_world())
-    #     self.sample.init_sensor_rig_from_file()
-    #
-    #     stage = omni.usd.get_context().get_stage()
-    #     self.sample.sr.initialize_waypoints('', stage)
-    #     print('Attach move to callback')
-    #     self.sample.attach_sensor_waypoint_callback(self.sample.sr)
-
-    # def _add_to_scene_event(self):
-    #     self.sample.init_sensor_and_semantics()
-    #
-    # def _on_load_scene_button_event(self):
-    #     self._add_to_scene_event()
-
-    # def build_worldgen_ui(self, frame):
-    #     with frame:
-    #         with ui.VStack(spacing=5):
-    #             # Update the Frame Title
-    #             frame.title = 'World Gen'
-    #             frame.visible = True
-    #             self.add_button('init_world', self.ui_init_world)
-    #             self.task_ui_elements['init_world'].enabled = True
-    #
-    #             self.add_button('init_semantics', self.ui_init_semantics)
-    #             self.task_ui_elements['init_semantics'].enabled = True
-    #             # self.add_button('area gen test', self._empty_func)
-    #             # self.task_ui_elements['area gen test'].enabled = True

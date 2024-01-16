@@ -24,6 +24,8 @@ from omni.isaac.core.utils.stage import (
 from pxr import UsdShade, Sdf
 import math
 import time
+import os
+import glob
 
 
 
@@ -34,7 +36,7 @@ class WorldManager:
         self._o = "[World generator] "
 
     def _log(self,msg):
-        print(f"[{time.time()}]{self._o}{msg}")
+        print(f"[{time.ctime()}]{self._o}{msg}")
 
     def add_semantic(self, p, prim_class):
         """Adds semantic to prim"""
@@ -408,26 +410,43 @@ class WorldManager:
             closest_x = int(round(x_ind/10))
             closest_y = int(round(y_ind/10))
             closest = (closest_y, closest_x)
-
+            # print("------ ", closest)
             closest_ind =np.ravel_multi_index(closest, (len(height_map), len(height_map))) 
 
+            # print("****** the shape of the heightmap is ", height_map.shape, "  ", closest_ind, " ", closest )
             right = (closest_y +1, closest_x)
-            right_ind =np.ravel_multi_index(right, (len(height_map), len(height_map))) 
+            # right_ind =np.ravel_multi_index(right, (len(height_map), len(height_map))) 
             right = (closest_y +1, closest_x,0)
 
             left = (closest_y -1, closest_x) 
-            left_ind =np.ravel_multi_index(left, (len(height_map), len(height_map))) 
+            # left_ind =np.ravel_multi_index(left, (len(height_map), len(height_map))) 
 
             left = (closest_y -1, closest_x,0) 
             up= (closest_y, closest_x+1) 
-            up_ind =np.ravel_multi_index(up, (len(height_map), len(height_map))) 
+            # up_ind =np.ravel_multi_index(up, (len(height_map), len(height_map))) 
 
             up= (closest_y, closest_x+1,0) 
             down= (closest_y, closest_x-1) 
-            down_ind =np.ravel_multi_index(down, (len(height_map), len(height_map))) 
+
+            # print("down****** the shape of the heightmap is ", height_map.shape, "  ", closest_ind, " ", down)
+            # down_ind =np.ravel_multi_index(down, (len(height_map), len(height_map))) 
 
             down= (closest_y, closest_x-1,0) 
-            possible_inds = [[up, right], [right, down], [down,left],[left,up]]
+
+            _possible_inds = [[up, right], [right, down], [down,left],[left,up]]
+            possible_inds = []
+            for entry in _possible_inds:
+                add = True
+                for vert in entry:
+                    for b in range(2):
+                        if vert[b] < 0 or vert[b] > len(height_map)-1:
+                            add = False
+                if add:
+                    possible_inds.append(entry)
+                    # print(entry)
+
+
+
 
             # z = float(height_map[int(round(y_ind/10))][int(round(x_ind/10))])# / mesh_height_modifier   # was abs
             for inds in possible_inds:
@@ -453,6 +472,7 @@ class WorldManager:
                     euler_deg = self.axis_angle_to_euler([0,0,1],normal)
                     euler_deg[0] = max(euler_deg[0], 5)
                     euler_deg[1] = max(euler_deg[1], 5)
+                    # print("****** spawning")
                     break
                 else:
                     # print(" =============== this triangle was not detected ")
@@ -467,7 +487,7 @@ class WorldManager:
             cc =(int(round(y_ind/10)),int(round(x_ind/10)) )
             ind = np.ravel_multi_index(cc, (len(height_map), len(height_map)))
             # print(np.asarray(self.t_normals))
-            poss_rot = np.asarray(self.t_normals)[ind]
+            # poss_rot = np.asarray(self.t_normals)[ind]
             # print("triangle normals")
             # print(poss_rot)
             # second one is iterated fasted
@@ -494,7 +514,7 @@ class WorldManager:
                 rot = euler_deg#poss_rot
             )
 
-    def create_terrains(self, terrain_info):
+    def create_terrains(self, terrain_info, mesh_save_path):
         self._log("Trying to create terrains.")
 
         # create the parent
@@ -514,29 +534,56 @@ class WorldManager:
             mat_name = mat_path.split('/')[-1]
             mat_name = mat_name.replace('.mdl', '')
             mesh_path = mesh_path.replace('.obj', '.usd')
+            print("mat path, key", mat_path, key)
+            # get the mateiral key
+            mat_key = key
+            # print("split apht ", mesh_path.split("mesh"))
+            og_path =mesh_path.split("mesh")[0]
+            og_path = mesh_save_path
+            print(" og path")
+            print(og_path)
+            pattern = os.path.join(og_path, f"mesh_*_{mat_key}")
+            print("pattern ", pattern)
+
+            # Use glob to find files matching the pattern
+            files = glob.glob(pattern)
+            files_with_material_id = []
+
+            # Iterate through all files in the directory
+            for filename in os.listdir(og_path):
+                print(filename)
+                # Check if the filename starts with 'mesh_' and ends with the material_id
+                if filename.startswith("mesh_") and filename.endswith(f"{mat_key}.usd"):
+                    print("here")
+                    full_path = os.path.join(og_path, filename)
+                    files_with_material_id.append(full_path)
+            print(files)
+            print(files_with_material_id)
             # spawn prim
+            cc = 0
+            # prim_p = f'/World/t/class_{mat_name}'
+            for i, path in enumerate(files_with_material_id):
+                prim_p = f'/World/t/class_{i}_{mat_name}'
+                # prim_p = f'/World/t/terrain{key}'
 
-            prim_p = f'/World/t/class_{mat_name}'
-            # prim_p = f'/World/t/terrain{key}'
+                stage = omni.usd.get_context().get_stage()
+                scale = 1#0.01
+                # X SCALE SHOULD BE NEGATIVE TO FLIP IT CORRECTLY
+                random_rotation = 0.0
+                x, y, z = 0, 0, 0
+                add_reference_to_stage(usd_path=path, prim_path=prim_p)
+                self.create_material_and_bind(
+                    mat_name, mat_path, prim_p, scale, stage
+                )
+                prim=stage.GetPrimAtPath(prim_p)
+                collisionAPI = UsdPhysics.CollisionAPI.Apply(prim)
+                sem = Semantics.SemanticsAPI.Apply(prim, 'Semantics')
+                sem.CreateSemanticTypeAttr()
+                sem.CreateSemanticDataAttr()
+                sem.GetSemanticTypeAttr().Set('class')
+                sem.GetSemanticDataAttr().Set(mat_name)
 
-            stage = omni.usd.get_context().get_stage()
-            scale = 1#0.01
-            # X SCALE SHOULD BE NEGATIVE TO FLIP IT CORRECTLY
-            random_rotation = 0.0
-            x, y, z = 0, 0, 0
-            add_reference_to_stage(usd_path=mesh_path, prim_path=prim_p)
-            self.create_material_and_bind(
-                mat_name, mat_path, prim_p, scale, stage
-            )
-            prim=stage.GetPrimAtPath(prim_p)
-            collisionAPI = UsdPhysics.CollisionAPI.Apply(prim)
-            sem = Semantics.SemanticsAPI.Apply(prim, 'Semantics')
-            sem.CreateSemanticTypeAttr()
-            sem.CreateSemanticDataAttr()
-            sem.GetSemanticTypeAttr().Set('class')
-            sem.GetSemanticDataAttr().Set(mat_name)
-
-        scale = 1#0.1
+        scale = 0.1#1#0.1
         random_rotation = 0.0
         x, y, z = 0, 0, 0
         # stage = self.usd_context.get_stage()
@@ -621,10 +668,11 @@ class WorldManager:
         ) =generate_world_from_file(obj_path, world_path)
 
         height_map = meshGen._points2
+        height_map = meshGen._noise_map_xy 
 
         self.occupancy = np.zeros((len(height_map),len(height_map)))
 
-        self.create_terrains(terrain_info)
+        self.create_terrains(terrain_info,meshGen._save_path)
 
         meshGen.clean_up_files()
         self._log(f"Temp files all cleaned up, now ready to move to next step")

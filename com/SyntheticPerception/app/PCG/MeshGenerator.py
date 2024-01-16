@@ -12,10 +12,12 @@ import omni.kit.asset_converter
 import carb
 import time
 import concurrent.futures
+import sys
+import glob
+sys.path.append('/home/jon/Documents/IsaacSyntheticPerception/com/SyntheticPerception/app/build/')
 import mesh_module
-# mesh_module.compute_base_mesh()
-# 0.001
-# enable project uvw coordinates
+from PIL import Image
+mesh_module.test_open3d()
 
 
 class MeshGen:
@@ -48,12 +50,10 @@ class MeshGen:
         self.preload_hm = heightmap
 
     def _log(self,msg):
-        print(f"[{time.time()}]{self._o}{msg}")
+        print(f"[{time.ctime()}]{self._o}{msg}")
 
 
     async def convert(self, in_file, out_file, load_materials=False):
-        # This import causes conflicts when global
-
         def progress_callback(progress, total_steps):
             pass
 
@@ -83,16 +83,18 @@ class MeshGen:
         return success
 
     def cnv(self):
+        prefix = "mesh_"
+        pattern = os.path.join(self._save_path, prefix + '*')
 
-        self._log('Converting .obj files to .usd')
-        for file_path in self._files_to_clean:
+        # Use glob to find files matching the pattern
+        files = glob.glob(pattern)
+        for file_path in files:
+
             new_path = file_path.replace('.obj', '.usd')
-            self.final_mesh_paths.append(new_path)
-            self._log(f'Trying to convert {file_path} to {new_path}')
-
             status = asyncio.get_event_loop().run_until_complete(
                 self.convert(file_path, new_path)
             )
+
 
 
     def generate_terrain_mesh(self):
@@ -104,8 +106,8 @@ class MeshGen:
         self._log(f"Computing base mesh and seperating to different regions and zone meshes.")
         self._compute_base_mesh()
 
-        self._log(f"Saving meshes to temp.")
-        self._save_meshes()
+        # self._log(f"Saving meshes to temp.")
+        # self._save_meshes()
 
         self._log(f"Converting meshes to usd.")
         self.cnv()
@@ -154,9 +156,6 @@ class MeshGen:
     def _create_noise_map(self):
 
         scale = 1#250.0
-        # self._noise_map_xy = generate_fractal_noise_2d(
-        #     self._map_shape, (8, 8), 5
-        # )
         if self.preload_hm is not None:
             self._noise_map_xy = self.preload_hm
             self._log(f"Using a preloaded noisemap")
@@ -200,95 +199,31 @@ class MeshGen:
         self.meshes_dict[res_ind].triangles.append(face)
 
     def _compute_base_mesh(self):
-
-        # subdivisions = (self._size * self._scale) - 1
+        self._log(f"The shape of points is {self._points.shape}")
         materials = list(np.unique(self._regions_map))
-        # self._log(f"Creating {len(materials)} meshes for each terrain type.")
-        #
         self.meshes_dict = {}
         for key in materials:
             self.meshes_dict[int(key)] = o3d.geometry.TriangleMesh()
-        # self._log(f'Computing the base mesh (assigning tris and verts).')
+
+            self.final_mesh_paths_dict[int(key)] = f'{self._save_path}/mesh_{key}.obj'
+
+            self._files_to_clean.append(f'{self._save_path}/mesh_{key}.obj')
+            self._files_to_clean.append(f'{self._save_path}/mesh_{key}.usd')
+            # print("num mats")
         self._faces = []
-        # 
-        # for j in range(subdivisions):
-        #     for i in range(subdivisions):
-        #         index = j * (subdivisions + 1) + i
-        #
-        #         face1 = [index, index + 1, index + subdivisions + 2]
-        #         face2 = [
-        #             index,
-        #             index + subdivisions + 2,
-        #             index + subdivisions + 1,
-        #         ]
-        #         self._faces.append(face1)
-        #         self._faces.append(face2)
-        #         res_ind = int(self._regions_map[j,i])
-        #         self.meshes_dict[res_ind].triangles.append(face1)
-        #         self.meshes_dict[res_ind].triangles.append(face2)
-        #
-        #     # print(f" {index} / {subdivisions*subdivisions}")
 
+        # load all the terrain textures
+        # img = Image.open("/home/jon/Desktop/bricks.jpg")
+        # new_width = int(img.width / 10)
+        # new_height = int(img.height / 10)
+        # img= img.resize((new_width, new_height), Image.ANTIALIAS)
+        # img_gray = img.convert('L')
+        # img_array = np.array(img_gray)
+        img_array = np.array([[2,2]])
+
+        self._points2 = mesh_module.build_meshes(self._size, self._scale, self._regions_map, self._points,self._save_path, img_array)
+        self._points2 = np.array(self._points2)
+
+        self.normals = 0
         self._log(f'Computing the base mesh (assigning tris and verts).')
-        meshes_dict = mesh_module.compute_base_mesh(self._size, self._scale, self._regions_map)
-        # print(meshes_dict)
-        # for key, val in meshes_dict:
-        #     print(key)
-        print("got out")
-        for key, value in meshes_dict.items():
-            # print(f"Key: {key}")
-            self._faces += value
-            print(type(value))
-            self.meshes_dict[int(key)].triangles = o3d.utility.Vector3iVector(np.array(value))
-        print("now we show the faces")
-        # print(self._faces)
-
-
-
-        # self._faces[:len(all_faces)] = all_faces
-
-        self._mesh = o3d.geometry.TriangleMesh()
-        self._mesh.vertices = o3d.utility.Vector3dVector(self._points)
-
-        self._mesh.triangles = o3d.utility.Vector3iVector(
-            np.array(self._faces)
-        )
-
-        self._mesh.paint_uniform_color([1, 0.706, 0])
-
-        self._mesh.compute_vertex_normals()
-
-        self._mesh = self._mesh.compute_vertex_normals()
-        self._mesh = self._mesh.remove_unreferenced_vertices()
-        self._mesh = self._mesh.remove_duplicated_vertices()
-        self.normals = self._mesh.triangle_normals
-
-        l = self._scale * self._size
-        # for i in range(len(self._mesh.vertices)):
-        #
-        #     ind = np.unravel_index(i, (l, l))
-        #     self._points2[ind] = self._mesh.vertices[i][2]
-        self.np_tris =np.asarray(self._mesh.triangles) 
-        self.np_verts =np.asarray(self._mesh.vertices) 
-
-
-        N = len(materials)
-        HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
-        RGB_tuples = list(map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples))
-
-        for i, key in enumerate(list(self.meshes_dict.keys())):
-            self.meshes_dict[key].vertices = self._mesh.vertices
-
-            self.meshes_dict[key].vertex_normals = self._mesh.vertex_normals
-            self.meshes_dict[key] = self.meshes_dict[
-                key
-            ].remove_unreferenced_vertices()
-            self.meshes_dict[key].paint_uniform_color(RGB_tuples[i])
-            self.meshes_dict[key] = self.meshes_dict[
-                key
-            ].compute_vertex_normals()
-            self.meshes_dict[key] = self.meshes_dict[
-                key
-            ].compute_triangle_normals()
-        print("should have made all these by now")
-
+        return
