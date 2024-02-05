@@ -526,7 +526,7 @@ class WorldManager:
             attributes={},
             select_new_prim=True,
         )
-
+        scale = 1
         for key in terrain_info:
             mesh_path = terrain_info[key].mesh_path
             scale = terrain_info[key].scale
@@ -534,16 +534,12 @@ class WorldManager:
             mat_name = mat_path.split('/')[-1]
             mat_name = mat_name.replace('.mdl', '')
             mesh_path = mesh_path.replace('.obj', '.usd')
-            print("mat path, key", mat_path, key)
             # get the mateiral key
             mat_key = key
             # print("split apht ", mesh_path.split("mesh"))
             og_path =mesh_path.split("mesh")[0]
             og_path = mesh_save_path
-            print(" og path")
-            print(og_path)
             pattern = os.path.join(og_path, f"mesh_*_{mat_key}")
-            print("pattern ", pattern)
 
             # Use glob to find files matching the pattern
             files = glob.glob(pattern)
@@ -551,23 +547,16 @@ class WorldManager:
 
             # Iterate through all files in the directory
             for filename in os.listdir(og_path):
-                print(filename)
-                # Check if the filename starts with 'mesh_' and ends with the material_id
                 if filename.startswith("mesh_") and filename.endswith(f"{mat_key}.usd"):
-                    print("here")
                     full_path = os.path.join(og_path, filename)
                     files_with_material_id.append(full_path)
-            print(files)
-            print(files_with_material_id)
-            # spawn prim
             cc = 0
-            # prim_p = f'/World/t/class_{mat_name}'
             for i, path in enumerate(files_with_material_id):
                 prim_p = f'/World/t/class_{i}_{mat_name}'
                 # prim_p = f'/World/t/terrain{key}'
 
                 stage = omni.usd.get_context().get_stage()
-                scale = 1#0.01
+                # scale = 1#0.01
                 # X SCALE SHOULD BE NEGATIVE TO FLIP IT CORRECTLY
                 random_rotation = 0.0
                 x, y, z = 0, 0, 0
@@ -583,10 +572,13 @@ class WorldManager:
                 sem.GetSemanticTypeAttr().Set('class')
                 sem.GetSemanticDataAttr().Set(mat_name)
 
-        scale = 0.1#1#0.1
+        # scale = #1#0.1
         random_rotation = 0.0
         x, y, z = 0, 0, 0
         # stage = self.usd_context.get_stage()
+        scale = float(0.1)
+        print(scale)
+        print(type(scale))
 
         omni.kit.commands.execute(
             'TransformPrimSRTCommand',
@@ -700,7 +692,7 @@ class WorldManager:
             True,
             Sdf.ValueTypeNames.Bool,
         )
-
+        scale = 0.1
         omni.usd.create_material_input(
             mtl_prim,
             'texture_scale',

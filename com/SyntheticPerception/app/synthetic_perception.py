@@ -51,6 +51,7 @@ import omni.kit.commands
 from pxr import Sdf
 import omni.physx
 from omni.physx import get_physx_scene_query_interface
+import rospy
 
 
 class SyntheticPerception(BaseSample):
@@ -93,6 +94,7 @@ class SyntheticPerception(BaseSample):
             "M": [0.0, 0.0, -1.0],
         }
 
+
     def _sub_keyboard_event(self, event, *args, **kwargs):
         self._event_flag = False
         # when a key is pressedor released  the command is adjusted w.r.t the key-mapping
@@ -107,6 +109,7 @@ class SyntheticPerception(BaseSample):
     def force_reload(self):
         self._world.initialize_physics()
         self.setup_scene()
+
 
     async def _on_load_world_async(self):
         await omni.kit.app.get_app().next_update_async()
@@ -239,6 +242,11 @@ class SyntheticPerception(BaseSample):
         # self.sr.add_depth_camera_to_rig( (0, 0, 0), (0, 0, 0), (512, 512), True,"DepthCamera")
         self.sr.add_sensor_to_rig(DepthCamera(name="depthcam2"))
         self.sr.add_sensor_to_rig(Lidar(path="coolLidar"))
+    def init_rig_ros(self):
+
+        # rospy.init_node('lidarnode',anonymous=True)
+        print("trying to init ros on the sensor rig")
+        self.sr.init_ros()
 
     def init_sensor_rig_from_file(self, path, out_path):
         self.stage = omni.usd.get_context().get_stage()  # Used to access Geometry

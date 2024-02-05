@@ -8,6 +8,12 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/PointField.h>
+#include <vector>
+#include <string>
 namespace py = pybind11;
 
 // std::vector<std::vector<float>>
@@ -97,6 +103,7 @@ build_meshes(int size, double scale,
   }
   // free the vec
   points.clear();
+  int numberOfChunkCreated = 0;
   for (int j = 0; j < subdivisions; ++j) {
     for (int i = 0; i < subdivisions; ++i) {
       int index = j * (subdivisions + 1) + i;
@@ -121,6 +128,7 @@ build_meshes(int size, double scale,
         // Key does not exist
         chunk_mat_dict[key] = std::unordered_map<
             int, std::shared_ptr<open3d::geometry::TriangleMesh>>();
+          numberOfChunkCreated += 1;
       }
 
       Eigen::Vector3i vec1(index, index + 1,
@@ -149,6 +157,7 @@ build_meshes(int size, double scale,
       chunk_mat_dict[chunkNumber][material_key]->triangles_.push_back(vec2);
     }
   }
+  std::cout << "we have created " << numberOfChunkCreated << " chunks" << std::endl;
 
 
   for (auto &key_value : chunk_mat_dict) {
@@ -256,6 +265,67 @@ compute_base_mesh(int size, double scale,
   return meshes_dict;
 }
 
+
+
+sensor_msgs::PointCloud2 createPointCloud2(const std::vector<geometry_msgs::Point32>& points,
+                                           const std::vector<float>& intensities,
+                                           const std::vector<uint32_t>& timestamps,
+                                           const std::vector<uint16_t>& rings,
+                                           const std::vector<uint32_t>& ranges,
+                                           const std::string& frame_id = "os_lidar") {
+    sensor_msgs::PointCloud2 cloud;
+    cloud.header.stamp = ros::Time::now();
+    cloud.header.frame_id = frame_id;
+
+    // Define fields for PointCloud2
+    cloud.fields.resize(9);
+    cloud.fields[0].name = "x"; cloud.fields[0].offset = 0; cloud.fields[0].datatype = sensor_msgs::PointField::FLOAT32; cloud.fields[0].count = 1;
+    cloud.fields[1].name = "y"; cloud.fields[1].offset = 4; cloud.fields[1].datatype = sensor_msgs::PointField::FLOAT32; cloud.fields[1].count = 1;
+    cloud.fields[2].name = "z"; cloud.fields[2].offset = 8; cloud.fields[2].datatype = sensor_msgs::PointField::FLOAT32; cloud.fields[2].count = 1;
+    cloud.fields[3].name = "intensity"; cloud.fields[3].offset = 16; cloud.fields[3].datatype = sensor_msgs::PointField::FLOAT32; cloud.fields[3].count = 1;
+    cloud.fields[4].name = "t"; cloud.fields[4].offset = 20; cloud.fields[4].datatype = sensor_msgs::PointField::UINT32; cloud.fields[4].count = 1;
+    cloud.fields[5].name = "reflectivity"; cloud.fields[5].offset = 24; cloud.fields[5].datatype = sensor_msgs::PointField::UINT16; cloud.fields[5].count = 1;
+    cloud.fields[6].name = "ring"; cloud.fields[6].offset = 26; cloud.fields[6].datatype = sensor_msgs::PointField::UINT16; cloud.fields[6].count = 1;
+    cloud.fields[7].name = "ambient"; cloud.fields[7].offset = 28; cloud.fields[7].datatype = sensor_msgs::PointField::UINT16; cloud.fields[7].count = 1;
+    cloud.fields[8].name = "range"; cloud.fields[8].offset = 32; cloud.fields[8].datatype = sensor_msgs::PointField::UINT32; cloud.fields[8].count = 1;
+
+    // Point step
+    cloud.point_step = 40; // size of a point in bytes
+    cloud.row_step = cloud.point_step * points.size();
+    cloud.height = 1;
+    cloud.width = points.size();
+    cloud.is_dense = false;
+    cloud.is_bigendian = false;
+
+    // Data
+    cloud.data.resize(cloud.row_step * cloud.height);
+    uint8_t* dataPtr = &(cloud.data[0]);
+
+    for (size_t i = 0; i < points.size(); ++i) {
+        // Assume geometry_msgs::Point32 for point, adjust if using a different type
+        memcpy(dataPtr + i * cloud.point_step, &points[i].x, 12); // x, y, z
+
+        float intensity = intensities[i];
+        memcpy(dataPtr + i * cloud.point_step + 16, &intensity, 4);
+
+        uint32_t timestamp = timestamps[i] / 10000; // Adjust division as necessary
+        memcpy(dataPtr + i * cloud.point_step + 20, &timestamp, 4);
+
+        uint16_t reflectivity = 5; // Example value, adjust as necessary
+        memcpy(dataPtr + i * cloud.point_step + 24, &reflectivity, 2);
+
+        uint16_t ring = rings[i];
+        memcpy(dataPtr + i * cloud.point_step + 26, &ring, 2);
+
+        uint16_t ambient = 3; // Example value, adjust as necessary
+        memcpy(dataPtr + i * cloud.point_step + 28, &ambient, 2);
+
+        uint32_t range = ranges[i];
+        memcpy(dataPtr + i * cloud.point_step + 32, &range, 4);
+    }
+
+    return cloud;
+}
 void test_open3d() {
 
   auto mesh = std::make_shared<open3d::geometry::TriangleMesh>();

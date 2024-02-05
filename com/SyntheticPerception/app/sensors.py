@@ -11,7 +11,9 @@ The rig also handles sampling rates and timestamps.
 
 
 """
+import omni.replicator.core as rep
 from omni.syntheticdata.scripts.sensors import enable_sensors
+import time
 
 from omni.syntheticdata import helpers
 from omni.isaac.core.utils.prims import define_prim, delete_prim
@@ -286,13 +288,25 @@ class SensorRig:
         # print(self.time)
         # log timestep
         # Sample all sensors
-        if self.sample_time_counter >= (1 / self.sample_rate):
-            # print("sampling at ", self.time)
-            for sensor in self.__sensors:
-                # print(sensor)
-                sensor.sample_sensor()
-            self._time_stamp_file.write(f"{str(self.time)}\n")
-            self.sample_time_counter = 0
+
+        for sensor in self.__sensors:
+            # print(sensor)
+            sensor.sample_sensor()
+
+        # if self.sample_time_counter >= (1 / self.sample_rate):
+        #     # print("sampling at ", self.time)
+        #     a = time.time()
+        #     for sensor in self.__sensors:
+        #         # print(sensor)
+        #         sensor.sample_sensor()
+        #     # self._time_stamp_file.write(f"{str(self.time)}\n")
+        #     print("time to sample: ", time.time()-a)
+        #     self.sample_time_counter = 0
+    def init_ros(self):
+        print(" ============= init all sensor ros")
+        print("all sensors; ", self.__sensors)
+        for sensor in self.__sensors:
+            sensor.init_ros()
 
     def sample_sensors_return(self):
         sensor_output = []
@@ -383,6 +397,7 @@ class SensorRig:
         return move_vec, rot_vec, rot_float
 
     def move(self, time_step):
+        return
         # timeline = omni.timeline.get_timeline_interface()
 
         # timecode = (

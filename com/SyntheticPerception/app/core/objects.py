@@ -1,5 +1,4 @@
 from pxr import Sdf, Usd, Gf, UsdGeom
-
 from omni.isaac.core.utils.stage import get_stage_units
 from omni.isaac.core.prims import XFormPrim, RigidPrim
 from omni.isaac.core.utils.stage import (

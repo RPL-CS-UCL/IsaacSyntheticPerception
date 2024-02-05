@@ -214,132 +214,190 @@ class WorldHandler:
             mode="constant",
             constant_values=0,
         )
-
     def _read_world(self):
         self.objects_to_spawn = {}
-        data = None
-        objs_per_region = {}
         with open(self._world_path, "r+") as infile:
             data = json.load(infile)
-        if data != None:
-            n = data["size"]
 
-            # lets check if there is a preloaded heightmap and mask
-            preload_hm = data.get("heightmap", None)
-            preload_mask = data.get("mask", None)
-            ignore_gen = False
-            use_preloaded_mask = False
+        if data is None:
+            return None, None, None, None
 
-            if preload_hm:
-                ignore_gen = True
-                preload_hm = np.load(preload_hm)
-                preload_hm = self.pad_to_square(preload_hm)
-            else:
-                preload_hm = None
+        n = data["size"]
+        preload_hm = preload_mask = None
+        ignore_gen = False
 
-            if preload_mask:
-                preload_mask = np.load(preload_mask)
+        if "heightmap" in data:
+            preload_hm = self.pad_to_square(np.load(data["heightmap"]))
+            ignore_gen = True
 
-                preload_mask = self.pad_to_square(preload_mask)
-                if preload_hm is None:
-                    preload_mask = self.pad_to_multiple_of_eight(preload_mask)
-                preload_mask = preload_mask[:6000][:6000]
+        if "mask" in data:
+            preload_mask = np.load(data["mask"])
+            preload_mask = self.pad_to_square(preload_mask)
+            preload_mask = preload_mask[:6000, :6000] if preload_hm is None else preload_mask
+            n = len(preload_mask)
+            ignore_gen = True
 
-                use_preloaded_mask = True
-                ignore_gen = True
+        arr = np.zeros((n, n)) if not ignore_gen else preload_mask
+        terrain_info, objs_per_region = {}, {}
 
-                n = len(preload_mask)
+        for region_id, region_data in data["regions"].items():
+            terrain_info[str(region_id)] = TerrainPrim("", region_data["material_path"], region_data["material_scale"])
+            objs_per_region[str(region_id)] = [self.objects_dict[str(obj_uid)] for obj_uid in region_data["objects"]]
 
-            arr = np.zeros((n, n))
-            self._log(f"Size of arr: {arr.shape}")
-            total_arr = np.zeros((n, n))
-            regions = data["regions"]
-            terrain_info = {}
-            for region_id in regions:
-                region_id = str(region_id)
+            if not ignore_gen:
+                arr = self._generate_terrain(arr, region_id, region_data, n)
 
-                terrain_info[region_id] = TerrainPrim(
-                    "",
-                    regions[region_id]["material_path"],
-                    regions[region_id]["material_scale"],
-                )
-                # print("terrrain info key type ", type(region_id))
+            for zone_id, zone_data in region_data["zones"].items():
+                terrain_info[str(zone_id)] = TerrainPrim("", zone_data["material_path"], zone_data["material_scale"])
+                objs_per_region[str(zone_id)] = [self.objects_dict[obj_uid] for obj_uid in zone_data["objects"]]
+
                 if not ignore_gen:
-                    new_arr = PerlinNoise.generate_region2(
-                        seed=int(region_id),
-                        shape=(n, n),
-                        threshold=float(regions[region_id]["threshold"]),
-                        show_plot=False,
-                        region_value=int(region_id),
-                    )
+                    arr = self._generate_terrain(arr, zone_id, zone_data, n)
 
-                    arr = append_to_area(arr, new_arr, int(region_id))
-                total_arr = arr
-                # handle objects in the zone
-                objs = regions[region_id]["objects"]
-                objs_per_region[region_id] = []
-                if len(objs) > 0:
-                    for obj_uid in objs:
-                        # get corresponding object from objects
-                        object_prim = self.objects_dict[str(obj_uid)]
-                        objs_per_region[region_id].append(object_prim)
+        self._log("Performing poisson disc sampling for object placement.")
+        for key, obs in objs_per_region.items():
+            if len(obs) > 0 and np.isin(int(key), arr):
+                self._log(f"Sampling for {key}.")
+                for obj in obs:
+                    area, coords = fill_area(arr, obj.poisson_size / self._WORLD_TO_POISSON_SCALE, int(key), 999)
+                    self.objects_to_spawn.setdefault(obj.unique_id, []).extend(coords)
 
-                # now we need to deal with sub zones
-                zones = regions[region_id]["zones"]
-                for zone_id in zones:
-                    terrain_info[str(zone_id)] = TerrainPrim(
-                        "",
-                        zones[zone_id]["material_path"],
-                        zones[zone_id]["material_scale"],
-                    )
+        return arr, n, terrain_info, preload_hm
 
-                    if not ignore_gen:
-                        new_arr = PerlinNoise.generate_region2(
-                            seed=int(zone_id),
-                            shape=(n, n),
-                            threshold=float(zones[zone_id]["threshold"]),
-                            show_plot=False,
-                            region_value=int(zone_id),
-                        )
-
-                        zone_to_save = append_inside_area(arr, new_arr, int(zone_id))
-
-                        total_arr = zone_to_save
-                    objs = zones[zone_id]["objects"]
-
-                    objs_per_region[zone_id] = []
-                    if len(objs) > 0:
-                        for obj_uid in objs:
-                            # get corresponding object from objects
-                            object_prim = self.objects_dict[obj_uid]
-
-                            objs_per_region[zone_id].append(object_prim)
-
-            if ignore_gen or use_preloaded_mask:
-                total_arr = preload_mask
-
-            self._log(f"Performing poisson disc sampling for object placement.")
-
-            for key in objs_per_region:
-                total_arr = total_arr[:6000, :6000]
-
-                obs = objs_per_region[key]
-                if len(obs) > 0 and np.isin(int(key), total_arr):
-                    self._log(f"Sampling for {key}.")
-                    for obj in obs:
-                        area, coords = fill_area(
-                            total_arr,
-                            obj.poisson_size / self._WORLD_TO_POISSON_SCALE,
-                            int(key),
-                            999,
-                        )
-                        if obj.unique_id not in self.objects_to_spawn:
-                            self.objects_to_spawn[obj.unique_id] = coords
-                        else:
-                            self.objects_to_spawn[obj.unique_id] = (
-                                self.objects_to_spawn[obj.unique_id] + coords
-                            )
-            return total_arr, n, terrain_info, preload_hm
+    def _generate_terrain(self, arr, region_id, region_data, n):
+        new_arr = PerlinNoise.generate_region2(
+            seed=int(region_id),
+            shape=(n, n),
+            threshold=float(region_data["threshold"]),
+            show_plot=False,
+            region_value=int(region_id),
+        )
+        return append_to_area(arr, new_arr, int(region_id))
+    # def _read_world(self):
+    #     self.objects_to_spawn = {}
+    #     data = None
+    #     objs_per_region = {}
+    #     with open(self._world_path, "r+") as infile:
+    #         data = json.load(infile)
+    #     if data != None:
+    #         n = data["size"]
+    #
+    #         # lets check if there is a preloaded heightmap and mask
+    #         preload_hm = data.get("heightmap", None)
+    #         preload_mask = data.get("mask", None)
+    #         ignore_gen = False
+    #         use_preloaded_mask = False
+    #
+    #         if preload_hm:
+    #             ignore_gen = True
+    #             preload_hm = np.load(preload_hm)
+    #             preload_hm = self.pad_to_square(preload_hm)
+    #         else:
+    #             preload_hm = None
+    #
+    #         if preload_mask:
+    #             preload_mask = np.load(preload_mask)
+    #
+    #             preload_mask = self.pad_to_square(preload_mask)
+    #             if preload_hm is None:
+    #                 preload_mask = self.pad_to_multiple_of_eight(preload_mask)
+    #             preload_mask = preload_mask[:6000][:6000]
+    #
+    #             use_preloaded_mask = True
+    #             ignore_gen = True
+    #
+    #             n = len(preload_mask)
+    #
+    #         arr = np.zeros((n, n))
+    #         self._log(f"Size of arr: {arr.shape}")
+    #         total_arr = np.zeros((n, n))
+    #         regions = data["regions"]
+    #         terrain_info = {}
+    #         for region_id in regions:
+    #             region_id = str(region_id)
+    #
+    #             terrain_info[region_id] = TerrainPrim(
+    #                 "",
+    #                 regions[region_id]["material_path"],
+    #                 regions[region_id]["material_scale"],
+    #             )
+    #             # print("terrrain info key type ", type(region_id))
+    #             if not ignore_gen:
+    #                 new_arr = PerlinNoise.generate_region2(
+    #                     seed=int(region_id),
+    #                     shape=(n, n),
+    #                     threshold=float(regions[region_id]["threshold"]),
+    #                     show_plot=False,
+    #                     region_value=int(region_id),
+    #                 )
+    #
+    #                 arr = append_to_area(arr, new_arr, int(region_id))
+    #             total_arr = arr
+    #             # handle objects in the zone
+    #             objs = regions[region_id]["objects"]
+    #             objs_per_region[region_id] = []
+    #             if len(objs) > 0:
+    #                 for obj_uid in objs:
+    #                     # get corresponding object from objects
+    #                     object_prim = self.objects_dict[str(obj_uid)]
+    #                     objs_per_region[region_id].append(object_prim)
+    #
+    #             # now we need to deal with sub zones
+    #             zones = regions[region_id]["zones"]
+    #             for zone_id in zones:
+    #                 terrain_info[str(zone_id)] = TerrainPrim(
+    #                     "",
+    #                     zones[zone_id]["material_path"],
+    #                     zones[zone_id]["material_scale"],
+    #                 )
+    #
+    #                 if not ignore_gen:
+    #                     new_arr = PerlinNoise.generate_region2(
+    #                         seed=int(zone_id),
+    #                         shape=(n, n),
+    #                         threshold=float(zones[zone_id]["threshold"]),
+    #                         show_plot=False,
+    #                         region_value=int(zone_id),
+    #                     )
+    #
+    #                     zone_to_save = append_inside_area(arr, new_arr, int(zone_id))
+    #
+    #                     total_arr = zone_to_save
+    #                 objs = zones[zone_id]["objects"]
+    #
+    #                 objs_per_region[zone_id] = []
+    #                 if len(objs) > 0:
+    #                     for obj_uid in objs:
+    #                         # get corresponding object from objects
+    #                         object_prim = self.objects_dict[obj_uid]
+    #
+    #                         objs_per_region[zone_id].append(object_prim)
+    #
+    #         if ignore_gen or use_preloaded_mask:
+    #             total_arr = preload_mask
+    #
+    #         self._log(f"Performing poisson disc sampling for object placement.")
+    #
+    #         for key in objs_per_region:
+    #             total_arr = total_arr[:6000, :6000]
+    #
+    #             obs = objs_per_region[key]
+    #             if len(obs) > 0 and np.isin(int(key), total_arr):
+    #                 self._log(f"Sampling for {key}.")
+    #                 for obj in obs:
+    #                     area, coords = fill_area(
+    #                         total_arr,
+    #                         obj.poisson_size / self._WORLD_TO_POISSON_SCALE,
+    #                         int(key),
+    #                         999,
+    #                     )
+    #                     if obj.unique_id not in self.objects_to_spawn:
+    #                         self.objects_to_spawn[obj.unique_id] = coords
+    #                     else:
+    #                         self.objects_to_spawn[obj.unique_id] = (
+    #                             self.objects_to_spawn[obj.unique_id] + coords
+    #                         )
+    #         return total_arr, n, terrain_info, preload_hm
 
 
 def generate_world_from_file(world_path, object_path):

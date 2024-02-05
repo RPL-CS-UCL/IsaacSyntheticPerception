@@ -52,6 +52,8 @@ class DepthCamera:
         pathlib.Path(path +"/cameraDepth").mkdir(parents=True, exist_ok=True)
         pathlib.Path(path +"/cameraLabels").mkdir(parents=True, exist_ok=True)
         pathlib.Path(path +"/cameraPC").mkdir(parents=True, exist_ok=True)
+    def init_ros(self):
+        pass
 
     def init_sensor(self, parent):
         # print(self.__clipping_range)

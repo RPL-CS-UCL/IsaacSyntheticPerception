@@ -71,8 +71,28 @@ from .core.objects import Object
 # from omni.isaac.core.utils import ray_cast
 
 from omni.isaac.core.utils.collisions import ray_cast
+from omni.isaac.core.utils import extensions
+
+extensions.enable_extension("omni.isaac.ros_bridge")
+import rospy
+
+import os
+import rospy
+
+# import urlparse  # For Python 2, use 'urlparse'. For Python 3, use 'urllib.parse'
 
 
+def get_ros_master_uri():
+    # Get the ROS Master URI from the environment variable
+    return os.environ.get("ROS_MASTER_URI")
+
+
+def get_ros_master_ip():
+    # Get the ROS Master URI from the environment variable
+    return os.environ.get("ROS_MASTER_IP")
+
+
+# import RosBridge
 class SelectedPrim:
     def __init__(self) -> None:
         self.prim = None
@@ -148,6 +168,10 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         self.stage_event_delegate = self.events.create_subscription_to_pop(
             self._get_obj_details, name="Object Info Selection Update"
         )
+        # rospy.init_node("asdasd",anonymous=True)
+        os.environ["ROS_MASTER_URI"] = "http://10.20.21.1:11311"
+        os.environ["ROS_IP"] = "10.20.21.1"
+        print("&&&&&&&&&&&& ros master uri ", get_ros_master_uri(), get_ros_master_ip())
 
     def on_stage_event(self, event):
         if event.type == int(omni.usd.StageEventType.SELECTION_CHANGED):
@@ -221,7 +245,15 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         def load_sensor_rig_from_path():
             if has_missing_inputs_init_rig():
                 return
-            asyncio.ensure_future(init_rig_and_waypoints())
+            # asyncio.ensure_future(init_rig_and_waypoints())
+
+            self.sample.init_sensor_rig_from_file(
+                self.build_sensor_rig_ui_values["RigPath"],
+                self.build_sensor_rig_ui_values["OutputSavePath"],
+            )
+            print("()()()()()()()(() loading and stuff)")
+
+            self.sample.init_rig_ros()
 
             stage = omni.usd.get_context().get_stage()
             parent = stage.GetPrimAtPath("/_WAYPOINTS_")
@@ -421,19 +453,23 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     "Sensor Rig settings path",
                     "None",
                     read_only=False,
+                    default_value = "/home/jon/Documents/buzz_backup/sensors.json",
                     use_folder_picker=True,
                     item_filter_fn=self._true,
                     on_value_changed_fn=update_sensor_rig_path,
                 )
+                update_sensor_rig_path("/home/jon/Documents/buzz_backup/sensors.json")
 
                 self._sensor_rig_ui_inputs["OutputSavePath"] = StringField(
                     "Output path",
                     "None",
                     read_only=False,
+                    default_value = "/home/jon/Desktop",
                     use_folder_picker=True,
                     item_filter_fn=self._true,
                     on_value_changed_fn=update_output_save_path,
                 )
+                update_output_save_path("/home/jon/Desktop")
                 self._sensor_rig_ui_inputs["LoadRig"] = Button(
                     "Load sensor rig",
                     "Load",
@@ -451,10 +487,13 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     "Waypoints path",
                     "None",
                     read_only=False,
+
+                    default_value = "/home/jon/Documents/buzz_backup/way6.json",
                     use_folder_picker=True,
                     item_filter_fn=self._true,
                     on_value_changed_fn=update_waypoint_path,
                 )
+                update_waypoint_path("/home/jon/Documents/buzz_backup/way6.json")
 
                 self._sensor_rig_ui_inputs["LoadWaypoints"] = Button(
                     "Load & attach waypoints",
@@ -871,4 +910,3 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     "Initialize",
                     on_click_fn=self.init_semantics_in_scene,
                 )
-
