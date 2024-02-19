@@ -70,6 +70,7 @@ from .core.objects import Object
 # from .core.rig import Rig
 # from omni.isaac.core.utils import ray_cast
 
+from omni.isaac.core import World
 from omni.isaac.core.utils.collisions import ray_cast
 from omni.isaac.core.utils import extensions
 
@@ -274,14 +275,25 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
         def update_waypoint_path(val):
             self.build_sensor_rig_ui_values["WaypointPath"] = val
 
+        # NOTE REVERT ROUND HERE
         def load_waypoints_intermediate():
             asyncio.ensure_future(load_waypoints())
+            # load_waypoints()
 
         async def load_waypoints():
             if has_missing_inputs_wp():
                 return
-            # self.sample.force_reload()
-            await asyncio.ensure_future(self.sample._on_load_world_async())
+            # await asyncio.ensure_future(self.sample._on_load_world_async())
+            print("trying to update stage async")
+            # update_stage()
+            await asyncio.ensure_future(update_stage_async())
+            await asyncio.ensure_future(update_stage_async())
+            await asyncio.ensure_future(update_stage_async())
+            await asyncio.ensure_future(update_stage_async())
+            await asyncio.ensure_future(update_stage_async())
+            await asyncio.ensure_future(update_stage_async())
+            await asyncio.ensure_future(update_stage_async())
+            print("stage updated")
             # await asyncio.ensure_future(self.sample.init_world())
             # print(self.sample._world.GetAttributes())
             # print(self.sample._world.__dir__())
@@ -320,14 +332,30 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                         "/_WAYPOINTS_/w_{:02d}".format(i + 1), "Cube"
                     )
                     UsdGeom.Xformable(cube_prim).AddTranslateOp().Set(Gf.Vec3d(c))
-                self.sample.sr.initialize_waypoints_preloaded(
-                    json_data, stage.GetPrimAtPath("/_WAYPOINTS_")
-                )
+                # self.sample.init_sim()
+                # print(" === ", World.instance())
+
+                await asyncio.ensure_future(update_stage_async())
+                await asyncio.ensure_future(update_stage_async())
+                await asyncio.ensure_future(update_stage_async())
+                await asyncio.ensure_future(update_stage_async())
+                await asyncio.ensure_future(update_stage_async())
+                await asyncio.ensure_future(self.sample.sr.initialize_waypoints_preloaded(
+                    json_data, stage.GetPrimAtPath("/_WAYPOINTS_"), self.sample._world
+                ))
+
+            # self.sample.world.add_physics_callback(
+            #     "sim_step", callback_fn=self.sample.sr.move
+            # )
+
+            # for prim_ref in stage.Traverse():
+            #     prim_ref_name = str(prim_ref.GetPrimPath())
+            #     if "WAYPOINTS" in prim_ref_name:
+            #         delete_prim(prim_ref_name)
 
             self.sample._world.add_physics_callback(
                 "sim_step", callback_fn=self.sample.sr.move
             )
-
             self.sample.attach_sensor_sample_callback()
 
         def update_output_save_path(val):
@@ -464,12 +492,12 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     "Output path",
                     "None",
                     read_only=False,
-                    default_value = "/home/jon/Desktop",
+                    default_value = "",
                     use_folder_picker=True,
                     item_filter_fn=self._true,
                     on_value_changed_fn=update_output_save_path,
                 )
-                update_output_save_path("/home/jon/Desktop")
+                # update_output_save_path("/home/jon/Desktop")
                 self._sensor_rig_ui_inputs["LoadRig"] = Button(
                     "Load sensor rig",
                     "Load",
@@ -852,11 +880,58 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
             return
         print("Starting world gen")
         WG = WorldManager()
-        WG.create_world(self._world_path, self._object_path)
-        print("world creation finished")
+        WG.create_world(self._world_path, self._object_path, self.sample._world)
+        self.sample.get_world().play()
+        self.sample.get_world().pause()
+        self.sample.get_world().play()
+
+        print("world creation finished, sim will hang until physics are ready")
 
         return
 
+    def _run_world_creation_async_call(self):
+        asyncio.ensure_future(self._run_world_creation_async())
+
+    async def _run_world_creation_async(self):
+        errors = []
+
+        if self._object_path == "":
+            errors.append("No Object path specified.")
+        if ".json" not in self._object_path:
+            errors.append("Object path does not contain .json extension.")
+        if self._world_path == "":
+            errors.append("No world path environment file was specified.")
+        if ".json" not in self._world_path:
+            errors.append("World path does not contain .json exntension.")
+
+        # if we are here we have been given a path
+        # prevent isaac adding the odd "file://"
+        if "file://" in self._object_path:
+            self._object_path = self._object_path.split("://")[-1]
+
+        if "file://" in self._world_path:
+            self._world_path = self._world_path.split("://")[-1]
+        # Check if both files exist
+        if not self._check_file_exists(self._object_path):
+            errors.append("Object path file specified does not exist.")
+
+        if not self._check_file_exists(self._world_path):
+            errors.append("World path file specified does not exist.")
+
+        if len(errors) != 0:
+            message_out = "".join([str + "\n" for str in errors])
+            dialog = FormDialog(
+                title="ERROR",
+                message=message_out,
+                ok_handler=lambda dialog: print(
+                    f"Form accepted: '{dialog.get_values()}'"
+                ),
+            )
+            return
+        print("Starting world gen")
+        WG = WorldManager()
+        WG.create_world(self._world_path, self._object_path)
+        print("world creation finished")
     def build_pcg_env_ui(self, frame):
         def open_world_creator():
             pass
@@ -903,6 +978,7 @@ class SyntheticPerceptionExtension(BaseSampleExtension):
                     "Initialize world generation",
                     "Create World",
                     on_click_fn=self._run_world_creation,
+                    # on_click_fn=self._run_world_creation_async_call,
                 )
 
                 self.world_gen_ui_elements["InitSemantics"] = Button(

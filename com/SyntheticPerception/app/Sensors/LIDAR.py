@@ -38,6 +38,10 @@ import struct
 import inspect
 from sensor_msgs import point_cloud2
 
+from omni.syntheticdata import helpers
+from omni.isaac.core.utils.prims import get_prim_at_path  # , get_prim_property
+
+
 class Lidar:
     def __init__(
         self,
@@ -74,15 +78,32 @@ class Lidar:
         self.__rotation = [0.0, 0.0, 0.0]
         self.sample_count = 0
         self.save_path = None
-        self._o = "[LiDAR] "
 
+        self._syn_interface =None
+        self._o = "[LiDAR] "
+        self.sequence = 0
+    
+
+    def _init_seq_folder(self,int_seq):
+        seq = format(int_seq, '02d')
+
+        velo_path = pathlib.Path(f"{self.save_path}/sequences_raw/{seq}/velodyne")
+        if not velo_path.is_dir():
+            velo_path.mkdir(parents=True, exist_ok=True)
+
+        label_path = pathlib.Path(f"{self.save_path}/sequences_raw/{seq}/labels")
+        if not label_path.is_dir():
+            label_path.mkdir(parents=True, exist_ok=True)
+
+        # pathlib.Path(path + "/velodyneLabels").mkdir(parents=True, exist_ok=True)
     def init_output_folder(self, path):
         print(f"{self._o} Initializing output folders")
         self.save_path = path
 
-        pathlib.Path(path + "/velodyne").mkdir(parents=True, exist_ok=True)
-
-        pathlib.Path(path + "/velodyneLabels").mkdir(parents=True, exist_ok=True)
+        self._init_seq_folder(0)
+        # pathlib.Path(path + "/velodyne").mkdir(parents=True, exist_ok=True)
+        #
+        # pathlib.Path(path + "/velodyneLabels").mkdir(parents=True, exist_ok=True)
 
     def read_from_json(self, data):
         # We have been given data["LIDAR"]
@@ -125,21 +146,28 @@ class Lidar:
         self.annotator = rep.AnnotatorRegistry.get_annotator(
             "RtxSensorCpuIsaacCreateRTXLidarScanBuffer"
         )
-        self.annotator.initialize(transformPoints=False,outputTimestamp=True, outputObjectId=True, outputDistance=True, outputIntensity=True, outputBeamId=True, outputEmitterId=True)  # outputElevation=True)
+        self.annotator.initialize(
+            transformPoints=False,
+            outputTimestamp=True,
+            outputObjectId=True,
+            outputDistance=True,
+            outputIntensity=True,
+            outputBeamId=True,
+            outputEmitterId=True,
+        )  # outputElevation=True)
         self.annotator.attach([self.hydra_texture])
 
         # print("=== Trying to init writer")
-        # self.writer = rep.writers.get("RtxLidar" + "DebugDrawPointCloud" + "Buffer")
-        # self.writer.attach([self.hydra_texture])
+        self.writer = rep.writers.get("RtxLidar" + "DebugDrawPointCloud" + "Buffer")
+        self.writer.attach([self.hydra_texture])
         # self.annotator2 = rep.AnnotatorRegistry.get_annotator(
         #     "RtxSensorCpuIsaacReadRTXLidarData"
         # )
-        argspec = inspect.getfullargspec(self.annotator.initialize)
-        default_values = argspec.defaults
-        kwarg_names = argspec.args[-len(default_values):] if default_values else []
+        # argspec = inspect.getfullargspec(self.annotator.initialize)
+        # default_values = argspec.defaults
+        # kwarg_names = argspec.args[-len(default_values) :] if default_values else []
 
-        print("Keyword argument names:", kwarg_names)
-
+        # print("Keyword argument names:", kwarg_names)
 
         # self.annotator2.initialize(outputData=True)
         # self.annotator2.attach([self.hydra_texture])
@@ -148,6 +176,7 @@ class Lidar:
         # self.writer2.initialize(topicName="ouster/points", frameId="camera_init")
         # self.writer2.attach([self.hydra_texture])
 
+        # ====== outdated physx lidar, left incase
         # self.__lidarInterface = _range_sensor.acquire_lidar_sensor_interface()
         # _, self.__lidar_prim = omni.kit.commands.execute(
         #     'RangeSensorCreateLidar',
@@ -178,17 +207,14 @@ class Lidar:
         print("initialising ros for lidar")
         rospy.init_node("lidarnod2", anonymous=True)
         self.pub = rospy.Publisher("/ouster/points", PointCloud2, queue_size=10)
+
+        self.obj_pub = rospy.Publisher("/objects", String, queue_size=10)
         # rospy.init_node('point_cloud_listener', anonymous=True)
         # rospy.Subscriber("/ouster/points", PointCloud2, self.point_cloud_callback)
         # rospy.spin()
 
-    # def sample_sensor(self):
-    #     self.get_pc_and_semantic()
     def sample_sensor(self):
-        # print("999999")
-        # return
         self.get_pc_and_semantic()
-
         self.sample_count += 1
 
     def array_to_pointcloud2(self, cloud_arr, stamp=None, frame_id=None):
@@ -212,75 +238,9 @@ class Lidar:
         cloud_msg.data = cloud_arr.tostring()
         return cloud_msg
 
-    # def create_point_cloud2(
-    #     self, points, intensities, timestamps,rings,ranges, frame_id="os_sensor"
-    # ):
-    #     """
-    #     Create a sensor_msgs/PointCloud2 message from point cloud data.
-    #
-    #     :param points: Nx3 numpy array of xyz positions.
-    #     :param intensities: N-sized numpy array of intensity values.
-    #     :param frame_id: frame ID for the point cloud.
-    #     :return: PointCloud2 message.
-    #     """
-    #     # Create header
-    #     header = rospy.Header()
-    #     header.stamp = rospy.Time.now()
-    #     # print(po# ints)
-    #     print("header in nano", header.stamp.to_nsec())
-    #     # print("a point from the points", timestamps[0])
-    #
-    #     # print(header.stamp)
-    #     header.frame_id = frame_id
-    #
-    #     # Create fields for PointCloud2
-    #     fields = [
-    #         PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
-    #         PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
-    #         PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
-    #         PointField(
-    #             name="intensity", offset=16, datatype=PointField.FLOAT32, count=1
-    #         ),
-    #
-    #         PointField(name="t", offset=20, datatype=PointField.UINT32, count=1),
-    #         PointField(
-    #             name="reflectivity", offset=24, datatype=PointField.UINT16, count=1
-    #         ),
-    #
-    #         PointField(name="ring", offset=26, datatype=PointField.UINT16, count=1),
-    #         PointField(name="ambient", offset=28, datatype=PointField.UINT16, count=1),
-    #         PointField(name="range", offset=32, datatype=PointField.UINT32, count=1),
-    #     ]
-    #
-    #     # Convert data to bytes
-    #     buf = []
-    #     for point, intensity,timestamp,ring,range in zip(points, intensities,timestamps,rings,ranges):
-    #         # print(point)
-    #         buf.append(struct.pack("fff", *point))
-    #         buf.append(struct.pack("f", intensity))
-    #
-    #         buf.append(struct.pack("f",int(timestamp)))  # t
-    #         buf.append(struct.pack("H", 1))  # reflec
-    #
-    #         buf.append(struct.pack("H", ring))  # ring
-    #         buf.append(struct.pack("H", 1))  # amb
-    #
-    #         buf.append(struct.pack("I", range))  # range
-    #
-    #     # Create PointCloud2 message
-    #     pc2 = PointCloud2()
-    #     pc2.header = header
-    #     pc2.height = 1
-    #     pc2.width = len(points)
-    #     pc2.is_dense = False
-    #     pc2.is_bigendian = False
-    #     pc2.fields = fields
-    #     pc2.point_step = 40 # size of point in bytes
-    #     pc2.row_step = pc2.point_step * pc2.width
-    #     pc2.data = b"".join(buf)
-    #
-    #     return pc2
-    def create_point_cloud2(self, points, intensities, timestamps, rings, ranges, frame_id="os_lidar"):
+    def create_point_cloud2(
+        self, points, intensities, timestamps, rings, ranges, frame_id="os_lidar"
+    ):
         # Create header
         header = rospy.Header()
         header.stamp = rospy.Time.now()
@@ -289,12 +249,16 @@ class Lidar:
 
         # Create fields for PointCloud2
         fields = [
-            PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1), #4,
-            PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1), #8
-            PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),#12
-            PointField(name="intensity", offset=16, datatype=PointField.FLOAT32, count=1),
+            PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),  # 4,
+            PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),  # 8
+            PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),  # 12
+            PointField(
+                name="intensity", offset=16, datatype=PointField.FLOAT32, count=1
+            ),
             PointField(name="t", offset=20, datatype=PointField.UINT32, count=1),
-            PointField(name="reflectivity", offset=24, datatype=PointField.UINT16, count=1),
+            PointField(
+                name="reflectivity", offset=24, datatype=PointField.UINT16, count=1
+            ),
             PointField(name="ring", offset=26, datatype=PointField.UINT16, count=1),
             PointField(name="ambient", offset=28, datatype=PointField.UINT16, count=1),
             PointField(name="range", offset=32, datatype=PointField.UINT32, count=1),
@@ -302,23 +266,27 @@ class Lidar:
 
         # Convert data to bytes
         buf = []
-        for point, intensity, timestamp, ring, rangee in zip(points, intensities, timestamps, rings, ranges):
+        for point, intensity, timestamp, ring, rangee in zip(
+            points, intensities, timestamps, rings, ranges
+        ):
             # print(ring)
             # Pack each point data with padding to align the total size to 40 bytes
             point_data = struct.pack("fff", *point)  # 12 bytes for x, y, z
 
-            point_data += b'\x00' * 4  # 6 bytes of padding to reach 40 bytes total
+            point_data += b"\x00" * 4  # 6 bytes of padding to reach 40 bytes total
             point_data += struct.pack("f", intensity)  # 4 bytes for intensity
-            point_data += struct.pack("I", int(timestamp/10000))  # 4 bytes for timestamp
+            point_data += struct.pack(
+                "I", int(timestamp / 10000)
+            )  # 4 bytes for timestamp
 
             point_data += struct.pack("H", int(5))  # 2 bytes for reflectivity
 
             point_data += struct.pack("H", int(ring))  # 2 bytes for ring
             point_data += struct.pack("H", int(3))  # 2 bytes for ambient
 
-            point_data += b'\x00' * 2  # 6 bytes of padding to reach 40 bytes total
+            point_data += b"\x00" * 2  # 6 bytes of padding to reach 40 bytes total
             point_data += struct.pack("I", int(rangee))  # 4 bytes for range
-            point_data += b'\x00' * 4# 6 bytes of padding to reach 40 bytes total
+            point_data += b"\x00" * 4  # 6 bytes of padding to reach 40 bytes total
 
             buf.append(point_data)
 
@@ -360,7 +328,9 @@ class Lidar:
 
         header_stamp_sec = point_cloud.header.stamp.to_sec()  # Convert to seconds
         header_stamp_nsec = point_cloud.header.stamp.to_nsec()  # Convert to nanoseconds
-        print(f"Header Stamp: {header_stamp_sec} seconds, {header_stamp_nsec} nanoseconds")
+        print(
+            f"Header Stamp: {header_stamp_sec} seconds, {header_stamp_nsec} nanoseconds"
+        )
 
         # Calculate the number of points in the cloud
         num_points = len(point_cloud.data) // point_cloud.point_step
@@ -370,116 +340,117 @@ class Lidar:
             # Calculate the starting byte of the current point
             start_byte = i * point_cloud.point_step
             # Decode each field based on its offset and type
-            x = struct.unpack_from('f', point_cloud.data, start_byte + 0)[0]
-            y = struct.unpack_from('f', point_cloud.data, start_byte + 4)[0]
-            z = struct.unpack_from('f', point_cloud.data, start_byte + 8)[0]
-            intensity = struct.unpack_from('f', point_cloud.data, start_byte + 16)[0]
-            timestamp = struct.unpack_from('I', point_cloud.data, start_byte + 20)[0]
-            reflectivity = struct.unpack_from('H', point_cloud.data, start_byte + 24)[0]
-            ring = struct.unpack_from('H', point_cloud.data, start_byte + 26)[0]
-            ambient = struct.unpack_from('H', point_cloud.data, start_byte + 28)[0]
-            range2 = struct.unpack_from('I', point_cloud.data, start_byte + 32)[0]
+            x = struct.unpack_from("f", point_cloud.data, start_byte + 0)[0]
+            y = struct.unpack_from("f", point_cloud.data, start_byte + 4)[0]
+            z = struct.unpack_from("f", point_cloud.data, start_byte + 8)[0]
+            intensity = struct.unpack_from("f", point_cloud.data, start_byte + 16)[0]
+            timestamp = struct.unpack_from("I", point_cloud.data, start_byte + 20)[0]
+            reflectivity = struct.unpack_from("H", point_cloud.data, start_byte + 24)[0]
+            ring = struct.unpack_from("H", point_cloud.data, start_byte + 26)[0]
+            ambient = struct.unpack_from("H", point_cloud.data, start_byte + 28)[0]
+            range2 = struct.unpack_from("I", point_cloud.data, start_byte + 32)[0]
 
-            print(f"{header_stamp_sec} seconds, {header_stamp_nsec} nanoseconds - Point: x={x}, y={y}, z={z}, intensity={intensity}, timestamp={timestamp}, ring={ring}, range={range2}")
+            print(
+                f"{header_stamp_sec} seconds, {header_stamp_nsec} nanoseconds - Point: x={x}, y={y}, z={z}, intensity={intensity}, timestamp={timestamp}, ring={ring}, range={range2}"
+            )
+
     def get_pc_and_semantic(self, save_path="/home/jon/Documents/temp/a"):
-        # return
-        # pointcloud = self.__lidarInterface.get_point_cloud_data(
-        #     self.__lidar_path
-        # )
-        # semantics = self.__lidarInterface.get_semantic_data(self.__lidar_path)
-        # # point_cloud, semantics = self.__clear_max_lidar_points(pointcloud,semantics,self.__get_position(),self.__max_range)
-        # # all_hit = self.__lidarInterface.get_prim_data(self.__lidar_path)
-        # # print(semantics)
-        # #
-        # header = std_msgs.msg.Header()
-        # header.stamp = rospy.Time.now()
-        # header.frame_id = 'map'
-        # pointcloud= np.array(pointcloud).reshape(-1, 3)
+        ob_ids = self.annotator.get_data()["objectId"]  # ids
+        unique_obs_ids = set(ob_ids)
+        semantic_labels = []
 
-        # get the data
-        # print(" :: ", self.annotator.get_data())
-        # print(self.annotator.get_data())
 
-        # print(" ==================== ")
-        # print(self.annotator.get_data())
-        # print("*****")
-        # print(self.annotator.get_data().get("objectId", None))
-
-        # print(self.annotator2.get_data())
-        # print("&&&&&&&&&&&&&&&")
-        # ComputeRTXLidarPointCloudNode = og.Controller().node(
-        #     "/Render/PostProcess/SDGPipeline/RenderProduct_Isaac_RtxSensorCpuIsaacComputeRTXLidarPointCloud"
-        # )
-        # pointCloudData = ComputeRTXLidarPointCloudNode.get_attribute(
-        #     "outputs:pointCloudData"
-        # ).get()
-        # ob_ids = self.annotator.get_data()["objectId"]  # ids
-        # unique_obs_ids = set(ob_ids)
-        # # print(unique_obs_ids)
+        
+        # current_velo_save_dir = pathlib.Path(f"{self.save_path}velodyne/{format(self.sequence, '02d')}")
+        # if not current_velo_save_dir.is_dir():
+        #     current_velo_save_dir .mkdir(parents=True, exist_ok=True)
+        # current_velo_label_save_dir = pathlib.Path(f"{self.save_path}velodyneLabels/{format(self.sequence, '02d')}")
         #
-        # for id in unique_obs_ids:
+        # if not current_velo_label_save_dir.is_dir():
+        #     current_velo_label_save_dir.mkdir(parents=True, exist_ok=True)
+        # ==================================================
+        # code for the llm graph stuff
+        # llm_strings = []
+        # for u_obj in unique_obs_ids:
         #     primpath = (
         #         acquire_syntheticdata_interface().get_uri_from_instance_segmentation_id(
-        #             id
+        #             u_obj
         #         )
-        #     )
-        # print(self.annotator.get_data())
-        # emitId = self.annotator.get_data()["emitterId"]
+        #         )
+        #     primpath_split = primpath.split("/")
+        #     llm_strings.append(primpath_split[-1])
+        # print(llm_strings)
+        # self.obj_pub.publish(",".join(llm_strings))
+        # return
+        # ==============================================
+        if self._syn_interface is None:
+            self._syn_interface = acquire_syntheticdata_interface()
 
-        # timestamp = self.annotator.get_data()["timestamp"]
-        # print(t)
-        # print(self.annotator.get_data())
+        # Get all the unique objects and get their class labels:
+        obj_to_class = {}
+        for u_obj in unique_obs_ids:
+            primpath = (
+                self._syn_interface.get_uri_from_instance_segmentation_id(
+                    u_obj
+                )
+            )
+            # we most likely got the most child node, but we will need its most
+            # obj parent
+            primpath_split = primpath.split("/")
+            path_id = 0
+            for word in primpath_split:
+                path_id += 1
+                if "class" in word:
+                    break
+            # path id will be at the obj path of class, we want the obj just below it
+            # path_id +=1
+            primpath = "/".join(primpath_split[: path_id + 1])
+
+            prim = get_prim_at_path(primpath)
+            semantic_api = Semantics.SemanticsAPI.Get(prim, "Semantics")
+            type_attr = semantic_api.GetSemanticTypeAttr()
+            data_attr = semantic_api.GetSemanticDataAttr()
+            obj_to_class[u_obj] = data_attr.Get()
+            if obj_to_class[u_obj] is None:
+                obj_to_class[u_obj] = "None"
+
+            # print(f"querying ", primpath, "  :  ", obj_to_class[u_obj])
+
+        raw_mapping = helpers.get_instance_mappings()
+        self.mapping = {"None": 9999}
+        for data in raw_mapping:
+            class_id = data[2]
+            class_name = data[3]
+            if class_id not in self.mapping:
+                self.mapping[class_name] = class_id
+        # print(self.mapping)
+        # print(obj_to_class)
+
+        object_id_to_class_name = np.vectorize(lambda x: obj_to_class[x])(ob_ids)
+
+        final_class_ids = np.vectorize(lambda x: self.mapping[x])(
+            object_id_to_class_name
+        )
+
         pc = self.annotator.get_data()["data"]
-        # print(pc)
-        t= self.annotator.get_data()["timestamp"]
-        # t = timestamp
-        # if len(timestamp) > 0:
-        #     m = min(timestamp)
-        #
-        #     t = [x /1000 for x in timestamp]
-        # print("size diff ", max(timestamp)-min(timestamp))
-        # print(timestamp)
+        # print(final_class_ids)
 
+        # ======= The following are other possible data we can get
+        t = self.annotator.get_data()["timestamp"]
         intensities = self.annotator.get_data()["intensity"]
-
-        # intensities = [x * 1000 for x in intensities]
-        beamId= self.annotator.get_data()["beamId"]
-        # print(beamId)
+        beamId = self.annotator.get_data()["beamId"]
         distance = self.annotator.get_data()["distance"]
-        # print(ob_ids)
-        # distance = [int(x * 100) for x in distance]
-        # print("=== data from lidar")
-        # print("pc: ",  pc)
-        # print("intensity: ",intensities)
-        # print("beamid: ",beamId)
 
-        # print("timestamp: ",  timestamp)
-        # print("delta ", timestamp[-1]-timestamp[0])
-        # print("delata2 ", max(timestamp) - min(timestamp))
-
-        # print("distance: ",distance)
-
+        # ===== the following line is needed to convert and publish
         msg = self.create_point_cloud2(pc, intensities, t,beamId,distance)
-        # print("dist ", self.annotator.get_data()["distance"])
-        # print("beamid", self.annotator.get_data()["beamId"])
-        # print(primpath)
-
-        # distances = np.linalg.norm(pointcloud, axis=1)
-        #
-        # mask = distances < self.__max_range
-        #
-        # pointcloud=pointcloud[mask]
-        # pc_msg= pcl2.create_cloud_xyz32(header,pointcloud)
-        # print(msg)
-        #
         self.pub.publish(msg)
-        # all_hit_unique =set(all_hit)
-        # for obj in all_hit_unique:
-        #     print(obj.__dir__())
-        # print(semantics)
-
-        # np.save(f"{self.save_path}velodyne/{self.sample_count}.npy",pointcloud)
-        # np.save(f"{self.save_path}velodyneLabels/{self.sample_count}.npy",semantics, allow_pickle=True)
+        # =================================
+        
+        np.save(f"{self.save_path}sequences_raw/{format(self.sequence, '02d')}/velodyne/{self.sample_count}.npy",pc)
+        np.save(f"{self.save_path}sequences_raw/{format(self.sequence, '02d')}/labels/{self.sample_count}.npy",final_class_ids, allow_pickle=True)
+        if self.sample_count > 1000:
+            self.sequence +=1
+            self.sample_count = 0
         # return pointcloud, semantics
         return None, None
 

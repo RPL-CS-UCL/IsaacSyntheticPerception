@@ -52,7 +52,9 @@ from pxr import Sdf
 import omni.physx
 from omni.physx import get_physx_scene_query_interface
 import rospy
-
+from omni.isaac.core import World
+from omni.isaac.core.scenes.scene import Scene
+from omni.isaac.core.utils.stage import create_new_stage_async, update_stage_async
 
 class SyntheticPerception(BaseSample):
     """
@@ -62,11 +64,14 @@ class SyntheticPerception(BaseSample):
 
     def __init__(self) -> None:
         super().__init__()
+
+        # ==== default world setup
+        self._world = None
+        self._world_settings = {"physics_dt": 1.0 / 60.0, "stage_units_in_meters": 1.0, "rendering_dt": 1.0 / 60.0}
         self.__created_objs = []
         self.save_count = 0
         self.obstacles = []
         self.__undefined_class_string = "undef"
-
         self.sr = SensorRig("SensorRig", "/World")
 
         self._event_flag = False
@@ -94,6 +99,43 @@ class SyntheticPerception(BaseSample):
             "M": [0.0, 0.0, -1.0],
         }
 
+    # ================ default sim stuff
+    def set_world_settings(self, physics_dt=None, stage_units_in_meters=None, rendering_dt=None):
+        if physics_dt is not None:
+            self._world_settings["physics_dt"] = physics_dt
+        if stage_units_in_meters is not None:
+            self._world_settings["stage_units_in_meters"] = stage_units_in_meters
+        if rendering_dt is not None:
+            self._world_settings["rendering_dt"] = rendering_dt
+        return
+
+    async def load_world_async(self):
+        """Function called when clicking load buttton"""
+        print("")
+        if World.instance() is None:
+            await create_new_stage_async()
+            self._world = World(**self._world_settings)
+            await self._world.initialize_simulation_context_async()
+        else:
+            self._world = World.instance()
+
+        await self._world.initialize_simulation_context_async()
+        await self._world.reset_async()
+        await self._world.pause_async()
+        await self.setup_post_load()
+
+        self._world.initialize_physics()
+
+    async def reset_async(self):
+        """Function called when clicking reset buttton"""
+        await self._world.play_async()
+        await update_stage_async()
+        # await self.setup_pre_reset()
+        # await self._world.reset_async()
+        # await self._world.pause_async()
+        # await self.setup_post_reset()
+        return
+    # ============= end of default sim stuff
 
     def _sub_keyboard_event(self, event, *args, **kwargs):
         self._event_flag = False
@@ -111,29 +153,36 @@ class SyntheticPerception(BaseSample):
         self.setup_scene()
 
 
-    async def _on_load_world_async(self):
-        await omni.kit.app.get_app().next_update_async()
-
-        self._world = World(**self._world_settings)
-
-        await self._world.initialize_simulation_context_async()
-        # await self._world.reset_async()
-
-    async def load_sample(self) -> None:
-        """Function called when clicking load buttton"""
-        if World.instance() is None:
-            self._world = World(**self._world_settings)
-            await self._world.initialize_simulation_context_async()
-            self.setup_scene()
-        else:
-            self._world = World.instance()
-        await self._world.reset_async()
-        await self._world.pause_async()
-        await self.setup_post_load()
+    # async def _on_load_world_async(self):
+    #     await omni.kit.app.get_app().next_update_async()
+    #
+    #     self._world = World(**self._world_settings)
+    #
+    #     await self._world.initialize_simulation_context_async()
+    #     # await self._world.reset_async()
+    #
+    # async def load_sample(self) -> None:
+    #     """Function called when clicking load buttton"""
+    #     if World.instance() is None:
+    #         self._world = World(**self._world_settings)
+    #         await self._world.initialize_simulation_context_async()
+    #         self.setup_scene()
+    #     else:
+    #         self._world = World.instance()
+    #     await self._world.reset_async()
+    #     await self._world.pause_async()
+    #     await self.setup_post_load()
 
     def setup_scene(self):
         self.world = self.get_world()
 
+    def init_sim(self) -> None:
+        if World.instance() is None:
+            print("**** creating")
+            self.world = World(**self._world_settings)
+
+            self.world.initialize_simulation_context()
+            self.world = World.instance()
     async def init_world(self) -> None:
         if World.instance() is None:
             self._world = World(**self._world_settings)
@@ -220,9 +269,14 @@ class SyntheticPerception(BaseSample):
         for prim_ref in stage.Traverse():
             prim_ref_name = str(prim_ref.GetPrimPath())
             len_of_prim = len(prim_ref_name.split("/"))
+            # if "/t/" in prim_ref_name:
+            #     print(" ------ skipping adding semantics to ", prim_ref_name)
+            #     continue
             for word in prim_ref_name.split("/"):
                 if "class" in word and word not in completed_classes:
                     prim_class = word
+                    if "-" in prim_class:
+                        prim_class = "".join(prim_class.split("+")[0])
 
                     # self.add_semantic(prim_ref, prim_class)
                     for i in range(len(prim_ref.GetChildren())):
@@ -250,8 +304,12 @@ class SyntheticPerception(BaseSample):
 
     def init_sensor_rig_from_file(self, path, out_path):
         self.stage = omni.usd.get_context().get_stage()  # Used to access Geometry
+
+        # self.sample.get_world().play()
         self.sr.create_rig_from_file(path, self.stage, self._world)
         self.sr.setup_sensor_output_path(out_path)
+
+        # self.sample.get_world().pause()
 
     def sample_sensors(self):
         self.sr.sample_sensors()

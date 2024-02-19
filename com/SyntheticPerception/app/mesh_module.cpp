@@ -9,13 +9,51 @@
 #include <unordered_map>
 #include <vector>
 
-#include <ros/ros.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/PointField.h>
 #include <vector>
 #include <string>
 namespace py = pybind11;
+std::vector<uint8_t> convert_to_bytes(
+    const std::vector<std::array<float, 3>>& points,
+    const std::vector<float>& intensities,
+    const std::vector<uint64_t>& timestamps,
+    const std::vector<uint16_t>& rings,
+    const std::vector<uint32_t>& ranges) {
+    
+    std::vector<uint8_t> buffer;
+    
+    for (size_t i = 0; i < points.size(); ++i) {
+        // Pack each point
+        for (const auto& val : points[i]) {
+            auto bytes = reinterpret_cast<const uint8_t*>(&val);
+            buffer.insert(buffer.end(), bytes, bytes + sizeof(float));
+        }
 
+        buffer.insert(buffer.end(), 4, 0); // 4 bytes of padding
+
+        auto intensity_bytes = reinterpret_cast<const uint8_t*>(&intensities[i]);
+        buffer.insert(buffer.end(), intensity_bytes, intensity_bytes + sizeof(float));
+        
+        uint32_t timestamp = static_cast<uint32_t>(timestamps[i] / 10000);
+        auto timestamp_bytes = reinterpret_cast<const uint8_t*>(&timestamp);
+        buffer.insert(buffer.end(), timestamp_bytes, timestamp_bytes + sizeof(uint32_t));
+
+        buffer.insert(buffer.end(), {0, 0}); // Reflectivity (2 bytes)
+        
+        auto ring_bytes = reinterpret_cast<const uint8_t*>(&rings[i]);
+        buffer.insert(buffer.end(), ring_bytes, ring_bytes + sizeof(uint16_t));
+
+        buffer.insert(buffer.end(), {0, 0}); // Ambient (2 bytes)
+
+        buffer.insert(buffer.end(), 2, 0); // 2 bytes of padding
+
+        auto range_bytes = reinterpret_cast<const uint8_t*>(&ranges[i]);
+        buffer.insert(buffer.end(), range_bytes, range_bytes + sizeof(uint32_t));
+
+        buffer.insert(buffer.end(), 4, 0); // 4 bytes of padding
+    }
+    
+    return buffer;
+}
 // std::vector<std::vector<float>>
 // apply_texture(std::vector<std::vector<float>> &terrainHeightmap,
 //               std::vector<std::vector<float>> &brickHeightMap, int size) {
@@ -63,7 +101,10 @@ std::vector<std::vector<float>>
 build_meshes(int size, double scale,
              const std::vector<std::vector<int>> &regions_map,
              std::vector<std::vector<float>> &points, std::string file_path,
-             std::vector<std::vector<float>> &terrainHeightmap) {
+             std::vector<std::vector<float>> &terrainHeightmap,
+
+                const int chunkSize
+             ) {
 
   // std::cout << "starting building meshpoints array" << std::endl;
 
@@ -85,15 +126,14 @@ build_meshes(int size, double scale,
       std::unordered_map<int, std::shared_ptr<open3d::geometry::TriangleMesh>>>
       chunk_mat_dict;
 
-  const int chunkSize = 2000;
 
   int length = size * scale;
   std::vector<std::vector<float>> return_points(
       length, std::vector<float>(length, 0.0f));
   int l = subdivisions + 1;
-  std::cout << "begin fixing hte points array" << std::endl;
-  std::cout << points.size() << std::endl;
-  std::cout << return_points.size() << std::endl;
+  // std::cout << "begin fixing hte points array" << std::endl;
+  // std::cout << points.size() << std::endl;
+  // std::cout << return_points.size() << std::endl;
   for (int i = 0; i < points.size(); ++i) {
     int row = i / l;
     int col = i % l;
@@ -157,7 +197,7 @@ build_meshes(int size, double scale,
       chunk_mat_dict[chunkNumber][material_key]->triangles_.push_back(vec2);
     }
   }
-  std::cout << "we have created " << numberOfChunkCreated << " chunks" << std::endl;
+  // std::cout << "we have created " << numberOfChunkCreated << " chunks" << std::endl;
 
 
   for (auto &key_value : chunk_mat_dict) {
@@ -188,7 +228,7 @@ build_meshes(int size, double scale,
       name += std::to_string(matID);
       name += ".obj";
 
-      std::cout << name << std::endl;
+      // std::cout << name << std::endl;
       open3d::io::WriteTriangleMesh(
           name, *mesh,
           /* write_ascii = */ false, // If you want to write in binary format,
@@ -266,66 +306,6 @@ compute_base_mesh(int size, double scale,
 }
 
 
-
-sensor_msgs::PointCloud2 createPointCloud2(const std::vector<geometry_msgs::Point32>& points,
-                                           const std::vector<float>& intensities,
-                                           const std::vector<uint32_t>& timestamps,
-                                           const std::vector<uint16_t>& rings,
-                                           const std::vector<uint32_t>& ranges,
-                                           const std::string& frame_id = "os_lidar") {
-    sensor_msgs::PointCloud2 cloud;
-    cloud.header.stamp = ros::Time::now();
-    cloud.header.frame_id = frame_id;
-
-    // Define fields for PointCloud2
-    cloud.fields.resize(9);
-    cloud.fields[0].name = "x"; cloud.fields[0].offset = 0; cloud.fields[0].datatype = sensor_msgs::PointField::FLOAT32; cloud.fields[0].count = 1;
-    cloud.fields[1].name = "y"; cloud.fields[1].offset = 4; cloud.fields[1].datatype = sensor_msgs::PointField::FLOAT32; cloud.fields[1].count = 1;
-    cloud.fields[2].name = "z"; cloud.fields[2].offset = 8; cloud.fields[2].datatype = sensor_msgs::PointField::FLOAT32; cloud.fields[2].count = 1;
-    cloud.fields[3].name = "intensity"; cloud.fields[3].offset = 16; cloud.fields[3].datatype = sensor_msgs::PointField::FLOAT32; cloud.fields[3].count = 1;
-    cloud.fields[4].name = "t"; cloud.fields[4].offset = 20; cloud.fields[4].datatype = sensor_msgs::PointField::UINT32; cloud.fields[4].count = 1;
-    cloud.fields[5].name = "reflectivity"; cloud.fields[5].offset = 24; cloud.fields[5].datatype = sensor_msgs::PointField::UINT16; cloud.fields[5].count = 1;
-    cloud.fields[6].name = "ring"; cloud.fields[6].offset = 26; cloud.fields[6].datatype = sensor_msgs::PointField::UINT16; cloud.fields[6].count = 1;
-    cloud.fields[7].name = "ambient"; cloud.fields[7].offset = 28; cloud.fields[7].datatype = sensor_msgs::PointField::UINT16; cloud.fields[7].count = 1;
-    cloud.fields[8].name = "range"; cloud.fields[8].offset = 32; cloud.fields[8].datatype = sensor_msgs::PointField::UINT32; cloud.fields[8].count = 1;
-
-    // Point step
-    cloud.point_step = 40; // size of a point in bytes
-    cloud.row_step = cloud.point_step * points.size();
-    cloud.height = 1;
-    cloud.width = points.size();
-    cloud.is_dense = false;
-    cloud.is_bigendian = false;
-
-    // Data
-    cloud.data.resize(cloud.row_step * cloud.height);
-    uint8_t* dataPtr = &(cloud.data[0]);
-
-    for (size_t i = 0; i < points.size(); ++i) {
-        // Assume geometry_msgs::Point32 for point, adjust if using a different type
-        memcpy(dataPtr + i * cloud.point_step, &points[i].x, 12); // x, y, z
-
-        float intensity = intensities[i];
-        memcpy(dataPtr + i * cloud.point_step + 16, &intensity, 4);
-
-        uint32_t timestamp = timestamps[i] / 10000; // Adjust division as necessary
-        memcpy(dataPtr + i * cloud.point_step + 20, &timestamp, 4);
-
-        uint16_t reflectivity = 5; // Example value, adjust as necessary
-        memcpy(dataPtr + i * cloud.point_step + 24, &reflectivity, 2);
-
-        uint16_t ring = rings[i];
-        memcpy(dataPtr + i * cloud.point_step + 26, &ring, 2);
-
-        uint16_t ambient = 3; // Example value, adjust as necessary
-        memcpy(dataPtr + i * cloud.point_step + 28, &ambient, 2);
-
-        uint32_t range = ranges[i];
-        memcpy(dataPtr + i * cloud.point_step + 32, &range, 4);
-    }
-
-    return cloud;
-}
 void test_open3d() {
 
   auto mesh = std::make_shared<open3d::geometry::TriangleMesh>();
@@ -342,4 +322,5 @@ PYBIND11_MODULE(mesh_module, m) {
   m.def("compute_base_mesh", &compute_base_mesh, "Compute the base mesh");
   m.def("build_meshes", &build_meshes, "build meshes");
   m.def("test_open3d", &test_open3d, "build meshes");
+  m.def("convert_to_bytes", &convert_to_bytes, "convert to bytes");
 }

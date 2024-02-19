@@ -70,16 +70,17 @@ def fill_area(
     object_value: int,
 ) -> Tuple[npt.NDArray[np.float64], list]:
     # Generate points and fill the area with objects using Poisson
-    print(
-        "beggining bridson sampling with area ",
-        area.shape,
-        " and poisson size of ",
-        size,
-    )
+    # print(
+    #     "beggining bridson sampling with area ",
+    #     area.shape,
+    #     " and poisson size of ",
+    #     size,
+    # )
 
     points = PoissonDisk.Bridson_sampling(
         width=area.shape[0] - 1, height=area.shape[1] - 1, radius=size, k=15
     )  # 30
+    # print("sampling done now we need to extract what points can be used")
     new_points = []
     for i, p in enumerate(points):
         x_int = int(p[0])
@@ -141,6 +142,12 @@ class WorldHandler:
     def _log(self, msg):
         print(f"[{time.ctime()}]{self._o}{msg}")
 
+
+    def read_configs(self):
+
+        self._read_objects()
+        res = self._read_world()
+        return res
     def _read_objects(self):
         with open(self._object_path, "r+") as infile:
             data = json.load(infile)
@@ -233,7 +240,8 @@ class WorldHandler:
         if "mask" in data:
             preload_mask = np.load(data["mask"])
             preload_mask = self.pad_to_square(preload_mask)
-            preload_mask = preload_mask[:6000, :6000] if preload_hm is None else preload_mask
+            preload_mask = self.pad_to_multiple_of_eight(preload_mask)
+            preload_mask = preload_mask[:4000, :4000] if preload_hm is None else preload_mask
             n = len(preload_mask)
             ignore_gen = True
 
@@ -255,11 +263,13 @@ class WorldHandler:
                     arr = self._generate_terrain(arr, zone_id, zone_data, n)
 
         self._log("Performing poisson disc sampling for object placement.")
+        self._log(f"The size of the array is, {arr.shape}" )
         for key, obs in objs_per_region.items():
             if len(obs) > 0 and np.isin(int(key), arr):
                 self._log(f"Sampling for {key}.")
                 for obj in obs:
-                    area, coords = fill_area(arr, obj.poisson_size / self._WORLD_TO_POISSON_SCALE, int(key), 999)
+                    area, coords = fill_area(arr, obj.poisson_size * 10 , int(key), 999)
+                    # area, coords = fill_area(arr, obj.poisson_size / self._WORLD_TO_POISSON_SCALE, int(key), 999)
                     self.objects_to_spawn.setdefault(obj.unique_id, []).extend(coords)
 
         return arr, n, terrain_info, preload_hm
@@ -273,141 +283,20 @@ class WorldHandler:
             region_value=int(region_id),
         )
         return append_to_area(arr, new_arr, int(region_id))
-    # def _read_world(self):
-    #     self.objects_to_spawn = {}
-    #     data = None
-    #     objs_per_region = {}
-    #     with open(self._world_path, "r+") as infile:
-    #         data = json.load(infile)
-    #     if data != None:
-    #         n = data["size"]
-    #
-    #         # lets check if there is a preloaded heightmap and mask
-    #         preload_hm = data.get("heightmap", None)
-    #         preload_mask = data.get("mask", None)
-    #         ignore_gen = False
-    #         use_preloaded_mask = False
-    #
-    #         if preload_hm:
-    #             ignore_gen = True
-    #             preload_hm = np.load(preload_hm)
-    #             preload_hm = self.pad_to_square(preload_hm)
-    #         else:
-    #             preload_hm = None
-    #
-    #         if preload_mask:
-    #             preload_mask = np.load(preload_mask)
-    #
-    #             preload_mask = self.pad_to_square(preload_mask)
-    #             if preload_hm is None:
-    #                 preload_mask = self.pad_to_multiple_of_eight(preload_mask)
-    #             preload_mask = preload_mask[:6000][:6000]
-    #
-    #             use_preloaded_mask = True
-    #             ignore_gen = True
-    #
-    #             n = len(preload_mask)
-    #
-    #         arr = np.zeros((n, n))
-    #         self._log(f"Size of arr: {arr.shape}")
-    #         total_arr = np.zeros((n, n))
-    #         regions = data["regions"]
-    #         terrain_info = {}
-    #         for region_id in regions:
-    #             region_id = str(region_id)
-    #
-    #             terrain_info[region_id] = TerrainPrim(
-    #                 "",
-    #                 regions[region_id]["material_path"],
-    #                 regions[region_id]["material_scale"],
-    #             )
-    #             # print("terrrain info key type ", type(region_id))
-    #             if not ignore_gen:
-    #                 new_arr = PerlinNoise.generate_region2(
-    #                     seed=int(region_id),
-    #                     shape=(n, n),
-    #                     threshold=float(regions[region_id]["threshold"]),
-    #                     show_plot=False,
-    #                     region_value=int(region_id),
-    #                 )
-    #
-    #                 arr = append_to_area(arr, new_arr, int(region_id))
-    #             total_arr = arr
-    #             # handle objects in the zone
-    #             objs = regions[region_id]["objects"]
-    #             objs_per_region[region_id] = []
-    #             if len(objs) > 0:
-    #                 for obj_uid in objs:
-    #                     # get corresponding object from objects
-    #                     object_prim = self.objects_dict[str(obj_uid)]
-    #                     objs_per_region[region_id].append(object_prim)
-    #
-    #             # now we need to deal with sub zones
-    #             zones = regions[region_id]["zones"]
-    #             for zone_id in zones:
-    #                 terrain_info[str(zone_id)] = TerrainPrim(
-    #                     "",
-    #                     zones[zone_id]["material_path"],
-    #                     zones[zone_id]["material_scale"],
-    #                 )
-    #
-    #                 if not ignore_gen:
-    #                     new_arr = PerlinNoise.generate_region2(
-    #                         seed=int(zone_id),
-    #                         shape=(n, n),
-    #                         threshold=float(zones[zone_id]["threshold"]),
-    #                         show_plot=False,
-    #                         region_value=int(zone_id),
-    #                     )
-    #
-    #                     zone_to_save = append_inside_area(arr, new_arr, int(zone_id))
-    #
-    #                     total_arr = zone_to_save
-    #                 objs = zones[zone_id]["objects"]
-    #
-    #                 objs_per_region[zone_id] = []
-    #                 if len(objs) > 0:
-    #                     for obj_uid in objs:
-    #                         # get corresponding object from objects
-    #                         object_prim = self.objects_dict[obj_uid]
-    #
-    #                         objs_per_region[zone_id].append(object_prim)
-    #
-    #         if ignore_gen or use_preloaded_mask:
-    #             total_arr = preload_mask
-    #
-    #         self._log(f"Performing poisson disc sampling for object placement.")
-    #
-    #         for key in objs_per_region:
-    #             total_arr = total_arr[:6000, :6000]
-    #
-    #             obs = objs_per_region[key]
-    #             if len(obs) > 0 and np.isin(int(key), total_arr):
-    #                 self._log(f"Sampling for {key}.")
-    #                 for obj in obs:
-    #                     area, coords = fill_area(
-    #                         total_arr,
-    #                         obj.poisson_size / self._WORLD_TO_POISSON_SCALE,
-    #                         int(key),
-    #                         999,
-    #                     )
-    #                     if obj.unique_id not in self.objects_to_spawn:
-    #                         self.objects_to_spawn[obj.unique_id] = coords
-    #                     else:
-    #                         self.objects_to_spawn[obj.unique_id] = (
-    #                             self.objects_to_spawn[obj.unique_id] + coords
-    #                         )
-    #         return total_arr, n, terrain_info, preload_hm
 
 
 def generate_world_from_file(world_path, object_path):
     world = WorldHandler(world_path, object_path)
-    print(f"[{time.time()}][AreaMaskGenerator] Reading objects and world from file.")
-    world._read_objects()
-    res = world._read_world()
+
+    print(f"[{time.ctime()}][AreaMaskGenerator] Reading objects and world from file.")
+
+    # world._read_objects()
+    # res = world._read_world()
+    res= world.read_configs()
+
     mesh_scale = 1  # 10
 
-    terrain_mesh_paths = []
+    # terrain_mesh_paths = []
     if res:
         region_map, map_size, terrain_info, preload_hm = res
         m_path = (
@@ -419,12 +308,10 @@ def generate_world_from_file(world_path, object_path):
 
         meshGen.generate_terrain_mesh()
 
-        print(f"[{time.time()}][AreaMaskGenerator] Saving mesh paths.")
+        print(f"[{time.ctime()}][AreaMaskGenerator] Saving mesh paths.")
         regs = list(np.unique(region_map))
-        print(regs)
-        print(terrain_info)
         for key in terrain_info:
-            print(key)
+            # print(key)
             if float(key) in regs:
                 terrain_info[str(key)].mesh_path = meshGen.final_mesh_paths_dict[
                     int(key)

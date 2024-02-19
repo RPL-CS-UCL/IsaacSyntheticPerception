@@ -15,6 +15,7 @@ import sys
 import glob
 
 import numpy as np
+
 sys.path.append(
     "/home/jon/Documents/IsaacSyntheticPerception/com/SyntheticPerception/app/build/"
 )
@@ -35,6 +36,54 @@ from PIL import Image
 import mesh_module
 
 mesh_module.test_open3d()
+
+
+def pad_to_match_target(current_array, target_shape):
+    """
+
+    Pad the current array with zeros to match the target shape.
+
+
+
+    Parameters:
+
+    - current_array: np.array, the array to be padded
+
+    - target_shape: tuple, the target shape (n, n)
+
+
+
+    Returns:
+
+    - np.array, padded array with shape matching target_shape
+
+    """
+
+    # Calculate padding needed on each side
+
+    pad_height = (target_shape[0] - current_array.shape[0]) // 2
+
+    pad_width = (target_shape[1] - current_array.shape[1]) // 2
+
+    # Adjust the padding for odd differences in dimensions
+
+    pad_height_extra = (target_shape[0] - current_array.shape[0]) % 2
+
+    pad_width_extra = (target_shape[1] - current_array.shape[1]) % 2
+
+    # Apply padding
+
+    padded_array = np.pad(
+        current_array,
+        (
+            (pad_height, pad_height + pad_height_extra),
+            (pad_width, pad_width + pad_width_extra),
+        ),
+        "constant",
+        constant_values=(0),
+    )
+
+    return padded_array
 
 
 class MeshGen:
@@ -133,8 +182,13 @@ class MeshGen:
         def file_exists(file_path):
             return os.path.exists(file_path)
 
-        for file_path in self._files_to_clean:
+        pattern = os.path.join(self._save_path, f"mesh_*_*")
+
+        # Use glob to find files matching the pattern
+        files = glob.glob(pattern)
+        for file_path in files:
             if file_exists(file_path):
+                self._log(f"Removing mesh file, {file_path}")
                 os.remove(file_path)
 
     def _save_meshes(self):
@@ -179,10 +233,21 @@ class MeshGen:
             self._log(f"Creating Noise Map for terrain heights.")
             self._map_shape = (self._size * self._scale, self._size * self._scale)
             self._noise_map_xy = generate_perlin_noise_2d(self._map_shape, (8, 8))
+            self._noise_map_xy += generate_perlin_noise_2d(self._map_shape, (4, 4)) * 4
+            self._noise_map_xy += generate_perlin_noise_2d(self._map_shape, (2, 2)) * 2
+            # lacunarity = 2
+            # octaves = 1
+            # res = (8, 8)
+            #
+            # multiple = lacunarity ** (octaves - 1) * res
+            # multiple = multiple[-1]
+            # lower_multiple = multiple * (self._map_shape[0] // multiple)
+            # higher_multiple = lower_multiple 
+            # idea_map_size= (higher_multiple,higher_multiple)
+            # print("idea map shape ", idea_map_size)
+            #
+            # self._noise_map_xy = generate_fractal_noise_2d(idea_map_size, lacunarity=lacunarity,octaves=octaves,res=res)
 
-            # self._noise_map_xy = generate_fractal_noise_2d(
-            #     self._map_shape, (8, 8), 5
-            # )
         self._noise_map_xy = self.add_grain_noise(self._noise_map_xy)
         x = np.linspace(
             0,
@@ -198,7 +263,7 @@ class MeshGen:
         )
         self._log(f"Map of size {x.shape}, {y.shape} created.")
 
-        scale = 3
+        scale = 5
         self._noise_map_xy *= scale
         noise_flat = self._noise_map_xy.flatten()
         X, Y = np.meshgrid(x, y)
@@ -237,11 +302,12 @@ class MeshGen:
 
         self._points2 = mesh_module.build_meshes(
             self._size,
-            self._scale,
-            self._regions_map,
+            float(self._scale),
+            self._regions_map.astype(int),
             self._points,
             self._save_path,
             img_array,
+            2000
         )
         self._points2 = np.array(self._points2)
 

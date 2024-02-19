@@ -58,6 +58,12 @@ from omni.isaac.core.utils.rotations import (
 
 # .
 
+from omni.isaac.core.utils.stage import (
+    add_reference_to_stage,
+    is_stage_loading,
+    update_stage_async,
+    update_stage,
+)
 from numpy.linalg import norm
 import copy
 import traceback
@@ -185,6 +191,7 @@ class SensorRig:
         self.time = 0
 
     def ray_cast(self, origin):
+        # print("trying ray cadts")
         # pos, _ = self.get_pos_rot()
 
         # print(pos)
@@ -195,7 +202,7 @@ class SensorRig:
         if hit["hit"]:
             distance = hit["distance"]
 
-            print(hit["position"][2])
+            print("ray cast hit", hit["position"][2], hit)
             return hit["position"][2]
         return 0
 
@@ -229,6 +236,14 @@ class SensorRig:
 
     def hide_waypoints_an_rig(self):
         pass
+
+    async def reading_sensor_save_pool(self):
+        self.save_buffer = []
+
+        while len(self.save_buffer) > 0:
+            info = self.save_buffer.pop(0)
+            path, data, pickle = info[0], info[1], info[2]
+            np.save(path, data, allow_pickle=pickle)
 
     def create_rig(self, position, orientation, stage):
         self._dc = _dynamic_control.acquire_dynamic_control_interface()
@@ -285,23 +300,21 @@ class SensorRig:
         # print("sampling sensors")
         self.time += n
         self.sample_time_counter += n
-        # print(self.time)
-        # log timestep
-        # Sample all sensors
 
-        for sensor in self.__sensors:
-            # print(sensor)
-            sensor.sample_sensor()
+        # for sensor in self.__sensors:
+        #     # print(sensor)
+        #     sensor.sample_sensor()
 
-        # if self.sample_time_counter >= (1 / self.sample_rate):
-        #     # print("sampling at ", self.time)
-        #     a = time.time()
-        #     for sensor in self.__sensors:
-        #         # print(sensor)
-        #         sensor.sample_sensor()
-        #     # self._time_stamp_file.write(f"{str(self.time)}\n")
-        #     print("time to sample: ", time.time()-a)
-        #     self.sample_time_counter = 0
+        if self.sample_time_counter >= (1 / self.sample_rate):
+            # print("sampling at ", self.time)
+            a = time.time()
+            for sensor in self.__sensors:
+                # print(sensor)
+                sensor.sample_sensor()
+            # self._time_stamp_file.write(f"{str(self.time)}\n")
+            # print("time to sample: ", time.time()-a)
+            self.sample_time_counter = 0
+
     def init_ros(self):
         print(" ============= init all sensor ros")
         print("all sensors; ", self.__sensors)
@@ -343,20 +356,29 @@ class SensorRig:
         print(f"{self._o} SensorRig waypoints initialization complete:")
         print(self.__waypoints)
 
-    def initialize_waypoints_preloaded(self, waypoints, parent_prim):
+    async def initialize_waypoints_preloaded(self, waypoints, parent_prim, world):
+        # update_stage()
         self.__waypoints = []
         self.__waypoints = waypoints
         self._waypoints_parent = parent_prim
-        print(f"{self._o} loaded waypoints from file ")
+        print(f"{self._o} loaded waypoints from file 12312")
+        print(len(self.__waypoints))
+
+        # world.play()
         for i in range(len(self.__waypoints)):
+            # print("1")
             origin = self.__waypoints[i]
+            # origin[3] += 20
+            # print("2")
             z = self.ray_cast(origin)
+            # print("3")
             z += 0.7
             self.__waypoints[i][2] = z
         print(f"{self._o} Synced waypoints to ground")
 
+        world.pause()
+
     def _waypoint_update(self, pos):
-        print(f"{self._o} Waypoint {self.__curr_waypoint_id}/{len(self.__waypoints)}")
         # Get the goal position and convert it into the correct type
         # print("moving")
         goal_pos = self.__waypoints[self.__curr_waypoint_id]
@@ -371,22 +393,23 @@ class SensorRig:
         move_vec = goal_pos - pos
         distance = np.linalg.norm(goal_pos - pos)
         move_vec = (move_vec / distance) * self.velocity
-        goal_pos_arr = np.array([[goal_pos[0], goal_pos[1], 0]])
-        pos_arr = np.array([[pos[0], pos[1], 0]])
+        # goal_pos_arr = np.array([[goal_pos[0], goal_pos[1], 0]])
+        # pos_arr = np.array([[pos[0], pos[1], 0]])
         ori_now = self.orient_val.Get()
         rvg = rot_vec
         rvc = quat_to_euler_angles(ori_now)
-        rot_ang = Gf.Vec3d(0, 0, rvg[2] - rvc[2])
+        # rot_ang = Gf.Vec3d(0, 0, rvg[2] - rvc[2])
         calc = rvg[2] - rvc[2]
         calc *= 57.2
-        x_ = rvg[0] - rvc[0]
-        y_ = rvg[1] - rvc[1]
+        # x_ = rvg[0] - rvc[0]
+        # y_ = rvg[1] - rvc[1]
 
         rot_float = Gf.Vec3d(0, 0, calc / 5.73)
 
         if distance < 0.5:
             self.__curr_waypoint_id += 1
 
+            print(f"{self._o} Waypoint {self.__curr_waypoint_id}/{len(self.__waypoints)}")
             if self.__curr_waypoint_id >= len(self.__waypoints):
                 self.__curr_waypoint_id = 0
                 timeline = omni.timeline.get_timeline_interface()
@@ -397,7 +420,7 @@ class SensorRig:
         return move_vec, rot_vec, rot_float
 
     def move(self, time_step):
-        return
+        # return
         # timeline = omni.timeline.get_timeline_interface()
 
         # timecode = (
@@ -461,11 +484,12 @@ class SensorRig:
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         pathlib.Path(path + "/timestamps.csv")
 
-        print(instance_mapping)
+        pathlib.Path(path+ "/sequences/").mkdir(parents=True, exist_ok=True)
+        # print(instance_mapping)
         self._time_stamp_file = open(path + "/timestamps.csv", "a")
         # create any needed directories for the sensors
         for sensor in self.__sensors:
-            sensor.init_output_folder(path)
+            sensor.init_output_folder(path + "/sequences/")
 
 
 """
